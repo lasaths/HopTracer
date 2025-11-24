@@ -1,79 +1,61 @@
+<p align="center">
+  <img src="logo/HopTrace_Logo.png" alt="HopTracer Logo" width="200"/>
+</p>
+
 # HopTracer
 
-> ⚠️ This repository contains code that was generated with AI assistance. Review, test, and use at your own risk.
+HopTracer is a powerful desktop tool designed to help architects and computational designers visualize changes in their Grasshopper definitions. It provides a clear, interactive comparison between two versions of a file, highlighting what has been added, removed, or modified.
 
-HopTracer is a hybrid .NET MAUI desktop application for comparing Grasshopper (`.gh` / `.ghx`) files. It runs an embedded ASP.NET Core server inside a MAUI WebView to render an HTML5 Canvas diff viewer, highlighting added, removed, and modified components between two versions of a definition.
-
-![Diff Viewer Screenshot](tests/data/gh_diff.png)
-
-## How it works
-- **MAUI Shell + Embedded Server**: `HopTracer.Maui` hosts a local Kestrel server that serves the UI and APIs to the in-app WebView.
-- **Diff Engine**: `HopTracer.Core` parses `.ghx` graphs, computes diffs, and returns JSON for rendering.
-- **Conversion**: Binary `.gh` files are converted to `.ghx` via the `GH_Converter` utility, which uses Rhino's `GH_IO.dll` and is based on the open-source [`ghtoghx`](https://bitbucket.org/RILGH/ghtoghx/wiki/Home) converter.
+> **AI Note**: This entire project was generated and refined by AI agents.
 
 ## Features
-- **Visual Diff**: Added (green), removed (red), and modified (orange) components with connection highlighting.
-- **Smart Highlighting**: Selecting a component dims unrelated nodes; long wires stay hidden until relevant.
-- **Interactive Navigation**: Pan/zoom (scroll/drag), minimap for large graphs, and keyboard shortcuts (F to fit, +/- to zoom).
-- **File Support**: Works with `.ghx` directly and `.gh` via built-in conversion.
-- **Git Integration**: Pick prior versions straight from the file's Git history.
-- **Portable Build**: Single-file executable (~140MB) with the runtime embedded.
+
+*   **Visual Diffing**: See added, removed, and modified components on an interactive canvas.
+*   **Git Integration**: View commit history for a file and compare against previous versions.
+*   **Portable**: Single-file executable with no external dependencies.
+*   **Interactive UI**: Pan, zoom, filter by change type, and search for components.
 
 ## Installation
-1. Download the latest `HopTracer.exe` from releases or `release/HopTracer_Portable`.
-2. Run the executable—no installer required.
+
+1.  Download the latest release from the [Releases](https://github.com/lasaths/HopTracer/releases) page.
+2.  Run `HopTracer.exe`.
 
 ## Usage
-1. Launch the application.
-2. Drag and drop your "Old" and "New" Grasshopper files into the drop zones.
-    - Optional: If the file lives in a Git repo, click "Select from Git History" to compare against a previous commit.
-3. Click **Compare Files**.
-4. Viewer controls:
-    - Left Click: Select a node to view details and connections.
-    - Drag: Pan the view.
-    - Scroll: Zoom in/out.
-    - Minimap: Drag the viewport box to navigate quickly.
-    - Sidebar: Filter by status (Added/Removed/Modified) or search for components.
 
-### Keyboard Shortcuts
-| Key | Action |
-| :--- | :--- |
-| `F` | Fit graph to view |
-| `Esc` | Deselect node |
-| `+` / `=` | Zoom In |
-| `-` | Zoom Out |
+1.  **Launch the App**: Open `HopTracer.exe`.
+2.  **Select Files**:
+    *   Drag your "Old" file into the left box.
+    *   Drag your "New" file into the right box.
+    *   *Optional*: If the file is in a Git repo, click "Select from Git History" to pick a previous commit.
+3.  **Compare**: Click "Compare Files".
+4.  **Explore**:
+    *   Use the sidebar to filter changes (Added, Removed, Modified).
+    *   Click nodes to see property changes.
+    *   Use the "Wire Visibility" slider to hide long wires for cleaner viewing.
 
-## Building from source
+## For Developers
 
-### Prerequisites
-- [.NET 9 SDK](https://dotnet.microsoft.com/download)
-- Visual Studio 2022 (17.12+) or VS Code
-- Rhino 7 or 8 installed (provides `GH_IO.dll` for the converter)
+This section contains technical details for those interested in the backend or contributing to the project.
 
-### Local build
-```powershell
-# Build the solution
-dotnet build src_csharp/HopTracer.sln
+### Architecture
+The project is built using **.NET 9** and **.NET MAUI** for cross-platform desktop support (Windows/macOS). It uses a hybrid approach where the UI is rendered via a local ASP.NET Core server hosting a web-based visualization.
 
-# Run the MAUI app (Windows)
-dotnet run --project src_csharp/HopTracer.Maui/HopTracer.csproj -f net9.0-windows10.0.19041.0
-```
+*   **Core**: Handles parsing of `.gh`/`.ghx` files and the diffing logic.
+*   **Web**: Serves the HTML/JS visualization and API endpoints.
+*   **MAUI**: Wraps the web application in a native desktop window using WebView2.
 
-If `GH_IO.dll` is not copied automatically, run `scripts/setup_dependencies.ps1` to pull it from your Rhino installation.
+### Building from Source
 
-### Create portable release
-```powershell
-dotnet publish src_csharp/HopTracer.Maui/HopTracer.csproj `
-    -f net9.0-windows10.0.19041.0 `
-    -c Release `
-    -p:WindowsPackageType=None `
-    -p:WindowsAppSDKSelfContained=true `
-    -p:SelfContained=true `
-    -p:PublishSingleFile=true `
-    -p:RuntimeIdentifier=win-x64 `
-    -o release/HopTracer_Portable
-```
+#### Prerequisites
+*   .NET 9 SDK
+*   Visual Studio 2022 or VS Code
+
+#### Steps
+1.  Clone the repository.
+2.  Open `src_csharp/HopTracer.sln`.
+3.  Build the `HopTracer.Maui` project.
+4.  Run the application.
 
 ## License
 
-This project is licensed under the MIT License - see `LICENSE` for details.
+MIT License
