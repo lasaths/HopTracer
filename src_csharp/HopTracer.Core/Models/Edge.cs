@@ -7,6 +7,8 @@ namespace HopTracer.Core.Models;
 public class Edge
 {
     public string Source { get; set; } = string.Empty;
+    public string SourcePort { get; set; } = string.Empty;
     public string Target { get; set; } = string.Empty;
+    public string TargetPort { get; set; } = string.Empty;
     public string Status { get; set; } = "same"; // same, added, removed
 }

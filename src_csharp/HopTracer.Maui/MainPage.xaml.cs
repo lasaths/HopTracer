@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using HopTracer.Core.Services;
+using HopTracer.Maui.Services;
 using Microsoft.Extensions.Logging;
 
 namespace HopTracer.Maui;
@@ -67,6 +68,7 @@ public partial class MainPage : ContentPage
                         services.AddSingleton<IGhxParser, GhxParser>();
                         services.AddSingleton<IDiffer, Differ>();
                         services.AddSingleton<IConverterService, ConverterService>();
+                        services.AddSingleton<INativeIntegration, MauiNativeIntegration>();
                     });
                 })
                 .Build();

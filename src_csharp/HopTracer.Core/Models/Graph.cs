@@ -7,7 +7,7 @@ namespace HopTracer.Core.Models;
 public class Graph
 {
     public Dictionary<string, Node> Nodes { get; set; } = new();
-    public List<(string Source, string Target)> Edges { get; set; } = new();
+    public List<Edge> Edges { get; set; } = new();
     public GraphMetadata Metadata { get; set; } = new();
 }
 
