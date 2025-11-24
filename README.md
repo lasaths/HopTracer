@@ -17,7 +17,7 @@ HopTracer is a powerful desktop tool designed to help architects and computation
 
 
 
-![HopTracer UI](tests/data/gh_ui.png)
+![HopTracer UI](tests/data/gh_ui_ports.png)
 
 ## Installation
 
