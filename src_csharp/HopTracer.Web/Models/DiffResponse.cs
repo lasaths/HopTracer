@@ -7,6 +7,8 @@ public class DiffResponse
     public List<Node> Nodes { get; set; } = new();
     public List<Edge> Edges { get; set; } = new();
     public DiffMeta Meta { get; set; } = new();
+    public GraphMetadata? OldMeta { get; set; }
+    public GraphMetadata? NewMeta { get; set; }
 }
 
 public class DiffMeta

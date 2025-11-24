@@ -371,6 +371,23 @@
         </div>
 
         <div class="controls">
+            <!-- File Analytics -->
+            <div style="margin-bottom: 16px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">File Analytics</div>
+                
+                <div style="margin-bottom: 8px;">
+                    <div style="color: var(--accent);">New Version (Left)</div>
+                    <div id="meta-new-name" style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                    <div id="meta-new-date" style="font-family: 'JetBrains Mono'; opacity: 0.7;">-</div>
+                </div>
+
+                <div>
+                    <div style="color: var(--warning);">Old Version (Right)</div>
+                    <div id="meta-old-name" style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                    <div id="meta-old-date" style="font-family: 'JetBrains Mono'; opacity: 0.7;">-</div>
+                </div>
+            </div>
+
             <div class="search-box">
                 <input type="text" id="search-input" placeholder="Search components...">
             </div>
@@ -387,6 +404,18 @@
                     <span id="wire-label" style="font-size: 11px; color: var(--text-primary);">Default</span>
                 </div>
                 <input type="range" id="wire-slider" min="0" max="100" value="85" style="width: 100%; accent-color: var(--accent);">
+            </div>
+
+            <div style="margin-top: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Version Compare</label>
+                    <span id="version-label" style="font-size: 11px; color: var(--text-primary);">Mixed</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-secondary); margin-bottom: 2px;">
+                    <span>New</span>
+                    <span>Old</span>
+                </div>
+                <input type="range" id="version-slider" min="0" max="100" value="50" style="width: 100%; accent-color: var(--accent);">
             </div>
         </div>
 
@@ -476,7 +505,8 @@
             filter: 'all',
             search: '',
             bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
-            wireThreshold: 1500 // Default
+            wireThreshold: 1500, // Default
+            versionMix: 0.5 // 0 = New, 1 = Old
         };
 
         // Elements
@@ -494,7 +524,21 @@
             resize();
             fitView();
             updateStats();
+            updateMetadata();
             requestAnimationFrame(loop);
+        }
+
+        function updateMetadata() {
+            if (GRAPH_DATA.newMeta) {
+                document.getElementById('meta-new-name').textContent = GRAPH_DATA.newMeta.name || 'Unknown';
+                document.getElementById('meta-new-date').textContent = GRAPH_DATA.newMeta.date ? new Date(GRAPH_DATA.newMeta.date).toLocaleString() : 'Unknown Date';
+                document.getElementById('meta-new-date').title = GRAPH_DATA.newMeta.description || '';
+            }
+            if (GRAPH_DATA.oldMeta) {
+                document.getElementById('meta-old-name').textContent = GRAPH_DATA.oldMeta.name || 'Unknown';
+                document.getElementById('meta-old-date').textContent = GRAPH_DATA.oldMeta.date ? new Date(GRAPH_DATA.oldMeta.date).toLocaleString() : 'Unknown Date';
+                document.getElementById('meta-old-date').title = GRAPH_DATA.oldMeta.description || '';
+            }
         }
 
         function processData() {
@@ -599,13 +643,26 @@
                     wireLabel.textContent = "Hide All";
                 } else {
                     // Map 1-99 to a reasonable range (e.g., 5000 down to 100)
-                    // Logarithmic-ish feel might be better, but let's try linear mapping first
-                    // 1 -> 10000
-                    // 99 -> 100
                     state.wireThreshold = 10000 - (val * 100); 
                     if (state.wireThreshold < 100) state.wireThreshold = 100;
                     wireLabel.textContent = `> ${state.wireThreshold}px Hidden`;
                 }
+                draw();
+            });
+
+            // Version Slider
+            const verSlider = document.getElementById('version-slider');
+            const verLabel = document.getElementById('version-label');
+
+            verSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                state.versionMix = val / 100.0;
+                
+                if (val === 0) verLabel.textContent = "New Only";
+                else if (val === 100) verLabel.textContent = "Old Only";
+                else if (val === 50) verLabel.textContent = "Mixed";
+                else verLabel.textContent = `${val}% Old`;
+                
                 draw();
             });
         }
@@ -675,10 +732,18 @@
             const nodesToDraw = state.nodes.map(n => {
                 const matchesFilter = (state.filter === 'all' || n.status === state.filter) &&
                                       (!state.search || n.name.toLowerCase().includes(state.search) || n.nickname.toLowerCase().includes(state.search));
-                return { node: n, dimmed: !matchesFilter };
+                
+                // Version Slider Logic
+                // 0 = New (Added=1, Removed=0)
+                // 1 = Old (Added=0, Removed=1)
+                let versionAlpha = 1.0;
+                if (n.status === 'added') versionAlpha = 1.0 - state.versionMix;
+                if (n.status === 'removed') versionAlpha = state.versionMix;
+                
+                return { node: n, dimmed: !matchesFilter, alpha: versionAlpha };
             });
             
-            const visibleNodeSet = new Set(nodesToDraw.filter(n => !n.dimmed).map(n => n.node.id));
+            const visibleNodeSet = new Set(nodesToDraw.filter(n => !n.dimmed && n.alpha > 0.05).map(n => n.node.id));
 
             // Connection Highlighting Logic
             const connectedIds = new Set();
@@ -725,6 +790,14 @@
                     ctx.globalAlpha = isDimmed ? 0.1 : 0.6;
                 }
 
+                // Apply version alpha to edges too
+                let edgeAlpha = 1.0;
+                if (e.status === 'added') edgeAlpha = 1.0 - state.versionMix;
+                if (e.status === 'removed') edgeAlpha = state.versionMix;
+                
+                ctx.globalAlpha *= edgeAlpha;
+                if (ctx.globalAlpha < 0.01) return; // Skip invisible
+
                 ctx.beginPath();
                 ctx.moveTo(start.x, start.y);
 
@@ -758,7 +831,8 @@
                     }
                 }
 
-                ctx.globalAlpha = isDimmed ? 0.1 : 1.0;
+                ctx.globalAlpha = (isDimmed ? 0.1 : 1.0) * item.alpha;
+                if (ctx.globalAlpha < 0.01) return; // Skip invisible
 
                 // Node Body
                 ctx.fillStyle = CONFIG.colors.nodeBg;
