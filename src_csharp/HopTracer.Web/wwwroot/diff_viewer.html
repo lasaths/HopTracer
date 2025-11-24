@@ -344,21 +344,25 @@
 
     <div id="sidebar">
         <div class="sidebar-header">
-            <h1>
-                <img src="images/HopTrace_Logo_White.png" alt="HopTracer" style="height: 28px; vertical-align: middle;">
+            <h1 style="display: flex; align-items: center; gap: 12px;">
+                <img src="images/HopTrace_Logo_White.png" alt="HopTracer" style="height: 40px;">
+                <span style="font-size: 20px; font-weight: 600;">HopTracer</span>
             </h1>
             <div class="stats-row">
-                <div class="stat-item">
+                <div class="stat-item" title="Added Nodes">
                     <div class="stat-dot" style="background: var(--added)"></div>
-                    <span id="stat-added">0</span>
+                    <span style="color: var(--text-secondary); margin-right: 4px;">Added:</span>
+                    <span id="stat-added" style="color: var(--text-primary); font-weight: 600;">0</span>
                 </div>
-                <div class="stat-item">
+                <div class="stat-item" title="Removed Nodes">
                     <div class="stat-dot" style="background: var(--removed)"></div>
-                    <span id="stat-removed">0</span>
+                    <span style="color: var(--text-secondary); margin-right: 4px;">Removed:</span>
+                    <span id="stat-removed" style="color: var(--text-primary); font-weight: 600;">0</span>
                 </div>
-                <div class="stat-item">
+                <div class="stat-item" title="Modified Nodes">
                     <div class="stat-dot" style="background: var(--modified)"></div>
-                    <span id="stat-modified">0</span>
+                    <span style="color: var(--text-secondary); margin-right: 4px;">Modified:</span>
+                    <span id="stat-modified" style="color: var(--text-primary); font-weight: 600;">0</span>
                 </div>
             </div>
             <div style="margin-top: 16px;">
