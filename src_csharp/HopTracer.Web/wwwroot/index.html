@@ -255,11 +255,27 @@
             dropZones.old.zone.appendChild(btn);
         }
 
-        function openGitModal() {
-            document.getElementById('gitModal').style.display = 'flex';
+        async function openGitModal() {
+            // Try to pick file natively first
+            try {
+                const res = await fetch('/system/pick_file', { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.path) {
+                    currentGitPath = data.path;
+                    document.getElementById('gitModal').style.display = 'flex';
+                    fetchCommits(currentGitPath);
+                    return;
+                }
+            } catch (e) {
+                console.log("Native picker failed, falling back to prompt");
+            }
+
+            // Fallback if native picker cancelled or failed
             const path = prompt("Enter full path to .ghx file to check history:", "C:/Users/lasaths/Downloads/comptest/DataDrop17.ghx");
             if (path) {
                 currentGitPath = path;
+                document.getElementById('gitModal').style.display = 'flex';
                 fetchCommits(path);
             }
         }
