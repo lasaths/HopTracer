@@ -39,7 +39,7 @@ public class GhxParser : IGhxParser
         }
 
         var nodes = new Dictionary<string, Node>();
-        var edges = new List<(string, string)>();
+        var edges = new List<Edge>();
 
         // Find all objects (chunks with name='Object')
         var objectChunks = doc.Descendants("chunk")
@@ -51,12 +51,43 @@ public class GhxParser : IGhxParser
             if (node != null)
             {
                 nodes[node.Id] = node;
-                
+
                 // Extract sources (edges)
-                var sources = ParseSources(chunk);
+                var sources = ParseSources(chunk).ToList();
+                EnsureInputPorts(node, sources.Count);
+
+                var portIndex = 0;
                 foreach (var srcGuid in sources)
                 {
-                    edges.Add((srcGuid, node.Id));
+                    edges.Add(new Edge
+                    {
+                        Source = srcGuid,
+                        SourcePort = $"{srcGuid}:out:0",
+                        Target = node.Id,
+                        TargetPort = $"{node.Id}:in:{portIndex}",
+                        Status = "same"
+                    });
+                    portIndex++;
+                }
+            }
+        }
+
+        // Ensure outputs exist for nodes referenced as sources
+        foreach (var edge in edges)
+        {
+            if (nodes.TryGetValue(edge.Source, out var srcNode))
+            {
+                if (srcNode.Outputs.All(p => p.Id != edge.SourcePort))
+                {
+                    srcNode.Outputs.Add(new Port
+                    {
+                        Id = edge.SourcePort,
+                        Name = "Out",
+                        Nickname = "",
+                        Kind = "output",
+                        Type = "",
+                        Status = "same"
+                    });
                 }
             }
         }
@@ -130,7 +161,7 @@ public class GhxParser : IGhxParser
                 y = yVal;
         }
 
-        return new Node
+        var node = new Node
         {
             Id = guid,
             Name = name,
@@ -138,6 +169,15 @@ public class GhxParser : IGhxParser
             X = x,
             Y = y
         };
+
+        // Capture simple property/value hints (best-effort)
+        var valueHints = ExtractValues(chunk);
+        foreach (var kvp in valueHints)
+        {
+            node.Properties[kvp.Key] = kvp.Value;
+        }
+
+        return node;
     }
 
     /// <summary>
@@ -161,5 +201,46 @@ public class GhxParser : IGhxParser
         }
 
         return sources;
+    }
+
+    private void EnsureInputPorts(Node node, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            var portId = $"{node.Id}:in:{i}";
+            if (node.Inputs.All(p => p.Id != portId))
+            {
+                node.Inputs.Add(new Port
+                {
+                    Id = portId,
+                    Name = $"In {i + 1}",
+                    Nickname = "",
+                    Kind = "input",
+                    Type = "",
+                    Status = "same"
+                });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Best-effort extraction of component values/code text for later diffing.
+    /// </summary>
+    private Dictionary<string, string> ExtractValues(XElement chunk)
+    {
+        var result = new Dictionary<string, string>();
+
+        // Common Grasshopper parameter payloads
+        var candidates = new[] { "Value", "Number", "Text", "String", "Expression", "Code", "Script" };
+        foreach (var name in candidates)
+        {
+            var val = GetValue(chunk, name);
+            if (!string.IsNullOrEmpty(val))
+            {
+                result[name] = val;
+            }
+        }
+
+        return result;
     }
 }

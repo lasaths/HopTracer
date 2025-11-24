@@ -40,11 +40,33 @@ public class Differ : IDiffer
 
                 var dx = nNew.X - nOld.X;
                 var dy = nNew.Y - nOld.Y;
-                
                 var status = "same";
-                
-                // Mark as modified if name/nickname changed
-                if (nOld.Name != nNew.Name || nOld.Nickname != nNew.Nickname)
+
+                var modified = nOld.Name != nNew.Name || nOld.Nickname != nNew.Nickname;
+
+                // Port-level diff
+                var mergedInputs = DiffPorts(nOld.Inputs, nNew.Inputs);
+                var mergedOutputs = DiffPorts(nOld.Outputs, nNew.Outputs);
+
+                // Property-level diff
+                var properties = new Dictionary<string, string>();
+                foreach (var kv in nNew.Properties) properties[kv.Key] = kv.Value;
+                foreach (var kv in nOld.Properties)
+                {
+                    if (!properties.ContainsKey(kv.Key)) properties[kv.Key] = kv.Value;
+                    if (nNew.Properties.TryGetValue(kv.Key, out var newVal) && kv.Value != newVal)
+                    {
+                        modified = true;
+                    }
+                }
+
+                if (mergedInputs.Any(p => p.Status != "same" || p.ValueChanged) ||
+                    mergedOutputs.Any(p => p.Status != "same" || p.ValueChanged))
+                {
+                    modified = true;
+                }
+
+                if (modified)
                 {
                     status = "modified";
                 }
@@ -60,7 +82,10 @@ public class Differ : IDiffer
                     H = nNew.H,
                     Status = status,
                     Dx = dx,
-                    Dy = dy
+                    Dy = dy,
+                    Inputs = mergedInputs,
+                    Outputs = mergedOutputs,
+                    Properties = properties
                 };
 
                 diffNodes.Add(nodeOut);
@@ -82,9 +107,10 @@ public class Differ : IDiffer
         }
 
         // 2. Diff Edges
-        var oldEdges = oldGraph.Edges.ToHashSet();
-        var newEdges = newGraph.Edges.ToHashSet();
-        var allEdges = oldEdges.Union(newEdges);
+        var edgeComparer = new EdgeComparer();
+        var oldEdges = oldGraph.Edges.ToHashSet(edgeComparer);
+        var newEdges = newGraph.Edges.ToHashSet(edgeComparer);
+        var allEdges = oldEdges.Union(newEdges, edgeComparer);
 
         var diffEdges = new List<Edge>();
         var nodeIoStats = new Dictionary<string, (int InAdded, int InRemoved, int OutAdded, int OutRemoved)>();
@@ -94,10 +120,10 @@ public class Differ : IDiffer
             nodeIoStats[nid] = (0, 0, 0, 0);
         }
 
-        foreach (var (src, tgt) in allEdges)
+        foreach (var edge in allEdges)
         {
-            var isOld = oldEdges.Contains((src, tgt));
-            var isNew = newEdges.Contains((src, tgt));
+            var isOld = oldEdges.Contains(edge);
+            var isNew = newEdges.Contains(edge);
 
             var status = "same";
             
@@ -108,17 +134,17 @@ public class Differ : IDiffer
             else if (isNew)
             {
                 status = "added";
-                UpdateStats(nodeIoStats, tgt, stats => (stats.InAdded + 1, stats.InRemoved, stats.OutAdded, stats.OutRemoved));
-                UpdateStats(nodeIoStats, src, stats => (stats.InAdded, stats.InRemoved, stats.OutAdded + 1, stats.OutRemoved));
+                UpdateStats(nodeIoStats, edge.Target, stats => (stats.InAdded + 1, stats.InRemoved, stats.OutAdded, stats.OutRemoved));
+                UpdateStats(nodeIoStats, edge.Source, stats => (stats.InAdded, stats.InRemoved, stats.OutAdded + 1, stats.OutRemoved));
             }
             else // isOld
             {
                 status = "removed";
-                UpdateStats(nodeIoStats, tgt, stats => (stats.InAdded, stats.InRemoved + 1, stats.OutAdded, stats.OutRemoved));
-                UpdateStats(nodeIoStats, src, stats => (stats.InAdded, stats.InRemoved, stats.OutAdded, stats.OutRemoved + 1));
+                UpdateStats(nodeIoStats, edge.Target, stats => (stats.InAdded, stats.InRemoved + 1, stats.OutAdded, stats.OutRemoved));
+                UpdateStats(nodeIoStats, edge.Source, stats => (stats.InAdded, stats.InRemoved, stats.OutAdded, stats.OutRemoved + 1));
             }
 
-            diffEdges.Add(new Edge { Source = src, Target = tgt, Status = status });
+            diffEdges.Add(new Edge { Source = edge.Source, Target = edge.Target, SourcePort = edge.SourcePort, TargetPort = edge.TargetPort, Status = status });
         }
 
         // Update nodes with IO stats
@@ -144,11 +170,70 @@ public class Differ : IDiffer
         return (diffNodes, diffEdges);
     }
 
+    private List<Port> DiffPorts(List<Port> oldPorts, List<Port> newPorts)
+    {
+        var result = new List<Port>();
+        var allIds = oldPorts.Select(p => p.Id).Union(newPorts.Select(p => p.Id)).ToHashSet();
+
+        foreach (var pid in allIds)
+        {
+            var inOld = oldPorts.FirstOrDefault(p => p.Id == pid);
+            var inNew = newPorts.FirstOrDefault(p => p.Id == pid);
+
+            if (inOld != null && inNew != null)
+            {
+                var valueChanged = (inOld.Value ?? "") != (inNew.Value ?? "");
+                var status = valueChanged || inOld.Name != inNew.Name || inOld.Nickname != inNew.Nickname ? "modified" : "same";
+
+                result.Add(new Port
+                {
+                    Id = pid,
+                    Name = inNew.Name,
+                    Nickname = inNew.Nickname,
+                    Kind = inNew.Kind,
+                    Type = inNew.Type,
+                    Value = inNew.Value,
+                    ValueOld = inOld.Value,
+                    ValueNew = inNew.Value,
+                    ValueChanged = valueChanged,
+                    Status = status
+                });
+            }
+            else if (inNew != null)
+            {
+                inNew.Status = "added";
+                result.Add(inNew);
+            }
+            else if (inOld != null)
+            {
+                inOld.Status = "removed";
+                result.Add(inOld);
+            }
+        }
+
+        return result.OrderBy(p => p.Id).ToList();
+    }
+
     private void UpdateStats(Dictionary<string, (int InAdded, int InRemoved, int OutAdded, int OutRemoved)> statsDict, string id, Func<(int InAdded, int InRemoved, int OutAdded, int OutRemoved), (int, int, int, int)> updateFunc)
     {
         if (statsDict.TryGetValue(id, out var currentStats))
         {
             statsDict[id] = updateFunc(currentStats);
         }
+    }
+}
+
+internal class EdgeComparer : IEqualityComparer<Edge>
+{
+    public bool Equals(Edge? x, Edge? y)
+    {
+        if (ReferenceEquals(x, y)) return true;
+        if (x is null || y is null) return false;
+        return x.Source == y.Source && x.SourcePort == y.SourcePort && x.Target == y.Target && x.TargetPort == y.TargetPort;
+    }
+
+    public int GetHashCode(Edge obj)
+    {
+        return HashCode.Combine(obj.Source, obj.SourcePort, obj.Target, obj.TargetPort);
     }
 }
