@@ -12,37 +12,49 @@
         rel="stylesheet">
     <style>
         :root {
-            /* Shadcn Dark Theme */
-            --background: 224 71.4% 4.1%;
-            --foreground: 210 20% 98%;
-            --card: 224 71.4% 4.1%;
-            --card-foreground: 210 20% 98%;
-            --popover: 224 71.4% 4.1%;
-            --popover-foreground: 210 20% 98%;
-            --primary: 263.4 70% 50.4%;
-            --primary-foreground: 210 20% 98%;
-            --secondary: 215 27.9% 16.9%;
-            --secondary-foreground: 210 20% 98%;
-            --muted: 215 27.9% 16.9%;
-            --muted-foreground: 217.9 10.6% 64.9%;
-            --accent: 215 27.9% 16.9%;
-            --accent-foreground: 210 20% 98%;
-            --destructive: 0 62.8% 30.6%;
-            --destructive-foreground: 210 20% 98%;
-            --border: 215 27.9% 16.9%;
-            --input: 215 27.9% 16.9%;
-            --ring: 263.4 70% 50.4%;
-            --radius: 0.5rem;
+            /* Shadcn Dark Theme (Zinc/Slate) */
+            --radius: 0.65rem;
+            --background: oklch(1 0 0);
+            --foreground: oklch(0.141 0.005 285.823);
+            --card: oklch(1 0 0);
+            --card-foreground: oklch(0.141 0.005 285.823);
+            --popover: oklch(1 0 0);
+            --popover-foreground: oklch(0.141 0.005 285.823);
+            --primary: oklch(0.541 0.281 293.009);
+            --primary-foreground: oklch(0.969 0.016 293.756);
+            --secondary: oklch(0.967 0.001 286.375);
+            --secondary-foreground: oklch(0.21 0.006 285.885);
+            --muted: oklch(0.967 0.001 286.375);
+            --muted-foreground: oklch(0.552 0.016 285.938);
+            --accent: oklch(0.967 0.001 286.375);
+            --accent-foreground: oklch(0.21 0.006 285.885);
+            --destructive: oklch(0.577 0.245 27.325);
+            --border: oklch(0.92 0.004 286.32);
+            --input: oklch(0.92 0.004 286.32);
+            --ring: oklch(0.702 0.183 293.541);
+            --chart-1: oklch(0.811 0.111 293.571);
+            --chart-2: oklch(0.606 0.25 292.717);
+            --chart-3: oklch(0.541 0.281 293.009);
+            --chart-4: oklch(0.491 0.27 292.581);
+            --chart-5: oklch(0.432 0.232 292.759);
+            --sidebar: oklch(0.985 0 0);
+            --sidebar-foreground: oklch(0.141 0.005 285.823);
+            --sidebar-primary: oklch(0.541 0.281 293.009);
+            --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
+            --sidebar-accent: oklch(0.967 0.001 286.375);
+            --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+            --sidebar-border: oklch(0.92 0.004 286.32);
+            --sidebar-ring: oklch(0.702 0.183 293.541);
 
-            /* App Mappings */
-            --bg-app: hsl(var(--background));
-            --bg-panel: hsl(var(--card)); /* Using card for panels to distinguish from bg */
-            --bg-card: hsl(var(--secondary)); /* Inner cards */
-            --border: hsl(var(--border));
-            --text-primary: hsl(var(--foreground));
-            --text-secondary: hsl(var(--muted-foreground));
-            --accent: hsl(var(--primary));
-            --accent-hover: hsl(var(--ring));
+            /* App Mappings (Light Mode Default) */
+            --bg-app: var(--background);
+            --bg-panel: var(--card);
+            --bg-card: var(--secondary);
+            --border-color: var(--border); /* Renamed to avoid conflict */
+            --text-primary: var(--foreground);
+            --text-secondary: var(--muted-foreground);
+            --accent-color: var(--primary); /* Renamed to avoid conflict */
+            --accent-hover: var(--ring);
             
             /* Status Colors */
             --success: #4caf50;
@@ -52,6 +64,50 @@
             --removed: #c62828;
             --modified: #f57f17;
             --same: #424242;
+        }
+
+        .dark {
+            --background: oklch(0.141 0.005 285.823);
+            --foreground: oklch(0.985 0 0);
+            --card: oklch(0.21 0.006 285.885);
+            --card-foreground: oklch(0.985 0 0);
+            --popover: oklch(0.21 0.006 285.885);
+            --popover-foreground: oklch(0.985 0 0);
+            --primary: oklch(0.606 0.25 292.717);
+            --primary-foreground: oklch(0.969 0.016 293.756);
+            --secondary: oklch(0.274 0.006 286.033);
+            --secondary-foreground: oklch(0.985 0 0);
+            --muted: oklch(0.274 0.006 286.033);
+            --muted-foreground: oklch(0.705 0.015 286.067);
+            --accent: oklch(0.274 0.006 286.033);
+            --accent-foreground: oklch(0.985 0 0);
+            --destructive: oklch(0.704 0.191 22.216);
+            --border: oklch(1 0 0 / 10%);
+            --input: oklch(1 0 0 / 15%);
+            --ring: oklch(0.38 0.189 293.745);
+            --chart-1: oklch(0.811 0.111 293.571);
+            --chart-2: oklch(0.606 0.25 292.717);
+            --chart-3: oklch(0.541 0.281 293.009);
+            --chart-4: oklch(0.491 0.27 292.581);
+            --chart-5: oklch(0.432 0.232 292.759);
+            --sidebar: oklch(0.21 0.006 285.885);
+            --sidebar-foreground: oklch(0.985 0 0);
+            --sidebar-primary: oklch(0.606 0.25 292.717);
+            --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
+            --sidebar-accent: oklch(0.274 0.006 286.033);
+            --sidebar-accent-foreground: oklch(0.985 0 0);
+            --sidebar-border: oklch(1 0 0 / 10%);
+            --sidebar-ring: oklch(0.38 0.189 293.745);
+
+            /* App Mappings (Dark Mode Override) */
+            --bg-app: var(--background);
+            --bg-panel: var(--card);
+            --bg-card: var(--secondary);
+            --border-color: var(--border);
+            --text-primary: var(--foreground);
+            --text-secondary: var(--muted-foreground);
+            --accent-color: var(--primary);
+            --accent-hover: var(--ring);
         }
 
         * {
@@ -72,7 +128,7 @@
         #sidebar {
             width: 320px;
             background-color: var(--bg-panel);
-            border-right: 1px solid var(--border);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             z-index: 10;
@@ -81,7 +137,7 @@
 
         .sidebar-header {
             padding: 16px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border-color);
             background: var(--bg-panel);
         }
 
@@ -142,7 +198,7 @@
         }
 
         .search-box input:focus {
-            border-color: var(--accent);
+            border-color: var(--accent-color);
         }
 
         .filter-group {
@@ -169,8 +225,8 @@
         }
 
         .filter-btn.active {
-            background: var(--accent);
-            border-color: var(--accent);
+            background: var(--accent-color);
+            border-color: var(--accent-color);
             color: white;
         }
 
@@ -191,7 +247,7 @@
 
         .detail-card {
             background: var(--bg-card);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 16px;
@@ -264,7 +320,7 @@
             display: flex;
             justify-content: space-between;
             padding: 8px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             background: rgba(255, 255, 255, 0.02);
         }
@@ -328,7 +384,7 @@
             background: var(--bg-panel);
             padding: 6px;
             border-radius: 8px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-color);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
@@ -359,7 +415,7 @@
             width: 200px;
             height: 140px;
             background: var(--bg-panel);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -378,7 +434,7 @@
             background: var(--bg-panel);
             padding: 10px 14px;
             border-radius: 8px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-color);
             display: flex;
             gap: 16px;
             font-size: 11px;
@@ -401,14 +457,14 @@
         /* Resizer */
         #resizer {
             width: 4px;
-            background-color: var(--border);
+            background-color: var(--border-color);
             cursor: col-resize;
             z-index: 20;
             transition: background-color 0.2s;
         }
 
         #resizer:hover, #resizer.active {
-            background-color: var(--accent);
+            background-color: var(--accent-color);
         }
 
         /* Bottom Controls */
@@ -422,7 +478,7 @@
             background: var(--bg-panel);
             padding: 12px 24px;
             border-radius: 12px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-color);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             z-index: 100;
             backdrop-filter: blur(8px);
@@ -450,7 +506,7 @@
 
         input[type=range] {
             width: 100%;
-            accent-color: var(--accent);
+            accent-color: var(--accent-color);
             height: 4px;
             border-radius: 2px;
             cursor: pointer;
@@ -460,7 +516,7 @@
         .tooltip {
             position: absolute;
             background: rgba(22, 24, 29, 0.95);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-color);
             padding: 8px 12px;
             border-radius: 6px;
             font-size: 12px;
@@ -473,7 +529,7 @@
     </style>
 </head>
 
-<body>
+<body class="dark">
 
     <div id="tooltip" class="tooltip"></div>
 
@@ -507,11 +563,11 @@
 
         <div class="controls">
             <!-- File Analytics -->
-            <div style="margin-bottom: 16px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+            <div style="margin-bottom: 16px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
                 <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">File Analytics</div>
                 
                 <div style="margin-bottom: 8px;">
-                    <div style="color: var(--accent);">New Version (Left)</div>
+                    <div style="color: var(--accent-color);">New Version (Left)</div>
                     <div id="meta-new-name" style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
                     <div id="meta-new-date" style="font-family: 'JetBrains Mono'; opacity: 0.7;">-</div>
                 </div>
@@ -533,7 +589,7 @@
                 <button class="filter-btn" data-filter="modified">Modified</button>
             </div>
             <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-                <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent);" checked />
+                <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" checked />
                 <span>Show port details (connections & values)</span>
             </div>
         </div>
@@ -577,7 +633,7 @@
                 </div>
                 <input type="range" id="wire-slider" min="0" max="100" value="85">
             </div>
-            <div style="width: 1px; background: var(--border);"></div>
+            <div style="width: 1px; background: var(--border-color);"></div>
             <div class="slider-group">
                 <div class="slider-header">
                     <span>Version Compare</span>
