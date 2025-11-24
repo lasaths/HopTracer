@@ -321,6 +321,19 @@
             border-radius: 2px;
         }
 
+        /* Resizer */
+        #resizer {
+            width: 4px;
+            background-color: var(--border);
+            cursor: col-resize;
+            z-index: 20;
+            transition: background-color 0.2s;
+        }
+
+        #resizer:hover, #resizer.active {
+            background-color: var(--accent);
+        }
+
         /* Tooltip */
         .tooltip {
             position: absolute;
@@ -426,6 +439,8 @@
         </div>
     </div>
 
+    <div id="resizer"></div>
+
     <div id="main-view">
         <div class="legend">
             <div class="legend-item">
@@ -516,16 +531,51 @@
         const miniCtx = minimap.getContext('2d');
         const detailsPanel = document.getElementById('details-panel');
         const tooltip = document.getElementById('tooltip');
+        const sidebar = document.getElementById('sidebar');
+        const resizer = document.getElementById('resizer');
 
         // Initialization
         function init() {
             processData();
             setupEventListeners();
+            setupResizer();
             resize();
             fitView();
             updateStats();
             updateMetadata();
             requestAnimationFrame(loop);
+        }
+
+        function setupResizer() {
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault(); // Prevent text selection
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                
+                // Constrain width
+                let newWidth = e.clientX;
+                if (newWidth < 200) newWidth = 200;
+                if (newWidth > 600) newWidth = 600;
+                
+                sidebar.style.width = newWidth + 'px';
+                resize(); // Resize canvas immediately
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('active');
+                    document.body.style.cursor = '';
+                    resize(); // Final resize
+                }
+            });
         }
 
         function updateMetadata() {
