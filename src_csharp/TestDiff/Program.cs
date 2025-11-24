@@ -1,5 +1,6 @@
 using HopTracer.Core.Models;
 using HopTracer.Core.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 // Test the core diff functionality
 Console.WriteLine("=== GH Diff Tool - Core Logic Test ===\n");
@@ -10,18 +11,22 @@ var newFile = @"C:\Users\lasaths\Downloads\comptest\DataDrop17.ghx";
 Console.WriteLine($"OLD: {oldFile}");
 Console.WriteLine($"NEW: {newFile}\n");
 
+// Setup services
+var parser = new GhxParser(NullLogger<GhxParser>.Instance);
+var differ = new Differ(NullLogger<Differ>.Instance);
+
 try
 {
     Console.WriteLine("Parsing OLD file...");
-    var graphOld = GhxParser.Parse(oldFile);
+    var graphOld = parser.Parse(oldFile);
     Console.WriteLine($"  ✓ Found {graphOld.Nodes.Count} nodes, {graphOld.Edges.Count} edges");
 
     Console.WriteLine("Parsing NEW file...");
-    var graphNew = GhxParser.Parse(newFile);
+    var graphNew = parser.Parse(newFile);
     Console.WriteLine($"  ✓ Found {graphNew.Nodes.Count} nodes, {graphNew.Edges.Count} edges\n");
 
     Console.WriteLine("Computing diff...");
-    var (nodes, edges) = Differ.Diff(graphOld, graphNew);
+    var (nodes, edges) = differ.Diff(graphOld, graphNew);
 
     var added = nodes.Count(n => n.Status == "added");
     var removed = nodes.Count(n => n.Status == "removed");

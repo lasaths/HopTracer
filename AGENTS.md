@@ -45,13 +45,13 @@ If this fails, run: `scripts/setup_dependencies.ps1`
 
 ### Building and Running
 1.  Open `src_csharp/HopTracer.sln`.
-2.  Set **HopTracer.Maui** as the startup project.
+2.  Set **HopTracer** as the startup project.
 3.  Run (F5).
 
 ### Creating a Portable Release
 To build the optimized, single-file executable (~140MB):
 ```powershell
-dotnet publish src_csharp/HopTracer.Maui/HopTracer.Maui.csproj `
+dotnet publish src_csharp/HopTracer.Maui/HopTracer.csproj `
     -f net9.0-windows10.0.19041.0 `
     -c Release `
     -p:WindowsPackageType=None `
