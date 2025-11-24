@@ -62,7 +62,31 @@ public class GhxParser : IGhxParser
         }
 
         _logger.LogInformation("Parsed graph with {NodeCount} nodes and {EdgeCount} edges from {Path}", nodes.Count, edges.Count, path);
-        return new Graph { Nodes = nodes, Edges = edges };
+        return new Graph { Nodes = nodes, Edges = edges, Metadata = ParseMetadata(doc) };
+    }
+
+    private GraphMetadata ParseMetadata(XDocument doc)
+    {
+        var meta = new GraphMetadata();
+        
+        var defChunk = doc.Descendants("chunk").FirstOrDefault(c => c.Attribute("name")?.Value == "Definition");
+        if (defChunk == null) return meta;
+
+        var propsChunk = defChunk.Descendants("chunk").FirstOrDefault(c => c.Attribute("name")?.Value == "DefinitionProperties");
+        if (propsChunk != null)
+        {
+            meta.Name = GetValue(propsChunk, "Name") ?? "";
+            meta.Description = GetValue(propsChunk, "Description") ?? "";
+            
+            var dateStr = GetValue(propsChunk, "Date");
+            if (long.TryParse(dateStr, out var ticks))
+            {
+                // GH uses Ticks
+                try { meta.Date = new DateTime(ticks); } catch { }
+            }
+        }
+        
+        return meta;
     }
 
     /// <summary>
