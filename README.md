@@ -22,7 +22,7 @@
 
 HopTracer is distributed as a single portable executable.
 
-1.  Download the latest `HopTracer.Maui.exe` from the releases.
+1.  Download the latest `HopTracer.exe` from the releases.
 2.  Run the executable. No installation required.
 
 ## Usage
@@ -58,14 +58,14 @@ HopTracer is distributed as a single portable executable.
 dotnet build src_csharp/HopTracer.sln
 
 # Run the MAUI app (Windows)
-dotnet run --project src_csharp/HopTracer.Maui/HopTracer.Maui.csproj -f net9.0-windows10.0.19041.0
+dotnet run --project src_csharp/HopTracer.Maui/HopTracer.csproj -f net9.0-windows10.0.19041.0
 ```
 
 ### Create Portable Release
 To build the optimized single-file executable:
 
 ```powershell
-dotnet publish src_csharp/HopTracer.Maui/HopTracer.Maui.csproj `
+dotnet publish src_csharp/HopTracer.Maui/HopTracer.csproj `
     -f net9.0-windows10.0.19041.0 `
     -c Release `
     -p:WindowsPackageType=None `
