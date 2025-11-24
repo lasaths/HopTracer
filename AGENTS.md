@@ -7,8 +7,8 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 9**. It uses 
 
 ## Architecture
 
-### Core Components (`src_csharp/`)
-- **HopTracer.Maui**: Main Application Entry Point.
+### Core Components (`Source/`)
+- **HopTracer**: Main Application Entry Point.
     - **Type**: .NET MAUI (Windows/macOS).
     - **Role**: Native Shell, Window Management, Embedded Server Host.
     - **Key Logic**: `MainPage.xaml.cs` starts a Kestrel server on `localhost:5000` and points a `WebView` to it. It uses `ManifestEmbeddedFileProvider` to serve static assets from the single-file bundle.
@@ -20,7 +20,7 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 9**. It uses 
     - **Type**: .NET Class Library.
     - **Role**: Parsing, Diffing, Git Operations.
     - **Key Classes**: `GhxParser`, `Differ`, `GitWrapper`, `ConverterService`.
-- **GH_Converter**: Utility.
+- **GhConverter**: Utility.
     - **Role**: Converts binary `.gh` files to XML `.ghx` using `GH_IO.dll`.
 
 ### Data Flow
@@ -41,17 +41,17 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 9**. It uses 
 
 ### Setup
 The project automatically copies `GH_IO.dll` from your local Rhino installation during build.
-If this fails, run: `scripts/setup_dependencies.ps1`
+If this fails, run: `Scripts/setup_dependencies.ps1`
 
 ### Building and Running
-1.  Open `src_csharp/HopTracer.sln`.
+1.  Open `Source/HopTracer.sln`.
 2.  Set **HopTracer** as the startup project.
 3.  Run (F5).
 
 ### Creating a Portable Release
 To build the optimized, single-file executable (~140MB):
 ```powershell
-dotnet publish src_csharp/HopTracer.Maui/HopTracer.csproj `
+dotnet publish Source/HopTracer/HopTracer.csproj `
     -f net9.0-windows10.0.19041.0 `
     -c Release `
     -p:WindowsPackageType=None `
@@ -59,7 +59,7 @@ dotnet publish src_csharp/HopTracer.Maui/HopTracer.csproj `
     -p:SelfContained=true `
     -p:PublishSingleFile=true `
     -p:RuntimeIdentifier=win-x64 `
-    -o release/HopTracer_Portable
+    -o Release/HopTracer_Portable
 ```
 
 ## Remaining Tasks & Improvements
@@ -78,15 +78,15 @@ dotnet publish src_csharp/HopTracer.Maui/HopTracer.csproj `
 ## Code Organization
 ```
 HopTracer/
-├── release/             # Build output
-├── scripts/             # Setup scripts
-├── src_csharp/
-│   ├── HopTracer.Maui/      # Main App (Shell)
+├── Release/             # Build output
+├── Scripts/             # Setup scripts
+├── Source/
+│   ├── HopTracer/           # Main App (Shell)
 │   ├── HopTracer.Web/       # UI & API (Logic)
 │   ├── HopTracer.Core/      # Parsing & Diffing (Core)
-│   ├── GH_Converter/        # GH->GHX Tool
+│   ├── GhConverter/         # GH->GHX Tool
 │   └── TestDiff/            # Unit Tests
-├── tests/
+├── Tests/
 │   └── data/                # Sample files
 ├── AGENTS.md                # Developer Guide
 └── README.md                # User Guide
