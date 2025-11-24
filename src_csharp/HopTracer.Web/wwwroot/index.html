@@ -115,14 +115,71 @@
             color: var(--text-dim);
         }
 
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
+        /* Git Modal Styles */
+        .commit-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+        }
 
-            100% {
-                transform: rotate(360deg);
-            }
+        .commit-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 150px 150px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .commit-row:last-child {
+            border-bottom: none;
+        }
+
+        .commit-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .commit-row.selected {
+            background: rgba(92, 128, 247, 0.15);
+            border-left: 3px solid var(--accent);
+        }
+
+        .commit-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 150px 150px;
+            padding: 12px 16px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .commit-hash {
+            font-family: monospace;
+            color: var(--accent);
+        }
+
+        .commit-msg {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 10px;
+            font-weight: 500;
+        }
+
+        .commit-author, .commit-date {
+            color: var(--text-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
 </head>
@@ -169,16 +226,28 @@
         <div id="gitModal"
             style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center;">
             <div
-                style="background:var(--panel); padding:20px; border-radius:12px; width:500px; max-height:80vh; display:flex; flex-direction:column;">
-                <h3 style="margin-top:0;">Git History</h3>
-                <div id="commitList"
-                    style="flex:1; overflow-y:auto; margin-bottom:20px; border:1px solid var(--border); border-radius:6px;">
+                style="background:var(--panel); padding:0; border-radius:12px; width:800px; height:600px; display:flex; flex-direction:column; overflow:hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+                
+                <div style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin:0;">Select Version from History</h3>
+                    <button onclick="closeGitModal()" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:20px;">&times;</button>
+                </div>
+
+                <div class="commit-header">
+                    <div>Hash</div>
+                    <div>Message</div>
+                    <div>Author</div>
+                    <div>Date</div>
+                </div>
+
+                <div id="commitList" class="commit-list" style="border:none; border-radius:0; margin:0;">
                     <!-- Commits injected here -->
                 </div>
-                <div style="display:flex; justify-content:flex-end; gap:10px;">
+
+                <div style="padding: 20px; border-top: 1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; background: var(--panel);">
                     <button class="btn" style="background:transparent; border:1px solid var(--border);"
                         onclick="closeGitModal()">Cancel</button>
-                    <button class="btn" id="loadCommitBtn">Load Selected</button>
+                    <button class="btn" id="loadCommitBtn" disabled>Load Selected Version</button>
                 </div>
             </div>
         </div>
@@ -306,34 +375,31 @@
         function renderCommits(commits) {
             const list = document.getElementById('commitList');
             list.innerHTML = '';
+            const loadBtn = document.getElementById('loadCommitBtn');
+            loadBtn.disabled = true;
+            selectedCommit = null;
 
             if (commits.length === 0) {
-                list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-dim);">No commits found</div>';
+                list.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-dim);">No commits found for this file.</div>';
                 return;
             }
 
             commits.forEach(c => {
                 const item = document.createElement('div');
-                item.style.padding = '10px';
-                item.style.borderBottom = '1px solid var(--border)';
-                item.style.cursor = 'pointer';
-                item.style.display = 'flex';
-                item.style.justifyContent = 'space-between';
-                item.style.alignItems = 'center';
-
+                item.className = 'commit-row';
+                
                 item.innerHTML = `
-                    <div>
-                        <div style="font-weight:600; font-size:13px;">${c.message}</div>
-                        <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">
-                            <span style="color:var(--accent); font-family:monospace;">${c.hash}</span> • ${c.author} • ${c.date}
-                        </div>
-                    </div>
+                    <div class="commit-hash">${c.hash}</div>
+                    <div class="commit-msg" title="${c.message}">${c.message}</div>
+                    <div class="commit-author" title="${c.author}">${c.author}</div>
+                    <div class="commit-date">${c.date}</div>
                 `;
 
                 item.onclick = () => {
-                    document.querySelectorAll('#commitList > div').forEach(d => d.style.background = 'transparent');
-                    item.style.background = 'rgba(92, 128, 247, 0.1)';
+                    document.querySelectorAll('.commit-row').forEach(d => d.classList.remove('selected'));
+                    item.classList.add('selected');
                     selectedCommit = c.hash;
+                    loadBtn.disabled = false;
                 };
 
                 list.appendChild(item);
