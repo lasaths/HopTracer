@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo/HopTrace_Logo.png" alt="HopTracer Logo" width="200"/>
+  <img src="Assets/HopTrace_Logo.png" alt="HopTracer Logo" width="200"/>
 </p>
 
 # HopTracer
@@ -17,7 +17,7 @@ HopTracer is a powerful desktop tool designed to help architects and computation
 
 
 
-![HopTracer UI](tests/data/gh_ui_ports.png)
+![HopTracer UI](Tests/data/gh_ui_ports.png)
 
 ## Installation
 
@@ -59,8 +59,8 @@ The project is built using **.NET 9** and **.NET MAUI** for cross-platform deskt
 #### Steps
 
 1. Clone the repository.
-2. Open `src_csharp/HopTracer.sln`.
-3. Build the `HopTracer.Maui` project.
+2. Open `Source/HopTracer.sln`.
+3. Build the `HopTracer` project.
 4. Run the application.
 
 ## License
