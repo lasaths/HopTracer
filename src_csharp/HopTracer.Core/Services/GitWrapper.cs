@@ -3,13 +3,27 @@ using Microsoft.Extensions.Logging;
 
 namespace HopTracer.Core.Services;
 
+public interface IGitWrapper
+{
+    bool IsGitRepo();
+    List<CommitInfo> GetCommits(string filePath, int limit = 10);
+    byte[] GetFileContentAtCommit(string commitHash, string filePath);
+}
+
 /// <summary>
 /// Wrapper for Git operations.
 /// </summary>
-public class GitWrapper
+public class GitWrapper : IGitWrapper
 {
     private readonly string _repoPath;
     private readonly ILogger<GitWrapper>? _logger;
+
+    // Default constructor for DI - assumes current directory or configured later
+    // Ideally, we should inject a factory or configuration, but for now we'll default to current dir
+    // or allow setting it.
+    public GitWrapper(ILogger<GitWrapper>? logger = null) : this(Directory.GetCurrentDirectory(), logger)
+    {
+    }
 
     public GitWrapper(string repoPath, ILogger<GitWrapper>? logger = null)
     {
