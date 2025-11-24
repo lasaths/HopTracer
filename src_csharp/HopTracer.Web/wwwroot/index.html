@@ -129,7 +129,13 @@
 
 <body>
     <div class="container">
-        <h1><img src="images/HopTrace_Logo.png" alt="HopTracer" style="max-width: 250px; height: auto;"></h1>
+        <div style="margin-bottom: 40px;">
+            <img src="images/HopTrace_Logo.png" alt="HopTracer" style="max-width: 150px; height: auto; margin-bottom: 16px;">
+            <h1 style="margin: 0; font-size: 32px; font-weight: 700; margin-bottom: 8px;">HopTracer</h1>
+            <p style="color: var(--text-dim); margin: 0; font-size: 16px;">
+                Visualize and compare changes in Grasshopper definitions.
+            </p>
+        </div>
 
         <form action="/compare" method="post" enctype="multipart/form-data" id="compareForm">
             <div class="drop-zone-container">
