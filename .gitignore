@@ -1,0 +1,31 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Generated outputs (can be regenerated from source .ghx files)
+/*.html
+!templates/
+diff_graph.json
+*.patch
+
+# Uploads directory (temporary file storage)
+uploads/
+
+# C# / .NET
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+*.suo
+*.userprefs
+
+# Release
+release/
