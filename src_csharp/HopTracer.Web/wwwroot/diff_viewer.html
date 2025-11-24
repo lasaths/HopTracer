@@ -380,6 +380,14 @@
                 <button class="filter-btn" data-filter="removed">Removed</button>
                 <button class="filter-btn" data-filter="modified">Modified</button>
             </div>
+            
+            <div style="margin-top: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Wire Visibility</label>
+                    <span id="wire-label" style="font-size: 11px; color: var(--text-primary);">Default</span>
+                </div>
+                <input type="range" id="wire-slider" min="0" max="100" value="85" style="width: 100%; accent-color: var(--accent);">
+            </div>
         </div>
 
         <div id="details-panel">
@@ -467,7 +475,8 @@
             hovered: null,
             filter: 'all',
             search: '',
-            bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 }
+            bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
+            wireThreshold: 1500 // Default
         };
 
         // Elements
@@ -574,6 +583,31 @@
             document.getElementById('btn-fit').addEventListener('click', fitView);
             document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
             document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
+
+            // Wire Slider
+            const wireSlider = document.getElementById('wire-slider');
+            const wireLabel = document.getElementById('wire-label');
+            
+            wireSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                
+                if (val === 0) {
+                    state.wireThreshold = Infinity; // Show all
+                    wireLabel.textContent = "Show All";
+                } else if (val === 100) {
+                    state.wireThreshold = 0; // Hide all (except connected)
+                    wireLabel.textContent = "Hide All";
+                } else {
+                    // Map 1-99 to a reasonable range (e.g., 5000 down to 100)
+                    // Logarithmic-ish feel might be better, but let's try linear mapping first
+                    // 1 -> 10000
+                    // 99 -> 100
+                    state.wireThreshold = 10000 - (val * 100); 
+                    if (state.wireThreshold < 100) state.wireThreshold = 100;
+                    wireLabel.textContent = `> ${state.wireThreshold}px Hidden`;
+                }
+                draw();
+            });
         }
 
         function resize() {
@@ -669,7 +703,7 @@
                 const dx = end.x - start.x;
                 const dy = end.y - start.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
-                const isLong = dist > 1500; 
+                const isLong = dist > state.wireThreshold; 
                 
                 const isConnected = state.selected && (e.source === state.selected || e.target === state.selected);
                 
