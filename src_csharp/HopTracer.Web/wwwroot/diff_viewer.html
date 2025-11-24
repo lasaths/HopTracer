@@ -462,6 +462,10 @@
                 <button class="filter-btn" data-filter="removed">Removed</button>
                 <button class="filter-btn" data-filter="modified">Modified</button>
             </div>
+            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+                <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent);" checked />
+                <span>Show port details (connections & values)</span>
+            </div>
             
             <div style="margin-top: 12px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -725,6 +729,14 @@
                     draw();
                 });
             });
+
+            const togglePorts = document.getElementById('toggle-ports');
+            if (togglePorts) {
+                togglePorts.addEventListener('change', () => {
+                    const selectedNode = state.nodes.find(n => n.id === state.selected);
+                    updateDetailsPanel(selectedNode || null);
+                });
+            }
 
             document.getElementById('btn-fit').addEventListener('click', fitView);
             document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
@@ -1171,6 +1183,8 @@
                 return;
             }
 
+            const showPorts = document.getElementById('toggle-ports').checked;
+
             const html = `
                 <div class="detail-card">
                     <div class="detail-header">
@@ -1185,7 +1199,7 @@
                     
                     <div class="prop-row">
                         <span class="prop-label">ID</span>
-                        <span class="prop-value" title="${node.id}">${node.id.substring(0, 8)}...</span>
+                        <span class="prop-value" title="${node.id}">${(node.id || '').substring(0, 8)}...</span>
                     </div>
                     <div class="prop-row">
                         <span class="prop-label">Position</span>
@@ -1208,10 +1222,43 @@
                         <span class="prop-label">Outputs</span>
                         <span class="prop-value">${node.outAdded || 0} add / ${node.outRemoved || 0} rem</span>
                     </div>
+                    ${showPorts ? renderPorts(node.inputs, 'Inputs') : ''}
+                    ${showPorts ? renderPorts(node.outputs, 'Outputs') : ''}
                 </div>
             `;
 
             detailsPanel.innerHTML = html;
+        }
+
+        function renderPorts(ports, title) {
+            if (!ports || ports.length === 0) return '';
+
+            const portItems = ports.map(p => {
+                const statusColor = CONFIG.colors[p.status] || CONFIG.colors.same;
+                const valueLine = p.valueChanged
+                    ? `<div class="port-value">Δ ${(p.valueOld || '')} → ${(p.valueNew || '')}</div>`
+                    : (p.value ? `<div class="port-value">${p.value}</div>` : '');
+
+                return `
+                    <div class="port-item">
+                        <div class="port-meta">
+                            <div class="port-name">${p.nickname || p.name || p.id}</div>
+                            ${valueLine || ''}
+                            <div class="port-value" style="opacity:0.7;">${p.id}</div>
+                        </div>
+                        <span class="port-status" style="background:${statusColor}; color:white;">${p.status}</span>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="port-section">
+                    <h4>${title}</h4>
+                    <div class="port-list">
+                        ${portItems}
+                    </div>
+                </div>
+            `;
         }
 
         function updateStats() {
