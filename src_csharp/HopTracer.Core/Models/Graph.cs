@@ -8,4 +8,13 @@ public class Graph
 {
     public Dictionary<string, Node> Nodes { get; set; } = new();
     public List<(string Source, string Target)> Edges { get; set; } = new();
+    public GraphMetadata Metadata { get; set; } = new();
+}
+
+public class GraphMetadata
+{
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    public DateTime? Date { get; set; }
+    public string Author { get; set; } = "";
 }

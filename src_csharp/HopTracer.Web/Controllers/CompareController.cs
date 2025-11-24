@@ -88,7 +88,9 @@ public class CompareController : ControllerBase
                     GeneratedAt = DateTime.Now.ToString("o"),
                     NodeCount = nodes.Count,
                     EdgeCount = edges.Count
-                }
+                },
+                OldMeta = graphOld.Metadata,
+                NewMeta = graphNew.Metadata
             };
 
             // Load the diff viewer template
