@@ -386,6 +386,51 @@
             background-color: var(--accent);
         }
 
+        /* Bottom Controls */
+        .bottom-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 24px;
+            background: var(--bg-panel);
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 160px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .slider-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent);
+            height: 4px;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
         /* Tooltip */
         .tooltip {
             position: absolute;
@@ -466,26 +511,6 @@
                 <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent);" checked />
                 <span>Show port details (connections & values)</span>
             </div>
-            
-            <div style="margin-top: 12px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <label style="font-size: 11px; color: var(--text-secondary);">Wire Visibility</label>
-                    <span id="wire-label" style="font-size: 11px; color: var(--text-primary);">Default</span>
-                </div>
-                <input type="range" id="wire-slider" min="0" max="100" value="85" style="width: 100%; accent-color: var(--accent);">
-            </div>
-
-            <div style="margin-top: 16px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <label style="font-size: 11px; color: var(--text-secondary);">Version Compare</label>
-                    <span id="version-label" style="font-size: 11px; color: var(--text-primary);">Mixed</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-secondary); margin-bottom: 2px;">
-                    <span>New</span>
-                    <span>Old</span>
-                </div>
-                <input type="range" id="version-slider" min="0" max="100" value="50" style="width: 100%; accent-color: var(--accent);">
-            </div>
         </div>
 
         <div id="details-panel">
@@ -517,6 +542,28 @@
 
         <div id="minimap-container">
             <canvas id="minimap-canvas"></canvas>
+        </div>
+
+        <div class="bottom-controls">
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>Wire Visibility</span>
+                    <span id="wire-label" class="slider-value">Default</span>
+                </div>
+                <input type="range" id="wire-slider" min="0" max="100" value="85">
+            </div>
+            <div style="width: 1px; background: var(--border);"></div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>Version Compare</span>
+                    <span id="version-label" class="slider-value">Mixed</span>
+                </div>
+                <input type="range" id="version-slider" min="0" max="100" value="50">
+                <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-secondary); margin-top: 2px;">
+                    <span>New</span>
+                    <span>Old</span>
+                </div>
+            </div>
         </div>
 
         <div class="overlay-controls">
@@ -1213,6 +1260,8 @@
                         <span class="prop-value">Δ ${node.dx.toFixed(1)}, ${node.dy.toFixed(1)}</span>
                     </div>` : ''}
                 </div>
+
+                ${renderProperties(node)}
                 
                 <div class="detail-card">
                     <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Connections</div>
@@ -1230,6 +1279,27 @@
             `;
 
             detailsPanel.innerHTML = html;
+        }
+
+        function renderProperties(node) {
+            if (!node.properties || Object.keys(node.properties).length === 0) return '';
+
+            let rows = '';
+            for (const [key, val] of Object.entries(node.properties)) {
+                rows += `
+                    <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                        <span class="prop-label">${key}</span>
+                        <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 150px; overflow-y: auto;">${val}</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="detail-card">
+                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Component Values</div>
+                    ${rows}
+                </div>
+            `;
         }
 
         function renderPorts(ports, title) {
