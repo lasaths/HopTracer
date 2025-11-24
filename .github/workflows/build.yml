@@ -1,0 +1,50 @@
+name: Build Application
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            runtime: win-x64
+            artifact-name: GH_Diff_Tool-Windows
+            artifact-path: src_csharp/GH_DiffApp/bin/Release/net9.0-windows/win-x64/publish/
+          - os: macos-latest
+            runtime: osx-x64
+            artifact-name: GH_Diff_Tool-macOS-x64
+            artifact-path: src_csharp/GH_DiffApp/bin/Release/net9.0-windows/osx-x64/publish/
+          - os: macos-latest
+            runtime: osx-arm64
+            artifact-name: GH_Diff_Tool-macOS-ARM64
+            artifact-path: src_csharp/GH_DiffApp/bin/Release/net9.0-windows/osx-arm64/publish/
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore src_csharp/GH_DiffApp/GH_DiffApp.csproj
+
+    - name: Build
+      run: dotnet build src_csharp/GH_DiffApp/GH_DiffApp.csproj --configuration Release --no-restore
+
+    - name: Publish
+      run: dotnet publish src_csharp/GH_DiffApp/GH_DiffApp.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=false
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact-name }}
+        path: ${{ matrix.artifact-path }}
+
