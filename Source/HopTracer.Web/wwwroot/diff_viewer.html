@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopTracer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Shadcn Dark Theme (Zinc/Slate) */
+            --radius: 0.65rem;
+            --background: oklch(1 0 0);
+            --foreground: oklch(0.141 0.005 285.823);
+            --card: oklch(1 0 0);
+            --card-foreground: oklch(0.141 0.005 285.823);
+            --popover: oklch(1 0 0);
+            --popover-foreground: oklch(0.141 0.005 285.823);
+            --primary: oklch(0.541 0.281 293.009);
+            --primary-foreground: oklch(0.969 0.016 293.756);
+            --secondary: oklch(0.967 0.001 286.375);
+            --secondary-foreground: oklch(0.21 0.006 285.885);
+            --muted: oklch(0.967 0.001 286.375);
+            --muted-foreground: oklch(0.552 0.016 285.938);
+            --accent: oklch(0.967 0.001 286.375);
+            --accent-foreground: oklch(0.21 0.006 285.885);
+            --destructive: oklch(0.577 0.245 27.325);
+            --border: oklch(0.92 0.004 286.32);
+            --input: oklch(0.92 0.004 286.32);
+            --ring: oklch(0.702 0.183 293.541);
+            --chart-1: oklch(0.811 0.111 293.571);
+            --chart-2: oklch(0.606 0.25 292.717);
+            --chart-3: oklch(0.541 0.281 293.009);
+            --chart-4: oklch(0.491 0.27 292.581);
+            --chart-5: oklch(0.432 0.232 292.759);
+            --sidebar: oklch(0.985 0 0);
+            --sidebar-foreground: oklch(0.141 0.005 285.823);
+            --sidebar-primary: oklch(0.541 0.281 293.009);
+            --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
+            --sidebar-accent: oklch(0.967 0.001 286.375);
+            --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+            --sidebar-border: oklch(0.92 0.004 286.32);
+            --sidebar-ring: oklch(0.702 0.183 293.541);
+
+            /* App Mappings (Light Mode Default) */
+            --bg-app: var(--background);
+            --bg-panel: var(--card);
+            --bg-card: var(--secondary);
+            --border-color: var(--border);
+            /* Renamed to avoid conflict */
+            --text-primary: var(--foreground);
+            --text-secondary: var(--muted-foreground);
+            --accent-color: var(--primary);
+            /* Renamed to avoid conflict */
+            --accent-hover: var(--ring);
+
+            /* Status Colors */
+            --success: #4caf50;
+            --danger: #f44336;
+            --warning: #ff9800;
+            --added: #2e7d32;
+            --removed: #c62828;
+            --modified: #f57f17;
+            --same: #424242;
+        }
+
+        .dark {
+            --background: oklch(0.141 0.005 285.823);
+            --foreground: oklch(0.985 0 0);
+            --card: oklch(0.21 0.006 285.885);
+            --card-foreground: oklch(0.985 0 0);
+            --popover: oklch(0.21 0.006 285.885);
+            --popover-foreground: oklch(0.985 0 0);
+            --primary: oklch(0.606 0.25 292.717);
+            --primary-foreground: oklch(0.969 0.016 293.756);
+            --secondary: oklch(0.274 0.006 286.033);
+            --secondary-foreground: oklch(0.985 0 0);
+            --muted: oklch(0.274 0.006 286.033);
+            --muted-foreground: oklch(0.705 0.015 286.067);
+            --accent: oklch(0.274 0.006 286.033);
+            --accent-foreground: oklch(0.985 0 0);
+            --destructive: oklch(0.704 0.191 22.216);
+            --border: oklch(1 0 0 / 10%);
+            --input: oklch(1 0 0 / 15%);
+            --ring: oklch(0.38 0.189 293.745);
+            --chart-1: oklch(0.811 0.111 293.571);
+            --chart-2: oklch(0.606 0.25 292.717);
+            --chart-3: oklch(0.541 0.281 293.009);
+            --chart-4: oklch(0.491 0.27 292.581);
+            --chart-5: oklch(0.432 0.232 292.759);
+            --sidebar: oklch(0.21 0.006 285.885);
+            --sidebar-foreground: oklch(0.985 0 0);
+            --sidebar-primary: oklch(0.606 0.25 292.717);
+            --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
+            --sidebar-accent: oklch(0.274 0.006 286.033);
+            --sidebar-accent-foreground: oklch(0.985 0 0);
+            --sidebar-border: oklch(1 0 0 / 10%);
+            --sidebar-ring: oklch(0.38 0.189 293.745);
+
+            /* App Mappings (Dark Mode Override) */
+            --bg-app: var(--background);
+            --bg-panel: var(--card);
+            --bg-card: var(--secondary);
+            --border-color: var(--border);
+            --text-primary: var(--foreground);
+            --text-secondary: var(--muted-foreground);
+            --accent-color: var(--primary);
+            --accent-hover: var(--ring);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Geist Sans", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* File Metadata Header */
+        #file-metadata-header {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--ring) 100%);
+            color: white;
+            padding: 12px 20px;
+            display: none;
+            /* Hidden by default, shown when metadata available */
+            flex-shrink: 0;
+            border-bottom: 2px solid var(--ring);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+
+        #file-metadata-header .metadata-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        #file-metadata-header .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        #file-metadata-header .metadata-label {
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        #file-metadata-header .metadata-value {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        #file-metadata-header .metadata-arrow {
+            font-size: 18px;
+            opacity: 0.8;
+        }
+
+        #main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 320px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-panel);
+        }
+
+        .sidebar-header h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .stat-number {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-weight: 600;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Controls */
+        .controls {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        /* Node List / Details */
+        #details-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 40px;
+            line-height: 1.5;
+        }
+
+        .detail-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .node-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .node-type {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        .status-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .prop-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .prop-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .prop-label {
+            color: var(--text-secondary);
+        }
+
+        .port-section {
+            margin-top: 12px;
+        }
+
+        .port-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 0.2px;
+        }
+
+        .port-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .port-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .port-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 12px;
+        }
+
+        .port-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .port-value {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .port-status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            height: fit-content;
+        }
+
+        .prop-value {
+            color: var(--text-primary);
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        /* Canvas Area */
+        #main-view {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #13151a 0%, #0f1115 100%);
+            overflow: hidden;
+        }
+
+        #graph-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        #graph-canvas:active {
+            cursor: grabbing;
+        }
+
+        /* Overlay Controls */
+        .overlay-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            background: var(--bg-panel);
+            padding: 6px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        /* Minimap */
+        #minimap-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 200px;
+            height: 140px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-panel);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 16px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+
+        /* Resizer */
+        #resizer {
+            width: 4px;
+            background-color: var(--border-color);
+            cursor: col-resize;
+            z-index: 20;
+            transition: background-color 0.2s;
+        }
+
+        #resizer:hover,
+        #resizer.active {
+            background-color: var(--accent-color);
+        }
+
+        /* Bottom Controls */
+        .bottom-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 24px;
+            background: var(--bg-panel);
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 240px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .slider-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent-color);
+            height: 4px;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(22, 24, 29, 0.95);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+
+<body class="dark">
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- File Metadata Header -->
+    <div id="file-metadata-header">
+        <div class="metadata-row">
+            <div class="metadata-item">
+                <span class="metadata-label">Comparing:</span>
+                <span class="metadata-value" id="meta-file-old">Loading...</span>
+                <span class="metadata-arrow">→</span>
+                <span class="metadata-value" id="meta-file-new">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-container">
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <h1 style="display: flex; align-items: center; gap: 12px;">
+                    <img src="/images/HopTrace_Logo_White.png" alt="HopTracer" style="height: 40px;">
+                    <span style="font-size: 20px; font-weight: 600;">HopTracer</span>
+                </h1>
+                <div class="stats-row">
+                    <div class="stat-item" title="Added Nodes">
+                        <div class="stat-dot" style="background: var(--added)"></div>
+                        <span style="color: var(--text-secondary); margin-right: 4px;">Added:</span>
+                        <span id="stat-added" class="stat-number" style="color: var(--text-primary);">0</span>
+                    </div>
+                    <div class="stat-item" title="Removed Nodes">
+                        <div class="stat-dot" style="background: var(--removed)"></div>
+                        <span style="color: var(--text-secondary); margin-right: 4px;">Removed:</span>
+                        <span id="stat-removed" class="stat-number" style="color: var(--text-primary);">0</span>
+                    </div>
+                    <div class="stat-item" title="Modified Nodes">
+                        <div class="stat-dot" style="background: var(--modified)"></div>
+                        <span style="color: var(--text-secondary); margin-right: 4px;">Modified:</span>
+                        <span id="stat-modified" class="stat-number" style="color: var(--text-primary);">0</span>
+                    </div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <a href="/" class="filter-btn"
+                        style="text-decoration: none; display: inline-block; text-align: center; width: 100%;">New
+                        Comparison</a>
+                </div>
+            </div>
+
+            <div class="controls">
+                <!-- File Analytics -->
+                <div
+                    style="margin-bottom: 16px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">File Analytics</div>
+
+                    <div style="margin-bottom: 8px;">
+                        <div style="color: var(--accent-color);">New Version (Left)</div>
+                        <div id="meta-new-name"
+                            style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 11px;">
+                            -</div>
+                        <div id="meta-new-date"
+                            style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; opacity: 0.7;">
+                            -</div>
+                    </div>
+
+                    <!-- Time difference indicator -->
+                    <div id="time-diff-container"
+                        style="display: none; margin: 8px 0; padding: 6px 8px; background: rgba(92, 128, 247, 0.1); border-left: 3px solid var(--accent-color); border-radius: 4px;">
+                        <div style="font-size: 10px; opacity: 0.8; margin-bottom: 2px;">Time Difference</div>
+                        <div id="time-diff-value" style="font-weight: 600; color: var(--accent-color);">-</div>
+                    </div>
+
+                    <div>
+                        <div style="color: var(--warning);">Old Version (Right)</div>
+                        <div id="meta-old-name"
+                            style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 11px;">
+                            -</div>
+                        <div id="meta-old-date"
+                            style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; opacity: 0.7;">
+                            -</div>
+                    </div>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Search components...">
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="added">Added</button>
+                    <button class="filter-btn" data-filter="removed">Removed</button>
+                    <button class="filter-btn" data-filter="modified">Modified</button>
+                </div>
+                <div
+                    style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+                    <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" checked />
+                    <span>Show port details (connections & values)</span>
+                </div>
+            </div>
+
+            <div id="details-panel">
+                <div class="empty-state">
+                    Select a node in the graph<br>to view details
+                </div>
+            </div>
+        </div>
+
+        <div id="resizer"></div>
+
+        <div id="main-view">
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--added)"></div> Added
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--removed)"></div> Removed
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--modified)"></div> Modified
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--same)"></div> Unchanged
+                </div>
+            </div>
+
+            <canvas id="graph-canvas"></canvas>
+
+            <div id="minimap-container">
+                <canvas id="minimap-canvas"></canvas>
+            </div>
+
+            <div class="bottom-controls">
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Wire Visibility</span>
+                        <span id="wire-label" class="slider-value">Default</span>
+                    </div>
+                    <input type="range" id="wire-slider" min="0" max="100" value="85">
+                </div>
+                <div style="width: 1px; background: var(--border-color);"></div>
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Version Compare</span>
+                        <span id="version-label" class="slider-value">Mixed</span>
+                    </div>
+                    <input type="range" id="version-slider" min="0" max="100" value="50">
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-secondary); margin-top: 2px;">
+                        <span>Old</span>
+                        <span>New</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overlay-controls">
+                <button class="icon-btn" id="btn-fit" title="Fit to View">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                    </svg>
+                </button>
+                <button class="icon-btn" id="btn-zoom-in" title="Zoom In">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="btn-zoom-out" title="Zoom Out">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+        </div> <!-- End of canvas/graph area -->
+
+    </div> <!-- End of main-container -->
+
+    <script>
+        // Placeholder for injected data
+        const GRAPH_DATA = { json_data };
+
+        // Configuration
+        const CONFIG = {
+            colors: {
+                added: '#2e7d32',
+                removed: '#c62828',
+                modified: '#f57f17',
+                same: '#424242',
+                bg: '#0f1115',
+                nodeBg: '#1c1e24',
+                text: '#eceef5',
+                textMuted: '#949aa5',
+                selection: '#5c80f7'
+            },
+            node: {
+                width: 120,
+                height: 50,
+                radius: 6
+            }
+        };
+
+        // State
+        let state = {
+            nodes: [],
+            edges: [],
+            view: { x: 0, y: 0, scale: 1 },
+            dragging: false,
+            minimapDragging: false,
+            lastPos: { x: 0, y: 0 },
+            selected: null,
+            hovered: null,
+            filter: 'all',
+            search: '',
+            bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
+            wireThreshold: 1500, // Default
+            versionMix: 0.5 // 0 = Old, 1 = New
+        };
+
+        // Elements
+        const canvas = document.getElementById('graph-canvas');
+        const ctx = canvas.getContext('2d');
+        const minimap = document.getElementById('minimap-canvas');
+        const miniCtx = minimap.getContext('2d');
+        const detailsPanel = document.getElementById('details-panel');
+        const tooltip = document.getElementById('tooltip');
+        const sidebar = document.getElementById('sidebar');
+        const resizer = document.getElementById('resizer');
+
+        // Initialization
+        function init() {
+            processData();
+            setupEventListeners();
+            setupResizer();
+            resize();
+            fitView();
+            updateStats();
+            updateMetadata();
+            requestAnimationFrame(loop);
+        }
+
+        function setupResizer() {
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault(); // Prevent text selection
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+
+                // Constrain width
+                let newWidth = e.clientX;
+                if (newWidth < 200) newWidth = 200;
+                if (newWidth > 600) newWidth = 600;
+
+                sidebar.style.width = newWidth + 'px';
+                resize(); // Resize canvas immediately
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('active');
+                    document.body.style.cursor = '';
+                    resize(); // Final resize
+                }
+            });
+        }
+
+        function formatTimeDifference(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            const months = Math.floor(days / 30);
+            const years = Math.floor(days / 365);
+
+            if (years > 0) return `${years} year${years > 1 ? 's' : ''}`;
+            if (months > 0) return `${months} month${months > 1 ? 's' : ''}`;
+            if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
+            if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
+            if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+            return `${seconds} second${seconds !== 1 ? 's' : ''}`;
+        }
+
+        function updateMetadata() {
+            // Check if this is a Git comparison
+            // Handle both camelCase (JSON) and PascalCase (C# fallback)
+            const meta = GRAPH_DATA.meta || {};
+            const commitHash = meta.commitHash || meta.CommitHash;
+            const commitMessage = meta.commitMessage || meta.CommitMessage;
+            const commitAuthor = meta.commitAuthor || meta.CommitAuthor;
+            const commitDate = meta.commitDate || meta.CommitDate;
+            const fileOld = meta.fileOld || meta.FileOld;
+            const fileNew = meta.fileNew || meta.FileNew;
+
+            const isGitComparison = !!commitHash;
+
+            console.log('updateMetadata:', { isGitComparison, meta });
+
+            if (isGitComparison) {
+                // Git comparison mode - show commit details
+                const analyticsTitle = document.querySelector('.controls > div:first-child > div:first-child');
+                if (analyticsTitle) {
+                    analyticsTitle.textContent = 'Git Commit Details';
+                }
+
+                // Update "New Version" to show current state
+                document.getElementById('meta-new-name').textContent = 'Current Version (Working Tree)';
+                const newDateElem = document.getElementById('meta-new-date');
+                newDateElem.textContent = new Date().toLocaleString();
+                newDateElem.title = 'Current state of the file';
+
+                // Update "Old Version" to show commit details
+                const oldNameElem = document.getElementById('meta-old-name');
+                const oldDateElem = document.getElementById('meta-old-date');
+
+                // Change label
+                const oldLabel = oldNameElem.previousElementSibling;
+                if (oldLabel) {
+                    oldLabel.textContent = `Commit ${commitHash.substring(0, 7)}`;
+                }
+
+                // Show commit message as name
+                if (commitMessage) {
+                    oldNameElem.textContent = commitMessage;
+                    oldNameElem.title = commitMessage;
+                } else {
+                    oldNameElem.textContent = `Commit ${commitHash.substring(0, 7)}`;
+                }
+
+                // Show author and date
+                let commitDetails = [];
+                if (commitAuthor) {
+                    commitDetails.push(`by ${commitAuthor}`);
+                }
+                if (commitDate) {
+                    commitDetails.push(commitDate);
+                }
+                oldDateElem.textContent = commitDetails.join(' • ');
+                oldDateElem.title = `Full hash: ${commitHash}`;
+            } else {
+                // Regular file comparison - show Grasshopper metadata
+                if (GRAPH_DATA.newMeta) {
+                    document.getElementById('meta-new-name').textContent = GRAPH_DATA.newMeta.name || 'Unknown';
+                    document.getElementById('meta-new-date').textContent = GRAPH_DATA.newMeta.date ? new Date(GRAPH_DATA.newMeta.date).toLocaleString() : 'Unknown Date';
+                    document.getElementById('meta-new-date').title = GRAPH_DATA.newMeta.description || '';
+                }
+                if (GRAPH_DATA.oldMeta) {
+                    document.getElementById('meta-old-name').textContent = GRAPH_DATA.oldMeta.name || 'Unknown';
+                    document.getElementById('meta-old-date').textContent = GRAPH_DATA.oldMeta.date ? new Date(GRAPH_DATA.oldMeta.date).toLocaleString() : 'Unknown Date';
+                    document.getElementById('meta-old-date').title = GRAPH_DATA.oldMeta.description || '';
+                }
+
+                // Calculate and display time difference
+                if (GRAPH_DATA.newMeta && GRAPH_DATA.oldMeta && GRAPH_DATA.newMeta.date && GRAPH_DATA.oldMeta.date) {
+                    const newDate = new Date(GRAPH_DATA.newMeta.date);
+                    const oldDate = new Date(GRAPH_DATA.oldMeta.date);
+                    const diffMs = Math.abs(newDate - oldDate);
+                    const timeDiff = formatTimeDifference(diffMs);
+
+                    document.getElementById('time-diff-value').textContent = timeDiff;
+                    document.getElementById('time-diff-container').style.display = 'block';
+                } else {
+                    document.getElementById('time-diff-container').style.display = 'none';
+                }
+            }
+
+            // Populate file metadata header
+            if (GRAPH_DATA.meta) {
+                const metaHeader = document.getElementById('file-metadata-header');
+                const metaFileOld = document.getElementById('meta-file-old');
+                const metaFileNew = document.getElementById('meta-file-new');
+
+                if (fileOld && fileNew) {
+                    metaFileOld.textContent = fileOld;
+                    metaFileNew.textContent = fileNew;
+                    metaHeader.style.display = 'block'; // Show the header
+                    console.log('✅ File metadata header displayed', { fileOld, fileNew });
+                } else {
+                    // Fallback to generic display if no specific metadata
+                    // Only show fallback if we are in git mode but missing specific filenames
+                    if (isGitComparison) {
+                        metaFileOld.textContent = 'Old Version';
+                        metaFileNew.textContent = 'New Version';
+                        metaHeader.style.display = 'block';
+                        console.warn('⚠️ Using fallback metadata display');
+                    }
+                }
+            } else {
+                console.warn('❌ GRAPH_DATA.meta is missing or undefined');
+            }
+        }
+
+        function processData() {
+            state.nodes = GRAPH_DATA.nodes.map(n => ({
+                ...n,
+                x: n.x || 0,
+                y: n.y || 0,
+                w: CONFIG.node.width,
+                h: CONFIG.node.height,
+                inputs: n.inputs || [],
+                outputs: n.outputs || [],
+                vx: 0,
+                vy: 0,
+                fx: 0,
+                fy: 0
+            }));
+
+            // Create maps for fast lookup
+            const nodeMap = new Map(state.nodes.map(n => [n.id, n]));
+
+            state.edges = GRAPH_DATA.edges
+                .filter(e => nodeMap.has(e.source) && nodeMap.has(e.target))
+                .map(e => ({
+                    ...e,
+                    sourceNode: nodeMap.get(e.source),
+                    targetNode: nodeMap.get(e.target)
+                }));
+
+            updateBounds();
+        }
+
+        function updateBounds() {
+            if (state.nodes.length > 0) {
+                state.bounds.minX = Math.min(...state.nodes.map(n => n.x));
+                state.bounds.maxX = Math.max(...state.nodes.map(n => n.x + n.w));
+                state.bounds.minY = Math.min(...state.nodes.map(n => n.y));
+                state.bounds.maxY = Math.max(...state.nodes.map(n => n.y + n.h));
+            }
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('resize', resize);
+
+            // Canvas interactions
+            canvas.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+            canvas.addEventListener('wheel', onWheel, { passive: false });
+            canvas.addEventListener('click', onClick);
+
+            // Minimap interactions
+            minimap.addEventListener('mousedown', onMinimapDown);
+            minimap.addEventListener('mousemove', onMinimapMove);
+            minimap.addEventListener('mouseup', () => state.minimapDragging = false);
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return; // Ignore if typing in search
+
+                switch (e.key.toLowerCase()) {
+                    case 'f': fitView(); break;
+                    case 'escape':
+                        state.selected = null;
+                        updateDetailsPanel(null);
+                        draw();
+                        break;
+                    case '=':
+                    case '+': zoom(1.2); break;
+                    case '-': zoom(0.8); break;
+                }
+            });
+
+            // Controls
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                state.search = e.target.value.toLowerCase();
+                draw();
+            });
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state.filter = e.target.dataset.filter;
+                    draw();
+                });
+            });
+
+            const togglePorts = document.getElementById('toggle-ports');
+            if (togglePorts) {
+                togglePorts.addEventListener('change', () => {
+                    const selectedNode = state.nodes.find(n => n.id === state.selected);
+                    updateDetailsPanel(selectedNode || null);
+                });
+            }
+
+            document.getElementById('btn-fit').addEventListener('click', fitView);
+            document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
+            document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
+
+            // Wire Slider
+            const wireSlider = document.getElementById('wire-slider');
+            const wireLabel = document.getElementById('wire-label');
+
+            wireSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+
+                if (val === 0) {
+                    state.wireThreshold = Infinity; // Show all
+                    wireLabel.textContent = "Show All";
+                } else if (val === 100) {
+                    state.wireThreshold = 0; // Hide all (except connected)
+                    wireLabel.textContent = "Hide All";
+                } else {
+                    // Non-linear mapping for smoother control
+                    // val 0-100 -> threshold 20000-100
+                    const factor = (100 - val) / 100;
+                    state.wireThreshold = 20000 * (factor * factor);
+
+                    if (state.wireThreshold < 100) state.wireThreshold = 100;
+                    wireLabel.textContent = `> ${Math.round(state.wireThreshold)}px Hidden`;
+                }
+                draw();
+            });
+
+            // Version Slider
+            const verSlider = document.getElementById('version-slider');
+            const verLabel = document.getElementById('version-label');
+
+            verSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                // Invert: 0 = Old (left), 100 = New (right)
+                state.versionMix = (100 - val) / 100.0;
+
+                if (val === 0) verLabel.textContent = "Old Only";
+                else if (val === 100) verLabel.textContent = "New Only";
+                else if (val === 50) verLabel.textContent = "Mixed";
+                else verLabel.textContent = `${100 - val}% Old`;
+
+                draw();
+            });
+        }
+
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            const miniContainer = document.getElementById('minimap-container');
+            minimap.width = miniContainer.clientWidth;
+            minimap.height = miniContainer.clientHeight;
+
+            draw();
+        }
+
+        function fitView() {
+            updateBounds();
+            if (state.nodes.length === 0) return;
+
+            const padding = 50;
+            const w = state.bounds.maxX - state.bounds.minX;
+            const h = state.bounds.maxY - state.bounds.minY;
+
+            // Prevent division by zero
+            if (w === 0 || h === 0) return;
+
+            const scaleX = (canvas.width - padding * 2) / w;
+            const scaleY = (canvas.height - padding * 2) / h;
+
+            state.view.scale = Math.min(scaleX, scaleY, 1); // Cap scale at 1
+            state.view.x = (canvas.width - w * state.view.scale) / 2 - state.bounds.minX * state.view.scale;
+            state.view.y = (canvas.height - h * state.view.scale) / 2 - state.bounds.minY * state.view.scale;
+
+            draw();
+        }
+
+        function zoom(factor) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            const newScale = state.view.scale * factor;
+            state.view.x = cx - (cx - state.view.x) * (newScale / state.view.scale);
+            state.view.y = cy - (cy - state.view.y) * (newScale / state.view.scale);
+            state.view.scale = newScale;
+
+            draw();
+        }
+
+        // --- Drawing ---
+
+        function loop() {
+            // Animation loop if needed later
+            // requestAnimationFrame(loop);
+        }
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Transform
+            ctx.save();
+            ctx.translate(state.view.x, state.view.y);
+            ctx.scale(state.view.scale, state.view.scale);
+
+            // Pre-calculate rendered positions for all nodes
+            const mix = state.versionMix;
+            const renderNodes = new Map();
+
+            state.nodes.forEach(n => {
+                // Lerp position: 
+                // If mix=1 (New), use n.x (New Pos)
+                // If mix=0 (Old), use n.x - n.dx (Old Pos)
+                // Interpolated = n.x - n.dx * (1 - mix)
+                // We overwrite x/y in this temporary object so downstream functions (like drawMinimap) work automatically
+                const rx = n.x - (n.dx || 0) * (1 - mix);
+                const ry = n.y - (n.dy || 0) * (1 - mix);
+
+                renderNodes.set(n.id, {
+                    ...n,
+                    x: rx,
+                    y: ry,
+                    // Interpolate alpha based on status
+                    alpha: (n.status === 'added' ? 1.0 - mix :
+                        (n.status === 'removed' ? mix : 1.0))
+                });
+            });
+
+            // Determine visibility/dimming
+            const nodesToDraw = [];
+            renderNodes.forEach(n => {
+                const matchesFilter = (state.filter === 'all' || n.status === state.filter) &&
+                    (!state.search || n.name.toLowerCase().includes(state.search) || n.nickname.toLowerCase().includes(state.search));
+
+                nodesToDraw.push({ node: n, dimmed: !matchesFilter, alpha: n.alpha });
+            });
+
+            const visibleNodeSet = new Set(nodesToDraw.filter(n => !n.dimmed && n.alpha > 0.05).map(n => n.node.id));
+
+            // Connection Highlighting Logic
+            const connectedIds = new Set();
+            if (state.selected) {
+                connectedIds.add(state.selected);
+                state.edges.forEach(e => {
+                    if (e.source === state.selected) connectedIds.add(e.target);
+                    if (e.target === state.selected) connectedIds.add(e.source);
+                });
+            }
+
+            // Draw Edges
+            state.edges.forEach(e => {
+                const sourceNode = renderNodes.get(e.source);
+                const targetNode = renderNodes.get(e.target);
+
+                if (!sourceNode || !targetNode) return;
+
+                const sourceDimmed = !visibleNodeSet.has(e.source);
+                const targetDimmed = !visibleNodeSet.has(e.target);
+                let isDimmed = sourceDimmed || targetDimmed;
+
+                const start = { x: sourceNode.x + sourceNode.w, y: sourceNode.y + sourceNode.h / 2 };
+                const end = { x: targetNode.x, y: targetNode.y + targetNode.h / 2 };
+
+                // Long wire logic
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const isLong = dist > state.wireThreshold;
+
+                const isConnected = state.selected && (e.source === state.selected || e.target === state.selected);
+
+                if (isLong && !isConnected) return;
+
+                // Highlight logic
+                if (state.selected) {
+                    if (isConnected) {
+                        isDimmed = false; // Force visible
+                        ctx.lineWidth = 2 / state.view.scale;
+                        ctx.globalAlpha = 1.0;
+                    } else {
+                        isDimmed = true; // Dim unrelated
+                        ctx.lineWidth = 1 / state.view.scale;
+                        ctx.globalAlpha = 0.05; // Very faint
+                    }
+                } else {
+                    ctx.lineWidth = 1 / state.view.scale;
+                    ctx.globalAlpha = isDimmed ? 0.1 : 0.6;
+                }
+
+                // Apply version alpha to edges too
+                let edgeAlpha = 1.0;
+                if (e.status === 'added') edgeAlpha = 1.0 - mix;
+                if (e.status === 'removed') edgeAlpha = mix;
+
+                ctx.globalAlpha *= edgeAlpha;
+                if (ctx.globalAlpha < 0.01) return; // Skip invisible
+
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+
+                // Bezier curve
+                const cp1 = { x: start.x + (end.x - start.x) / 2, y: start.y };
+                const cp2 = { x: end.x - (end.x - start.x) / 2, y: end.y };
+
+                ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y);
+
+                ctx.strokeStyle = CONFIG.colors.same;
+                if (e.status === 'added') ctx.strokeStyle = CONFIG.colors.added;
+                if (e.status === 'removed') ctx.strokeStyle = CONFIG.colors.removed;
+
+                // Override color if selected
+                if (isConnected) ctx.strokeStyle = CONFIG.colors.selection;
+
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Draw Nodes
+            nodesToDraw.forEach(item => {
+                const n = item.node;
+                let isDimmed = item.dimmed;
+
+                if (state.selected) {
+                    if (connectedIds.has(n.id)) {
+                        isDimmed = false;
+                    } else {
+                        isDimmed = true;
+                    }
+                }
+
+                ctx.globalAlpha = (isDimmed ? 0.1 : 1.0) * item.alpha;
+                if (ctx.globalAlpha < 0.01) return; // Skip invisible
+
+                // Node Body
+                ctx.fillStyle = CONFIG.colors.nodeBg;
+                ctx.strokeStyle = CONFIG.colors[n.status] || CONFIG.colors.same;
+
+                if (state.selected === n.id) {
+                    ctx.strokeStyle = CONFIG.colors.selection;
+                    ctx.lineWidth = 2 / state.view.scale;
+                    ctx.shadowColor = CONFIG.colors.selection;
+                    ctx.shadowBlur = 10;
+                } else if (state.selected && connectedIds.has(n.id)) {
+                    ctx.strokeStyle = CONFIG.colors.text; // Highlight connected nodes slightly
+                    ctx.lineWidth = 1.5 / state.view.scale;
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.lineWidth = 1 / state.view.scale;
+                    ctx.shadowBlur = 0;
+                }
+
+                roundRect(ctx, n.x, n.y, n.w, n.h, CONFIG.node.radius);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0; // Reset shadow
+
+                // Header / Status Bar
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.beginPath();
+                ctx.moveTo(n.x + CONFIG.node.radius, n.y);
+                ctx.lineTo(n.x + n.w - CONFIG.node.radius, n.y);
+                ctx.quadraticCurveTo(n.x + n.w, n.y, n.x + n.w, n.y + CONFIG.node.radius);
+                ctx.lineTo(n.x + n.w, n.y + 4); // Small header strip
+                ctx.lineTo(n.x, n.y + 4);
+                ctx.lineTo(n.x, n.y + CONFIG.node.radius);
+                ctx.quadraticCurveTo(n.x, n.y, n.x + CONFIG.node.radius, n.y);
+                ctx.fill();
+
+                // Text
+                if (state.view.scale > 0.4 || state.selected === n.id) {
+                    ctx.fillStyle = CONFIG.colors.text;
+                    ctx.font = '12px "Geist Sans", ui-sans-serif, system-ui, sans-serif';
+                    ctx.fillText(n.nickname || n.name, n.x + 8, n.y + 24);
+
+                    ctx.fillStyle = CONFIG.colors.textMuted;
+                    ctx.font = '10px "Geist Sans", ui-sans-serif, system-ui, sans-serif';
+                    const sub = n.name.length > 15 ? n.name.substring(0, 14) + '...' : n.name;
+                    ctx.fillText(sub, n.x + 8, n.y + 38);
+                }
+
+                ctx.globalAlpha = 1.0;
+            });
+
+            ctx.restore();
+
+            drawMinimap(nodesToDraw);
+        }
+
+        function drawMinimap(nodesWithDim) {
+            miniCtx.clearRect(0, 0, minimap.width, minimap.height);
+
+            const w = state.bounds.maxX - state.bounds.minX;
+            const h = state.bounds.maxY - state.bounds.minY;
+
+            // Handle empty or zero size
+            if (w === 0 || h === 0) return;
+
+            const scale = Math.min(minimap.width / w, minimap.height / h) * 0.9;
+
+            const offsetX = (minimap.width - w * scale) / 2 - state.bounds.minX * scale;
+            const offsetY = (minimap.height - h * scale) / 2 - state.bounds.minY * scale;
+
+            // Draw nodes
+            nodesWithDim.forEach(item => {
+                const n = item.node;
+                miniCtx.globalAlpha = item.dimmed ? 0.2 : 1.0;
+                miniCtx.fillStyle = CONFIG.colors[n.status] || CONFIG.colors.same;
+                miniCtx.fillRect(
+                    n.x * scale + offsetX,
+                    n.y * scale + offsetY,
+                    n.w * scale,
+                    n.h * scale
+                );
+            });
+            miniCtx.globalAlpha = 1.0;
+
+            // Draw Viewport Rect
+            const vx = (-state.view.x / state.view.scale) * scale + offsetX;
+            const vy = (-state.view.y / state.view.scale) * scale + offsetY;
+            const vw = (canvas.width / state.view.scale) * scale;
+            const vh = (canvas.height / state.view.scale) * scale;
+
+            miniCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            miniCtx.lineWidth = 1;
+            miniCtx.strokeRect(vx, vy, vw, vh);
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        // --- Interaction Handlers ---
+
+        function onMouseDown(e) {
+            state.dragging = true;
+            state.lastPos = { x: e.clientX, y: e.clientY };
+        }
+
+        function onMouseMove(e) {
+            if (state.dragging) {
+                const dx = e.clientX - state.lastPos.x;
+                const dy = e.clientY - state.lastPos.y;
+                state.view.x += dx;
+                state.view.y += dy;
+                state.lastPos = { x: e.clientX, y: e.clientY };
+                draw();
+            }
+
+            // Tooltip Logic
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left - state.view.x) / state.view.scale;
+            const my = (e.clientY - rect.top - state.view.y) / state.view.scale;
+
+            let hovered = null;
+            for (let i = state.nodes.length - 1; i >= 0; i--) {
+                const n = state.nodes[i];
+                if (mx >= n.x && mx <= n.x + n.w && my >= n.y && my <= n.y + n.h) {
+                    hovered = n;
+                    break;
+                }
+            }
+
+            if (hovered) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.clientX + 10) + 'px';
+                tooltip.style.top = (e.clientY + 10) + 'px';
+                tooltip.innerHTML = `<strong>${hovered.nickname || hovered.name}</strong><br><span style="color:var(--text-secondary)">${hovered.name}</span>`;
+                canvas.style.cursor = 'pointer';
+            } else {
+                tooltip.style.display = 'none';
+                canvas.style.cursor = state.dragging ? 'grabbing' : 'grab';
+            }
+        }
+
+        function onMouseUp() {
+            state.dragging = false;
+        }
+
+        // --- Minimap Interaction ---
+
+        function onMinimapDown(e) {
+            state.minimapDragging = true;
+            onMinimapMove(e);
+        }
+
+        function onMinimapMove(e) {
+            if (!state.minimapDragging) return;
+
+            const rect = minimap.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            const w = state.bounds.maxX - state.bounds.minX;
+            const h = state.bounds.maxY - state.bounds.minY;
+            if (w === 0 || h === 0) return;
+
+            const scale = Math.min(minimap.width / w, minimap.height / h) * 0.9;
+            const offsetX = (minimap.width - w * scale) / 2 - state.bounds.minX * scale;
+            const offsetY = (minimap.height - h * scale) / 2 - state.bounds.minY * scale;
+
+            // Reverse map from minimap coords to world coords
+            // mx = x * scale + offsetX  =>  x = (mx - offsetX) / scale
+            const worldX = (mx - offsetX) / scale;
+            const worldY = (my - offsetY) / scale;
+
+            // Center view on worldX, worldY
+            // view.x = canvas.width/2 - worldX * view.scale
+            state.view.x = canvas.width / 2 - worldX * state.view.scale;
+            state.view.y = canvas.height / 2 - worldY * state.view.scale;
+
+            draw();
+        }
+
+        function onWheel(e) {
+            e.preventDefault();
+            const delta = -Math.sign(e.deltaY);
+            const factor = Math.pow(1.1, delta);
+
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            const newScale = state.view.scale * factor;
+
+            // Zoom towards mouse pointer
+            state.view.x = mx - (mx - state.view.x) * (newScale / state.view.scale);
+            state.view.y = my - (my - state.view.y) * (newScale / state.view.scale);
+            state.view.scale = newScale;
+
+            draw();
+        }
+
+        function onClick(e) {
+            if (state.dragging) return; // Don't select if we were dragging
+
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left - state.view.x) / state.view.scale;
+            const my = (e.clientY - rect.top - state.view.y) / state.view.scale;
+
+            // Find clicked node (reverse order to hit top ones first)
+            let clicked = null;
+            for (let i = state.nodes.length - 1; i >= 0; i--) {
+                const n = state.nodes[i];
+                if (mx >= n.x && mx <= n.x + n.w && my >= n.y && my <= n.y + n.h) {
+                    clicked = n;
+                    break;
+                }
+            }
+
+            state.selected = clicked ? clicked.id : null;
+            updateDetailsPanel(clicked);
+            draw();
+        }
+
+        function updateDetailsPanel(node) {
+            if (!node) {
+                detailsPanel.innerHTML = '<div class="empty-state">Select a node in the graph<br>to view details</div>';
+                return;
+            }
+
+            const showPorts = document.getElementById('toggle-ports').checked;
+
+            const html = `
+                <div class="detail-card">
+                    <div class="detail-header">
+                        <div>
+                            <div class="node-name">${node.nickname || node.name}</div>
+                            <div class="node-type">${node.name}</div>
+                        </div>
+                        <span class="status-badge" style="background: ${CONFIG.colors[node.status]}; color: white">
+                            ${node.status}
+                        </span>
+                    </div>
+                    
+                    <div class="prop-row">
+                        <span class="prop-label">ID</span>
+                        <span class="prop-value" title="${node.id}">${(node.id || '').substring(0, 8)}...</span>
+                    </div>
+                    <div class="prop-row">
+                        <span class="prop-label">Position</span>
+                        <span class="prop-value">${Math.round(node.x)}, ${Math.round(node.y)}</span>
+                    </div>
+                    ${node.dx !== undefined ? `
+                    <div class="prop-row">
+                        <span class="prop-label">Movement</span>
+                        <span class="prop-value">Δ ${node.dx.toFixed(1)}, ${node.dy.toFixed(1)}</span>
+                    </div>` : ''}
+                </div>
+
+                ${renderProperties(node)}
+                
+                <div class="detail-card">
+                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Connections</div>
+                    <div class="prop-row">
+                        <span class="prop-label">Inputs</span>
+                        <span class="prop-value">${node.inAdded || 0} add / ${node.inRemoved || 0} rem</span>
+                    </div>
+                    <div class="prop-row">
+                        <span class="prop-label">Outputs</span>
+                        <span class="prop-value">${node.outAdded || 0} add / ${node.outRemoved || 0} rem</span>
+                    </div>
+                    ${showPorts ? renderPorts(node.inputs, 'Inputs') : ''}
+                    ${showPorts ? renderPorts(node.outputs, 'Outputs') : ''}
+                </div>
+            `;
+
+            detailsPanel.innerHTML = html;
+        }
+
+        function renderProperties(node) {
+            if (!node.properties || Object.keys(node.properties).length === 0) return '';
+
+            let rows = '';
+            for (const [key, val] of Object.entries(node.properties)) {
+                // Check if this property changed (has old value)
+                const hasOldValue = node.propertiesOld && node.propertiesOld[key];
+                const oldValue = hasOldValue ? node.propertiesOld[key] : null;
+
+                if (hasOldValue) {
+                    // Show before → after comparison
+                    rows += `
+                        <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                            <span class="prop-label">${key}</span>
+                            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${oldValue}</span>
+                                <span style="color: var(--text-secondary);">→</span>
+                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px;">${val}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Show single value (unchanged or new property)
+                    rows += `
+                        <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                            <span class="prop-label">${key}</span>
+                            <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 150px; overflow-y: auto;">${val}</span>
+                        </div>
+                    `;
+                }
+            }
+
+            return `
+                <div class="detail-card">
+                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Component Values</div>
+                    ${rows}
+                </div>
+            `;
+        }
+
+        function renderPorts(ports, title) {
+            if (!ports || ports.length === 0) return '';
+
+            const portItems = ports.map(p => {
+                const statusColor = CONFIG.colors[p.status] || CONFIG.colors.same;
+                const valueLine = p.valueChanged
+                    ? `<div class="port-value">Δ ${(p.valueOld || '')} → ${(p.valueNew || '')}</div>`
+                    : (p.value ? `<div class="port-value">${p.value}</div>` : '');
+
+                return `
+                    <div class="port-item">
+                        <div class="port-meta">
+                            <div class="port-name">${p.nickname || p.name || p.id}</div>
+                            ${valueLine || ''}
+                            <div class="port-value" style="opacity:0.7;">${p.id}</div>
+                        </div>
+                        <span class="port-status" style="background:${statusColor}; color:white;">${p.status}</span>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="port-section">
+                    <h4>${title}</h4>
+                    <div class="port-list">
+                        ${portItems}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateStats() {
+            const counts = { added: 0, removed: 0, modified: 0 };
+            state.nodes.forEach(n => {
+                if (counts[n.status] !== undefined) counts[n.status]++;
+            });
+
+            document.getElementById('stat-added').textContent = counts.added;
+            document.getElementById('stat-removed').textContent = counts.removed;
+            document.getElementById('stat-modified').textContent = counts.modified;
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>

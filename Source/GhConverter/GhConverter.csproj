@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="GH_IO">
+      <HintPath>..\HopTracer.Web\tools\GH_IO.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CopyGrasshopper DLLs" AfterTargets="Build">
+    <ItemGroup>
+      <GrasshopperDlls Include="C:\Program Files\Rhino 8\Plug-ins\Grasshopper\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(GrasshopperDlls)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

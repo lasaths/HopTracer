@@ -1,5 +1,5 @@
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$destDir = Join-Path $scriptDir "..\src_csharp\HopTracer.Web\tools"
+$destDir = Join-Path $scriptDir "..\Source\HopTracer.Web\tools"
 $destPath = Join-Path $destDir "GH_IO.dll"
 
 # Ensure destination directory exists
