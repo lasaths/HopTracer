@@ -28,4 +28,21 @@ TestResults/
 *.userprefs
 
 # Release
-release/
+Release/
+publish/
+tools/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Shortcuts
+*.lnk
