@@ -37,7 +37,7 @@ public partial class MainPage : ContentPage
                     // Use Embedded File Provider for single-file portability
                     // Look for embedded files in the HopTracer.Web assembly where wwwroot is located
                     var webAssembly = typeof(HopTracer.Web.Controllers.CompareController).Assembly;
-                    var embeddedProvider = new ManifestEmbeddedFileProvider(webAssembly, "wwwroot");
+                    var embeddedProvider = new EmbeddedFileProvider(webAssembly, "wwwroot");
 
                     webBuilder.Configure(app =>
                     {
