@@ -44,7 +44,10 @@ public partial class MainPage : ContentPage
                         var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
                         env.WebRootFileProvider = embeddedProvider;
 
-                        app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+                        // Restrict CORS to localhost only for security
+                        app.UseCors(x => x.WithOrigins("http://localhost:5000", "http://127.0.0.1:5000")
+                                          .AllowAnyMethod()
+                                          .AllowAnyHeader());
                         
                         app.UseStaticFiles();
 

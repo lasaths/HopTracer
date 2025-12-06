@@ -1,29 +1,21 @@
-name: Build Application
+name: Build and Release
 
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            runtime: win-x64
-            artifact-name: GH_Diff_Tool-Windows
-            artifact-path: src_csharp/GH_DiffApp/bin/Release/net9.0-windows/win-x64/publish/
-          - os: macos-latest
-            runtime: osx-x64
-            artifact-name: GH_Diff_Tool-macOS-x64
-            artifact-path: src_csharp/GH_DiffApp/bin/Release/net9.0-windows/osx-x64/publish/
-          - os: macos-latest
-            runtime: osx-arm64
-            artifact-name: GH_Diff_Tool-macOS-ARM64
-            artifact-path: src_csharp/GH_DiffApp/bin/Release/net9.0-windows/osx-arm64/publish/
+    name: Build Windows
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -31,20 +23,63 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install MAUI workload
+      run: dotnet workload install maui-windows
+
+    - name: Setup Dependencies
+      run: .\Scripts\setup_dependencies.ps1
+      shell: pwsh
 
     - name: Restore dependencies
-      run: dotnet restore src_csharp/GH_DiffApp/GH_DiffApp.csproj
+      run: dotnet restore Source/HopTracer.sln
+
+    - name: Run Tests
+      run: dotnet test Source/HopTracer.sln --configuration Release --no-restore
 
     - name: Build
-      run: dotnet build src_csharp/GH_DiffApp/GH_DiffApp.csproj --configuration Release --no-restore
+      run: dotnet build Source/HopTracer.sln --configuration Release --no-restore
 
-    - name: Publish
-      run: dotnet publish src_csharp/GH_DiffApp/GH_DiffApp.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=false
+    - name: Publish Single-File Executable
+      run: |
+        dotnet publish Source/HopTracer/HopTracer.csproj `
+          -f net9.0-windows10.0.19041.0 `
+          -c Release `
+          -r win-x64 `
+          -p:WindowsPackageType=None `
+          -p:WindowsAppSDKSelfContained=true `
+          -p:SelfContained=true `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -o ./Release/HopTracer_Portable
+      shell: pwsh
 
-    - name: Upload Artifacts
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.artifact-name }}
-        path: ${{ matrix.artifact-path }}
+        name: HopTracer-Windows-x64
+        path: ./Release/HopTracer_Portable/HopTracer.exe
+        retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Download Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: HopTracer-Windows-x64
+        path: ./artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./artifacts/HopTracer.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

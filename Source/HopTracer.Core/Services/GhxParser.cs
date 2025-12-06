@@ -1,6 +1,8 @@
 using System.Xml.Linq;
+using System.Xml;
 using HopTracer.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace HopTracer.Core.Services;
 
@@ -30,7 +32,15 @@ public class GhxParser : IGhxParser
         XDocument doc;
         try
         {
-            doc = XDocument.Load(path);
+            var settings = new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            };
+
+            using var stream = File.OpenRead(path);
+            using var reader = XmlReader.Create(stream, settings);
+            doc = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
         }
         catch (Exception ex)
         {
@@ -155,9 +165,9 @@ public class GhxParser : IGhxParser
             var xElem = pivot.Element("X");
             var yElem = pivot.Element("Y");
             
-            if (xElem != null && double.TryParse(xElem.Value, out var xVal))
+            if (xElem != null && double.TryParse(xElem.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var xVal))
                 x = xVal;
-            if (yElem != null && double.TryParse(yElem.Value, out var yVal))
+            if (yElem != null && double.TryParse(yElem.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var yVal))
                 y = yVal;
         }
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using HopTracer.Core.Services;
+using HopTracer.Web.Services;
 
 namespace HopTracer.Web.Controllers;
 
@@ -7,12 +8,19 @@ namespace HopTracer.Web.Controllers;
 [Route("api/[controller]")]
 public class FilePickerController : ControllerBase
 {
+    private const long MaxFileSize = 100 * 1024 * 1024;
     private readonly ILogger<FilePickerController> _logger;
-    private static string? _lastUploadedOldFilePath;
+    private readonly IFileValidationService _fileValidator;
+    private readonly IFileSelectionCache _fileSelectionCache;
 
-    public FilePickerController(ILogger<FilePickerController> logger)
+    public FilePickerController(
+        ILogger<FilePickerController> logger,
+        IFileValidationService fileValidator,
+        IFileSelectionCache fileSelectionCache)
     {
         _logger = logger;
+        _fileValidator = fileValidator;
+        _fileSelectionCache = fileSelectionCache;
     }
 
     [HttpPost("capture-file-path")]
@@ -23,21 +31,27 @@ public class FilePickerController : ControllerBase
             return BadRequest(new { error = "No file provided" });
         }
         
-        _lastUploadedOldFilePath = file.FileName;
-        _logger.LogInformation("Captured file path: {FileName}", file.FileName);
+        if (!_fileValidator.TryValidateUpload(file, MaxFileSize, out var error))
+        {
+            return BadRequest(new { error });
+        }
+
+        var safeName = _fileValidator.SanitizeFileName(file.FileName);
+        _fileSelectionCache.Record(safeName);
+        _logger.LogInformation("Captured file path: {FileName}", safeName);
         
-        return Ok(new { path = file.FileName });
+        return Ok(new { path = safeName });
     }
     
     [HttpGet("last-file-path")]
     public IActionResult GetLastFilePath()
     {
-        if (string.IsNullOrEmpty(_lastUploadedOldFilePath))
+        if (!_fileSelectionCache.TryGet(out var lastPath))
         {
             return NotFound(new { error = "No file has been uploaded yet" });
         }
         
-        return Ok(new { path = _lastUploadedOldFilePath });
+        return Ok(new { path = lastPath });
     }
     
     [HttpGet("pick-native-file")]
@@ -51,9 +65,15 @@ public class FilePickerController : ControllerBase
             
             if (!string.IsNullOrEmpty(path))
             {
-                _lastUploadedOldFilePath = path;
-                _logger.LogInformation("Native picker selected: {Path}", path);
-                return Ok(new { path = path });
+                if (!_fileValidator.TryValidateExistingPath(path, out var validationError, out var normalizedPath))
+                {
+                    _logger.LogWarning("Native picker returned invalid path: {Reason}", validationError);
+                    return BadRequest(new { error = validationError });
+                }
+
+                _fileSelectionCache.Record(normalizedPath);
+                _logger.LogInformation("Native picker selected: {Path}", normalizedPath);
+                return Ok(new { path = normalizedPath });
             }
             
             _logger.LogWarning("Native picker returned null/empty path");
