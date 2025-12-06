@@ -3,14 +3,15 @@ using HopTracer.Core.Models;
 using HopTracer.Core.Services;
 using HopTracer.Web.Models;
 using HopTracer.Web.Serialization;
+using HopTracer.Web.Services;
 using System.Text.Json;
-using Microsoft.Extensions.FileProviders;
+using System.Text.RegularExpressions;
 
 namespace HopTracer.Web.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class GitController : ControllerBase
+public partial class GitController : ControllerBase
 {
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<GitController> _logger;
@@ -18,6 +19,11 @@ public class GitController : ControllerBase
     private readonly IGhxParser _parser;
     private readonly IDiffer _differ;
     private readonly IConverterService _converter;
+    private readonly IFileValidationService _fileValidator;
+
+    // Regex to validate git commit hashes (7-40 hex characters)
+    [GeneratedRegex(@"^[a-fA-F0-9]{7,40}$")]
+    private static partial Regex GitHashRegex();
 
     public GitController(
         IWebHostEnvironment env, 
@@ -25,7 +31,8 @@ public class GitController : ControllerBase
         ILoggerFactory loggerFactory,
         IGhxParser parser,
         IDiffer differ,
-        IConverterService converter)
+        IConverterService converter,
+        IFileValidationService fileValidator)
     {
         _env = env;
         _logger = logger;
@@ -33,17 +40,23 @@ public class GitController : ControllerBase
         _parser = parser;
         _differ = differ;
         _converter = converter;
+        _fileValidator = fileValidator;
     }
 
     [HttpPost("check")]
     public IActionResult Check([FromBody] PathRequest request)
     {
-        if (string.IsNullOrEmpty(request.Path) || !System.IO.File.Exists(request.Path))
+        if (string.IsNullOrEmpty(request.Path))
         {
             return Ok(new { is_repo = false });
         }
 
-        var dirPath = Path.GetDirectoryName(request.Path) ?? request.Path;
+        if (!_fileValidator.TryValidateExistingPath(request.Path, out _, out var normalizedPath))
+        {
+            return Ok(new { is_repo = false });
+        }
+
+        var dirPath = Path.GetDirectoryName(normalizedPath) ?? normalizedPath;
         var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
         return Ok(new { is_repo = wrapper.IsGitRepo() });
     }
@@ -51,22 +64,27 @@ public class GitController : ControllerBase
     [HttpPost("commits")]
     public IActionResult GetCommits([FromBody] PathRequest request)
     {
-        if (string.IsNullOrEmpty(request.Path) || !System.IO.File.Exists(request.Path))
+        if (string.IsNullOrEmpty(request.Path))
         {
-            return NotFound(new { error = "File not found" });
+            return NotFound(new { error = "File path is required" });
         }
 
-        var dirPath = Path.GetDirectoryName(request.Path) ?? "";
+        if (!_fileValidator.TryValidateExistingPath(request.Path, out var validationError, out var normalizedPath))
+        {
+            return NotFound(new { error = validationError });
+        }
+
+        var dirPath = Path.GetDirectoryName(normalizedPath) ?? "";
         var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
         
         try
         {
-            var commits = wrapper.GetCommits(request.Path);
+            var commits = wrapper.GetCommits(normalizedPath);
             return Ok(new { commits = commits });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get commits");
+            _logger.LogError(ex, "Failed to get commits for {Path}", normalizedPath);
             return Ok(new { commits = new List<CommitInfo>() });
         }
     }
@@ -79,13 +97,23 @@ public class GitController : ControllerBase
             return BadRequest(new { error = "Missing parameters" });
         }
 
-        var dirPath = Path.GetDirectoryName(request.Path) ?? "";
+        if (!_fileValidator.TryValidateExistingPath(request.Path, out var validationError, out var normalizedPath))
+        {
+            return BadRequest(new { error = validationError });
+        }
+
+        if (!ValidateGitHash(request.HashOld))
+        {
+            return BadRequest(new { error = "Invalid commit hash format" });
+        }
+
+        var dirPath = Path.GetDirectoryName(normalizedPath) ?? "";
         var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
 
         try
         {
             // Get old content
-            var contentOld = wrapper.GetFileContentAtCommit(request.HashOld, request.Path);
+            var contentOld = wrapper.GetFileContentAtCommit(request.HashOld, normalizedPath);
             var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
             Directory.CreateDirectory(uploadsPath);
             
@@ -96,13 +124,13 @@ public class GitController : ControllerBase
             string pathNew;
             if (!string.IsNullOrEmpty(request.HashNew))
             {
-                var contentNew = wrapper.GetFileContentAtCommit(request.HashNew, request.Path);
+                var contentNew = wrapper.GetFileContentAtCommit(request.HashNew, normalizedPath);
                 pathNew = Path.Combine(uploadsPath, $"git_{request.HashNew}.ghx");
                 await System.IO.File.WriteAllBytesAsync(pathNew, contentNew);
             }
             else
             {
-                pathNew = request.Path;
+                pathNew = normalizedPath;
             }
 
             // Parse and diff
@@ -140,39 +168,44 @@ public class GitController : ControllerBase
             return BadRequest("Missing parameters for Git diff");
         }
 
-        // Validate that the file exists
-        if (!System.IO.File.Exists(path))
+        if (!_fileValidator.TryValidateExistingPath(path, out var validationError, out var normalizedPath))
         {
-            _logger.LogError("File does not exist: {Path}", path);
-            return BadRequest($"File not found: {path}");
+            _logger.LogWarning("Invalid file path for view_diff: {Path}", path);
+            return BadRequest(validationError);
         }
 
-        var dirPath = Path.GetDirectoryName(path) ?? "";
+        if (!ValidateGitHash(hash_old))
+        {
+            _logger.LogWarning("Invalid git hash for view_diff: {Hash}", hash_old);
+            return BadRequest("Invalid commit hash format");
+        }
+
+        var dirPath = Path.GetDirectoryName(normalizedPath) ?? "";
         var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
 
         // Check if it's a git repo
         if (!wrapper.IsGitRepo())
         {
-            _logger.LogError("Path is not in a Git repository: {Path}", path);
-            return BadRequest($"Path is not in a Git repository: {path}");
+            _logger.LogError("Path is not in a Git repository: {Path}", normalizedPath);
+            return BadRequest($"Path is not in a Git repository: {normalizedPath}");
         }
 
         try
         {
-            _logger.LogInformation("Fetching file content at commit {Commit} for {Path}", hash_old, path);
+            _logger.LogInformation("Fetching file content at commit {Commit} for {Path}", hash_old, normalizedPath);
             
             // Get commit details
-            var commits = wrapper.GetCommits(path, 100); // Get enough to find our commit
+            var commits = wrapper.GetCommits(normalizedPath, 100); // Get enough to find our commit
             var commitInfo = commits.FirstOrDefault(c => c.Hash == hash_old || c.Hash.StartsWith(hash_old));
             
             // Get old content from git
-            var contentOld = wrapper.GetFileContentAtCommit(hash_old, path);
+            var contentOld = wrapper.GetFileContentAtCommit(hash_old, normalizedPath);
             
             var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
             Directory.CreateDirectory(uploadsPath);
             
             // Determine file extension from original path
-            var originalExtension = Path.GetExtension(path).ToLower();
+            var originalExtension = Path.GetExtension(normalizedPath).ToLower();
             var isBinaryGh = originalExtension == ".gh";
             
             // Save the file with appropriate extension
@@ -199,7 +232,7 @@ public class GitController : ControllerBase
             }
 
             // Use current file for new content
-            var pathNew = path;
+            var pathNew = normalizedPath;
             
             // Convert current file if it's also .gh - copy to temp first!
             if (pathNew.ToLower().EndsWith(".gh"))
@@ -305,6 +338,33 @@ public class GitController : ControllerBase
             _logger.LogError(ex, "Error generating diff from Git: {Message}", ex.Message);
             return StatusCode(500, $"Error generating diff: {ex.Message}");
         }
+    }
+
+    private bool ValidateFilePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        // Check for path traversal
+        if (path.Contains(".."))
+        {
+            _logger.LogWarning("Path traversal attempt detected: {Path}", path);
+            return false;
+        }
+
+        if (!System.IO.File.Exists(path))
+            return false;
+
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        return AllowedExtensions.Contains(extension);
+    }
+
+    private bool ValidateGitHash(string hash)
+    {
+        if (string.IsNullOrWhiteSpace(hash))
+            return false;
+
+        return GitHashRegex().IsMatch(hash);
     }
 }
 
