@@ -160,6 +160,10 @@
             transition: all 0.2s;
             cursor: pointer;
             position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .drop-zone:hover,
@@ -181,12 +185,18 @@
             height: 48px;
             margin-bottom: 16px;
             color: var(--text-secondary);
+            pointer-events: none;
         }
 
         .label {
             font-size: 14px;
             color: var(--text-secondary);
             font-weight: 500;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            pointer-events: none;
         }
 
         .filename {
@@ -195,6 +205,11 @@
             color: var(--accent-color);
             font-weight: 600;
             font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            pointer-events: none;
         }
 
         .btn {
@@ -363,7 +378,7 @@
             <input type="hidden" name="path_new" id="pathNew">
 
             <div class="drop-zone-container">
-                <div class="drop-zone" id="dropOld" onclick="pickFile('old')">
+                <div class="drop-zone" id="dropOld">
                     <!-- File input kept as fallback but hidden/unused for main flow -->
                     <input type="file" name="file_old" id="fileOld" accept=".ghx,.gh" style="display:none;">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,7 +390,7 @@
                     <div class="filename" id="nameOld"></div>
                 </div>
 
-                <div class="drop-zone" id="dropNew" onclick="pickFile('new')">
+                <div class="drop-zone" id="dropNew">
                     <input type="file" name="file_new" id="fileNew" accept=".ghx,.gh" style="display:none;">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -727,6 +742,19 @@
 
         document.getElementById('compareForm').addEventListener('submit', () => {
             document.getElementById('loadingOverlay').style.display = 'flex';
+        });
+
+        // Set up click handlers for drop zones
+        document.getElementById('dropOld').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            pickFile('old');
+        });
+
+        document.getElementById('dropNew').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            pickFile('new');
         });
     </script>
 </body>

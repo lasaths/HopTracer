@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using HopTracer.Core.Services;
 using HopTracer.Maui.Services;
+using HopTracer.Web.Services;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace HopTracer.Maui;
 
@@ -35,9 +37,22 @@ public partial class MainPage : ContentPage
                     webBuilder.UseUrls("http://localhost:5000");
                     
                     // Use Embedded File Provider for single-file portability
-                    // Look for embedded files in the HopTracer.Web assembly where wwwroot is located
+                    // In portable builds, wwwroot files are embedded in the main assembly (HopTracer.Maui)
+                    // Embedded resources use RootNamespace + Link path: "HopTracer.Maui.wwwroot.index.html"
+                    var mainAssembly = Assembly.GetExecutingAssembly();
                     var webAssembly = typeof(HopTracer.Web.Controllers.CompareController).Assembly;
-                    var embeddedProvider = new EmbeddedFileProvider(webAssembly, "wwwroot");
+                    
+                    // Create providers with different base namespaces to handle both scenarios
+                    var mainProviderWithNs = new EmbeddedFileProvider(mainAssembly, "HopTracer.Maui.wwwroot");
+                    var mainProviderStandard = new EmbeddedFileProvider(mainAssembly, "wwwroot");
+                    var webProvider = new EmbeddedFileProvider(webAssembly, "wwwroot");
+                    
+                    // Composite provider checks all possibilities
+                    var embeddedProvider = new CompositeFileProvider(
+                        mainProviderWithNs,
+                        mainProviderStandard,
+                        webProvider
+                    );
 
                     webBuilder.Configure(app =>
                     {
@@ -72,6 +87,8 @@ public partial class MainPage : ContentPage
                         services.AddSingleton<IConverterService, ConverterService>();
                         services.AddSingleton<IGitWrapper, GitWrapper>();
                         services.AddSingleton<INativeIntegration, MauiNativeIntegration>();
+                        services.AddSingleton<IFileValidationService, FileValidationService>();
+                        services.AddSingleton<IFileSelectionCache, FileSelectionCache>();
                     });
                 })
                 .Build();
