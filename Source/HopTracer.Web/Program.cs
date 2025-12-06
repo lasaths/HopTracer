@@ -1,4 +1,5 @@
 using HopTracer.Core.Services;
+using HopTracer.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,11 +10,18 @@ builder.Services.AddSingleton<IDiffer, Differ>();
 builder.Services.AddSingleton<IConverterService, ConverterService>();
 builder.Services.AddSingleton<IGitWrapper, GitWrapper>();
 builder.Services.AddSingleton<INativeIntegration, HopTracer.Web.Services.WindowsNativeIntegration>();
+builder.Services.AddSingleton<IFileValidationService, FileValidationService>();
+builder.Services.AddSingleton<IFileSelectionCache, FileSelectionCache>();
+
+// Health checks for production monitoring
+builder.Services.AddHealthChecks();
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        // In production, this runs as a local-only desktop app
+        policy.WithOrigins("http://localhost:5000", "http://127.0.0.1:5000")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -26,6 +34,7 @@ app.UseCors();
 app.UseStaticFiles();
 app.UseRouting();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 // Serve index.html at root
 app.MapGet("/", () => Results.Redirect("/index.html"));

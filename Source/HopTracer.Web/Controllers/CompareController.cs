@@ -3,7 +3,7 @@ using HopTracer.Core.Models;
 using HopTracer.Core.Services;
 using HopTracer.Web.Models;
 using HopTracer.Web.Serialization;
-using System.Diagnostics;
+using HopTracer.Web.Services;
 using System.Text.Json;
 
 namespace HopTracer.Web.Controllers;
@@ -17,23 +17,26 @@ public class CompareController : ControllerBase
     private readonly IGhxParser _parser;
     private readonly IDiffer _differ;
     private readonly IConverterService _converter;
-    private const long MaxFileSize = 500 * 1024 * 1024; // 500MB
-    
-    // Store the last uploaded file path for Git integration
-    private static string? _lastUploadedOldFilePath;
+    private readonly IFileValidationService _fileValidator;
+    private readonly IFileSelectionCache _fileSelectionCache;
+    private const long MaxFileSize = 100 * 1024 * 1024; // 100MB - reasonable limit for GH files
 
     public CompareController(
         IWebHostEnvironment env, 
         ILogger<CompareController> logger,
         IGhxParser parser,
         IDiffer differ,
-        IConverterService converter)
+        IConverterService converter,
+        IFileValidationService fileValidator,
+        IFileSelectionCache fileSelectionCache)
     {
         _env = env;
         _logger = logger;
         _parser = parser;
         _differ = differ;
         _converter = converter;
+        _fileValidator = fileValidator;
+        _fileSelectionCache = fileSelectionCache;
     }
 
     [HttpPost]
@@ -49,25 +52,35 @@ public class CompareController : ControllerBase
             string originalFileNameNew;
 
             // Handle Old File
-            if (!string.IsNullOrEmpty(path_old) && System.IO.File.Exists(path_old))
+            if (!string.IsNullOrEmpty(path_old))
             {
-                finalPathOld = path_old;
-                originalFileNameOld = Path.GetFileName(path_old);
-                _lastUploadedOldFilePath = path_old; // Store for Git
-                _logger.LogInformation("Using local old file: {Path}", path_old);
+                if (!_fileValidator.TryValidateExistingPath(path_old, out var pathError, out var normalizedPath))
+                {
+                    return await ReturnErrorPage(pathError);
+                }
+                finalPathOld = normalizedPath;
+                originalFileNameOld = Path.GetFileName(normalizedPath);
+                _fileSelectionCache.Record(finalPathOld);
+                _logger.LogInformation("Using local old file: {Path}", normalizedPath);
             }
             else if (file_old != null)
             {
+                if (!_fileValidator.TryValidateUpload(file_old, MaxFileSize, out var fileError))
+                {
+                    return await ReturnErrorPage(fileError);
+                }
+                
                 var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
                 Directory.CreateDirectory(uploadsPath);
-                finalPathOld = Path.Combine(uploadsPath, file_old.FileName);
+                var safeFileName = _fileValidator.SanitizeFileName(file_old.FileName);
+                finalPathOld = Path.Combine(uploadsPath, safeFileName);
                 
-                using (var stream = new FileStream(finalPathOld, FileMode.Create))
+                await using (var stream = new FileStream(finalPathOld, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
                 {
                     await file_old.CopyToAsync(stream);
                 }
                 originalFileNameOld = file_old.FileName;
-                _lastUploadedOldFilePath = file_old.FileName; // Store for Git (though less useful without full path)
+                _fileSelectionCache.Record(finalPathOld);
                 _logger.LogInformation("Uploaded old file: {FileName}", file_old.FileName);
             }
             else
@@ -76,19 +89,30 @@ public class CompareController : ControllerBase
             }
 
             // Handle New File
-            if (!string.IsNullOrEmpty(path_new) && System.IO.File.Exists(path_new))
+            if (!string.IsNullOrEmpty(path_new))
             {
-                finalPathNew = path_new;
-                originalFileNameNew = Path.GetFileName(path_new);
-                _logger.LogInformation("Using local new file: {Path}", path_new);
+                if (!_fileValidator.TryValidateExistingPath(path_new, out var pathError, out var normalizedPath))
+                {
+                    return await ReturnErrorPage(pathError);
+                }
+                finalPathNew = normalizedPath;
+                originalFileNameNew = Path.GetFileName(normalizedPath);
+                _fileSelectionCache.Record(finalPathNew);
+                _logger.LogInformation("Using local new file: {Path}", normalizedPath);
             }
             else if (file_new != null)
             {
+                if (!_fileValidator.TryValidateUpload(file_new, MaxFileSize, out var fileError))
+                {
+                    return await ReturnErrorPage(fileError);
+                }
+                
                 var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
                 Directory.CreateDirectory(uploadsPath);
-                finalPathNew = Path.Combine(uploadsPath, file_new.FileName);
+                var safeFileName = _fileValidator.SanitizeFileName(file_new.FileName);
+                finalPathNew = Path.Combine(uploadsPath, safeFileName);
 
-                using (var stream = new FileStream(finalPathNew, FileMode.Create))
+                await using (var stream = new FileStream(finalPathNew, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
                 {
                     await file_new.CopyToAsync(stream);
                 }
@@ -104,11 +128,13 @@ public class CompareController : ControllerBase
             if (finalPathOld.ToLower().EndsWith(".gh"))
             {
                 finalPathOld = _converter.ConvertGhToGhx(finalPathOld);
+                _fileSelectionCache.Record(finalPathOld);
             }
 
             if (finalPathNew.ToLower().EndsWith(".gh"))
             {
                 finalPathNew = _converter.ConvertGhToGhx(finalPathNew);
+                _fileSelectionCache.Record(finalPathNew);
             }
 
             // Parse and diff
