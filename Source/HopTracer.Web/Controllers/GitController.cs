@@ -356,7 +356,7 @@ public partial class GitController : ControllerBase
             return false;
 
         var extension = Path.GetExtension(path).ToLowerInvariant();
-        return AllowedExtensions.Contains(extension);
+        return _fileValidator.AllowedExtensions.Contains(extension);
     }
 
     private bool ValidateGitHash(string hash)
