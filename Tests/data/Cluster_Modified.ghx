@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<archive>
+  <chunk name="Definition">
+    <chunk name="DefinitionObjects">
+      <items count="1">
+        <item name="ObjectCount" type_name="gh_int32" type_code="3">1</item>
+      </items>
+      <chunks count="1">
+        <chunk name="Object" index="0">
+          <items count="2">
+            <item name="GUID" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000001</item>
+            <item name="Name" type_name="gh_string" type_code="10">Cluster</item>
+          </items>
+          <chunks count="1">
+            <chunk name="Container">
+              <items count="4">
+                <item name="InstanceGuid" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000002</item>
+                <item name="Name" type_name="gh_string" type_code="10">Cluster</item>
+                <item name="NickName" type_name="gh_string" type_code="10">MyCluster</item>
+                <item name="ClusterDocument" type_name="gh_bytearray" type_code="20">
+                  <stream>R29vZGJ5ZSBXb3JsZA==</stream> <!-- "Goodbye World" in Base64 -->
+                </item>
+              </items>
+              <chunks count="1">
+                <chunk name="Attributes">
+                  <items count="2">
+                    <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
+                      <X>100</X>
+                      <Y>100</Y>
+                    </item>
+                  </items>
+                </chunk>
+              </chunks>
+            </chunk>
+          </chunks>
+        </chunk>
+      </chunks>
+    </chunk>
+  </chunk>
+</archive>

@@ -6,14 +6,14 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap">
 
-  <Identity Name="maui-package-name-placeholder" Publisher="CN=User Name" Version="0.0.0.0" />
+  <Identity Name="com.hoptracer.app" Publisher="CN=HopTracer" Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="C334DDAE-E204-40B4-BE32-DBD884E9E463" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>$placeholder$</DisplayName>
-    <PublisherDisplayName>User Name</PublisherDisplayName>
-    <Logo>$placeholder$.png</Logo>
+    <DisplayName>HopTracer</DisplayName>
+    <PublisherDisplayName>HopTracer</PublisherDisplayName>
+    <Logo>Resources\AppIcon\appicon_colored.png</Logo>
   </Properties>
 
   <Dependencies>
@@ -28,13 +28,13 @@
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="$placeholder$"
-        Description="$placeholder$"
-        Square150x150Logo="$placeholder$.png"
-        Square44x44Logo="$placeholder$.png"
+        DisplayName="HopTracer"
+        Description="HopTracer - Grasshopper File Comparison Tool"
+        Square150x150Logo="Resources\AppIcon\appicon_colored.png"
+        Square44x44Logo="Resources\AppIcon\appicon_colored.png"
         BackgroundColor="transparent">
-        <uap:DefaultTile Square71x71Logo="$placeholder$.png" Wide310x150Logo="$placeholder$.png" Square310x310Logo="$placeholder$.png" />
-        <uap:SplashScreen Image="$placeholder$.png" />
+        <uap:DefaultTile Square71x71Logo="Resources\AppIcon\appicon_colored.png" Wide310x150Logo="Resources\AppIcon\appicon_colored.png" Square310x310Logo="Resources\AppIcon\appicon_colored.png" />
+        <uap:SplashScreen Image="Resources\Splash\hoptrace_logo_noshadow.png" />
       </uap:VisualElements>
     </Application>
   </Applications>

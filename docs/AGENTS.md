@@ -1,9 +1,9 @@
 # AGENTS.md
 
 ## Project Overview
-**HopTracer** is a desktop application for diffing Grasshopper (`.gh`, `.ghx`) files. It allows users to visualize changes between two versions of a Grasshopper definition, including added/removed nodes, modified connections, and parameter changes.
+**HopTracer** is a desktop application for diffing Grasshopper (`.gh`, `.ghx`) files. It allows users to visualize changes between two versions of a Grasshopper definition, including added/removed nodes, modified connections, parameter changes, script code diffs, and cluster-level change previews.
 
-The project is a **Hybrid .NET MAUI** application targeting **.NET 9**. It uses an embedded ASP.NET Core server to render a high-performance HTML5 Canvas visualization within a native window.
+The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses an embedded ASP.NET Core server to render a high-performance HTML5 Canvas visualization within a native window.
 
 ## Architecture
 
@@ -35,13 +35,13 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 9**. It uses 
 ## Development Workflow
 
 ### Prerequisites
-- .NET 9 SDK
+- .NET 10 SDK
 - Visual Studio 2022 (17.12+) or VS Code
 - Rhino 7 or 8 installed (for `GH_IO.dll`)
 
 ### Setup
 The project automatically copies `GH_IO.dll` from your local Rhino installation during build.
-If this fails, run: `Scripts/setup_dependencies.ps1`
+If this fails, run: `scripts/setup_dependencies.ps1`
 
 ### Building and Running
 1.  Open `Source/HopTracer.sln`.
@@ -51,7 +51,7 @@ If this fails, run: `Scripts/setup_dependencies.ps1`
 ### Creating a Portable Release
 Use the build script:
 ```powershell
-.\Scripts\build.ps1
+.\scripts\build.ps1
 ```
 
 This will clean, build, test, and create a portable executable in `Release/HopTracer_Portable/`.
@@ -83,6 +83,8 @@ This will clean, build, test, and create a portable executable in `Release/HopTr
 - [x] **Code Cleanup**: Removed hardcoded paths, unused files.
 - [x] **Build Script Fixes**: Resolved RID and encoding issues (November 2025).
 - [x] **Single-File Publishing Issue**: Removed single-file option - MAUI/WindowsAppSDK requires external files.
+- [x] **Script Diff Tab**: Dedicated right-panel tab with GitHub-style code diff.
+- [x] **Cluster Preview Tab**: Dedicated right-panel tab with nested cluster diff canvas.
 - [ ] **Git Integration Polish**: Better error handling for non-git directories.
 
 ### Medium Priority
@@ -90,6 +92,24 @@ This will clean, build, test, and create a portable executable in `Release/HopTr
 - [ ] **Export to PDF**: Generate static reports.
 - [ ] **Blazor Migration**: Consider moving from Embedded Kestrel to Blazor Hybrid for tighter integration and smaller footprint.
 - [ ] **Build Optimization**: Reduce executable size with better trimming configuration.
+
+## Highly Critical Feature Updates (Proposed)
+
+### P0 (Reliability / Correctness)
+- [ ] **Deterministic Node Identity Engine**: Add robust ID matching fallback (signature + topology + port schema) when Grasshopper GUIDs churn across save/export operations. Prevent false add/remove noise.
+- [ ] **Deep Cluster Diff (Recursive)**: Expand current cluster preview into true recursive diffing for nested clusters (cluster-in-cluster), including propagated status rollups to parent canvas.
+- [ ] **Diff Integrity Diagnostics**: Add explicit warnings when edges are dropped due to unresolved endpoints, parser ambiguities, or conversion failures. Surface this in UI and exported report.
+- [ ] **Conversion Dependency Health Check**: Add startup diagnostics for `GH_IO.dll` / Rhino compatibility and hard-fail with guided remediation instead of late runtime exceptions.
+
+### P1 (Scalability / Performance)
+- [ ] **Large-Model Pipeline**: Support 50k+ node definitions with viewport-based culling, incremental rendering, and worker-thread parsing to keep interaction smooth.
+- [ ] **Progressive Diff Loading**: Stream parse/diff stages to UI (parse old, parse new, match, edge resolve) with progress and cancellation support.
+- [ ] **Edge Density Controls v2**: Add semantic wire filters (selected subgraph, changed-only wires, same-status suppression) on top of distance threshold.
+
+### P1 (Review Workflow)
+- [ ] **Forensic Diff Report**: Export a signed JSON+HTML artifact including metadata, summary metrics, top-risk changes (scripts/clusters), and parser diagnostics for code reviews.
+- [ ] **Risk Scoring Layer**: Rank changes by impact (script edits, removed clusters, broken inputs, parameter value mutations) and highlight the top critical nodes first.
+- [ ] **Baseline & Regression Mode**: Allow saving a known-good snapshot and running future diffs against it in CI to catch unintended Grasshopper definition regressions.
 
 ### Technical Notes from Build Script Development
 - **Runtime Identifier**: MAUI Windows projects automatically use `win-x64` RID; explicit specification can cause conflicts

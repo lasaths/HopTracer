@@ -8,11 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HopTracer.Core\HopTracer.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <ProjectReference Include="..\..\Source\HopTracer.Core\HopTracer.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -289,9 +289,16 @@
 
         /* Node List / Details */
         #details-panel {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
+            width: 420px;
+            min-width: 360px;
+            max-width: 520px;
+            background-color: var(--bg-panel);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
+            z-index: 10;
         }
 
         .empty-state {
@@ -512,7 +519,8 @@
         }
 
         /* Resizer */
-        #resizer {
+        #resizer,
+        #details-resizer {
             width: 4px;
             background-color: var(--border-color);
             cursor: col-resize;
@@ -521,7 +529,9 @@
         }
 
         #resizer:hover,
-        #resizer.active {
+        #resizer.active,
+        #details-resizer:hover,
+        #details-resizer.active {
             background-color: var(--accent-color);
         }
 
@@ -584,6 +594,211 @@
             display: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);
+        }
+
+        .details-tabs {
+            display: flex;
+            gap: 6px;
+            margin: 0;
+            padding: 12px;
+            z-index: 5;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .details-tab {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .details-tab:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-color);
+        }
+
+        .details-tab.active {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #fff;
+        }
+
+        .details-pane {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .details-pane.active {
+            display: block;
+        }
+
+        .cluster-empty {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 32px;
+            line-height: 1.5;
+        }
+
+        .cluster-canvas-wrap {
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            background: #0d1117;
+            padding: 8px;
+        }
+
+        .cluster-canvas {
+            width: 100%;
+            height: 320px;
+            display: block;
+            background: #0f1115;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+        }
+
+        .cluster-legend {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            color: #8b949e;
+            font-size: 10px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        .cluster-legend span::before {
+            content: "■";
+            margin-right: 6px;
+        }
+
+        .cluster-legend .added::before {
+            color: #2ea043;
+        }
+
+        .cluster-legend .removed::before {
+            color: #f85149;
+        }
+
+        .cluster-legend .same::before {
+            color: #8b949e;
+        }
+
+        .script-panel-header {
+            margin-bottom: 12px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-card);
+        }
+
+        .script-panel-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .script-panel-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        .script-key-select {
+            width: 100%;
+            margin-top: 10px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 6px 8px;
+            color: #c9d1d9;
+            font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        .script-empty {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 32px;
+            line-height: 1.5;
+        }
+
+        .diff-container {
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: auto;
+            background: #0d1117;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 12px;
+            max-height: 480px;
+        }
+
+        .diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .diff-line {
+            display: flex;
+            width: 100%;
+        }
+
+        .diff-num {
+            width: 50px;
+            flex-shrink: 0;
+            text-align: right;
+            padding: 4px 8px;
+            color: #6e7681;
+            user-select: none;
+            border-right: 1px solid #30363d;
+            background: #0d1117;
+        }
+
+        .diff-code {
+            flex: 1;
+            padding: 4px 8px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #c9d1d9;
+        }
+
+        /* Diff Colors (GitHub Dark Style) */
+        .diff-added {
+            background-color: rgba(46, 160, 67, 0.15);
+        }
+
+        .diff-added .diff-num {
+            background-color: rgba(46, 160, 67, 0.15);
+            /* Match row, clearer */
+            border-color: rgba(46, 160, 67, 0.4);
+        }
+
+        .diff-removed {
+            background-color: rgba(248, 81, 73, 0.15);
+        }
+
+        .diff-removed .diff-num {
+            background-color: rgba(248, 81, 73, 0.15);
+            /* Match row */
+            border-color: rgba(248, 81, 73, 0.4);
+        }
+
+        .diff-header-row {
+            background-color: #161b22;
+            padding: 8px 16px;
+            color: #8b949e;
+            font-size: 12px;
+            border-bottom: 1px solid #30363d;
+            position: sticky;
+            top: 0;
         }
     </style>
 </head>
@@ -683,13 +898,18 @@
                     <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" checked />
                     <span>Show port details (connections & values)</span>
                 </div>
-            </div>
-
-            <div id="details-panel">
-                <div class="empty-state">
-                    Select a node in the graph<br>to view details
+                <div
+                    style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+                    <input type="checkbox" id="toggle-changed-edges" style="accent-color: var(--accent-color);" />
+                    <span>Show changed wires only</span>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button id="btn-export-forensic" class="filter-btn" style="flex:1;">Export Report</button>
+                    <button id="btn-save-baseline" class="filter-btn" style="flex:1;">Save Baseline</button>
+                    <button id="btn-check-baseline" class="filter-btn" style="flex:1;">Check Baseline</button>
                 </div>
             </div>
+
         </div>
 
         <div id="resizer"></div>
@@ -708,6 +928,14 @@
                 <div class="legend-item">
                     <div class="legend-dot" style="background: var(--same)"></div> Unchanged
                 </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #7c4dff; border: 1px solid #b388ff; box-sizing: border-box;"></div> Cluster
+                </div>
+            </div>
+
+            <div id="perf-indicator"
+                style="position:absolute; top:16px; right:16px; z-index:120; font-size:11px; background:rgba(12,14,18,0.8); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px; color:var(--text-secondary); display:none;">
+                Initializing…
             </div>
 
             <canvas id="graph-canvas"></canvas>
@@ -720,9 +948,9 @@
                 <div class="slider-group">
                     <div class="slider-header">
                         <span>Wire Visibility</span>
-                        <span id="wire-label" class="slider-value">Default</span>
+                        <span id="wire-label" class="slider-value">Show All</span>
                     </div>
-                    <input type="range" id="wire-slider" min="0" max="100" value="85">
+                    <input type="range" id="wire-slider" min="0" max="100" value="0">
                 </div>
                 <div style="width: 1px; background: var(--border-color);"></div>
                 <div class="slider-group">
@@ -759,11 +987,28 @@
             </div>
         </div> <!-- End of canvas/graph area -->
 
+        <div id="details-resizer"></div>
+
+        <div id="details-panel">
+            <div class="details-tabs">
+                <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
+                <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script Diff</button>
+                <button id="details-tab-cluster" class="details-tab" data-tab="cluster" style="display:none;">Cluster Preview</button>
+            </div>
+            <div id="details-pane-inspector" class="details-pane active">
+                <div class="empty-state">
+                    Select a node in the graph<br>to view details
+                </div>
+            </div>
+            <div id="details-pane-script" class="details-pane"></div>
+            <div id="details-pane-cluster" class="details-pane"></div>
+        </div>
+
     </div> <!-- End of main-container -->
 
     <script>
         // Placeholder for injected data
-        const GRAPH_DATA = { json_data };
+        const GRAPH_DATA = {json_data};
 
         // Configuration
         const CONFIG = {
@@ -772,6 +1017,7 @@
                 removed: '#c62828',
                 modified: '#f57f17',
                 same: '#424242',
+                edgeSame: '#8f98ae',
                 bg: '#0f1115',
                 nodeBg: '#1c1e24',
                 text: '#eceef5',
@@ -791,6 +1037,7 @@
             edges: [],
             view: { x: 0, y: 0, scale: 1 },
             dragging: false,
+            dragMoved: false,
             minimapDragging: false,
             lastPos: { x: 0, y: 0 },
             selected: null,
@@ -798,8 +1045,14 @@
             filter: 'all',
             search: '',
             bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
-            wireThreshold: 1500, // Default
-            versionMix: 0.5 // 0 = Old, 1 = New
+            wireThreshold: Infinity, // Show all wires by default
+            versionMix: 0.5, // 0 = Old, 1 = New
+            activeDetailsTab: 'inspector',
+            scriptContext: null,
+            clusterContext: null,
+            showChangedEdgesOnly: false,
+            largeModelMode: false,
+            processingData: false
         };
 
         // Elements
@@ -807,51 +1060,144 @@
         const ctx = canvas.getContext('2d');
         const minimap = document.getElementById('minimap-canvas');
         const miniCtx = minimap.getContext('2d');
-        const detailsPanel = document.getElementById('details-panel');
+        const detailsPaneInspector = document.getElementById('details-pane-inspector');
+        const detailsPaneScript = document.getElementById('details-pane-script');
+        const detailsPaneCluster = document.getElementById('details-pane-cluster');
+        const detailsTabInspector = document.getElementById('details-tab-inspector');
+        const detailsTabScript = document.getElementById('details-tab-script');
+        const detailsTabCluster = document.getElementById('details-tab-cluster');
         const tooltip = document.getElementById('tooltip');
         const sidebar = document.getElementById('sidebar');
         const resizer = document.getElementById('resizer');
+        const detailsPanel = document.getElementById('details-panel');
+        const detailsResizer = document.getElementById('details-resizer');
+        const perfIndicator = document.getElementById('perf-indicator');
 
         // Initialization
-        function init() {
-            processData();
-            setupEventListeners();
-            setupResizer();
-            resize();
-            fitView();
-            updateStats();
-            updateMetadata();
-            requestAnimationFrame(loop);
+        async function init() {
+            try {
+                await processData();
+                setupDetailsTabs();
+                setupEventListeners();
+                setupResizer();
+                resize();
+                fitView();
+                updateStats();
+                updateMetadata();
+                requestAnimationFrame(loop);
+            } catch (err) {
+                console.error('HopTracer viewer initialization failed:', err);
+                showPerf(`Viewer initialization failed: ${err && err.message ? err.message : err}`);
+            }
+        }
+
+        const SCRIPT_PROPERTY_KEYS = new Set([
+            'ScriptSource', 'Code', 'Script', 'Expression',
+            'CodeInput', 'CodeOutput', 'PythonScript', 'PythonCode',
+            'CSharpCode', 'VBCode', 'SourceCode'
+        ]);
+        const SCRIPT_KEY_PATTERN = /(script|code|python|ghpython|csharp|c#|vb\.?net|expression)/i;
+        const SCRIPT_COMPONENT_PATTERN = /(python|ghpython|c#|csharp|vb|script)/i;
+
+        function setupDetailsTabs() {
+            detailsTabInspector.addEventListener('click', () => setDetailsTab('inspector'));
+            detailsTabScript.addEventListener('click', () => setDetailsTab('script'));
+            detailsTabCluster.addEventListener('click', () => setDetailsTab('cluster'));
+            setDetailsTab('inspector');
+            renderEmptyScriptPane();
+            renderEmptyClusterPane();
+        }
+
+        function setDetailsTab(tab) {
+            state.activeDetailsTab = tab;
+
+            const isInspector = tab === 'inspector';
+            const isScript = tab === 'script';
+            const isCluster = tab === 'cluster';
+
+            detailsTabInspector.classList.toggle('active', isInspector);
+            detailsPaneInspector.classList.toggle('active', isInspector);
+
+            detailsTabScript.classList.toggle('active', isScript);
+            detailsPaneScript.classList.toggle('active', isScript);
+
+            detailsTabCluster.classList.toggle('active', isCluster);
+            detailsPaneCluster.classList.toggle('active', isCluster);
+        }
+
+        function setScriptTabVisibility(visible, count = 0) {
+            detailsTabScript.style.display = visible ? '' : 'none';
+            detailsTabScript.textContent = count > 1 ? `Script Diff (${count})` : 'Script Diff';
+
+            if (!visible && state.activeDetailsTab === 'script') {
+                setDetailsTab('inspector');
+            }
+        }
+
+        function setClusterTabVisibility(visible) {
+            detailsTabCluster.style.display = visible ? '' : 'none';
+
+            if (!visible && state.activeDetailsTab === 'cluster') {
+                setDetailsTab('inspector');
+            }
+        }
+
+        function renderEmptyScriptPane(message = 'Select a script component to view code diff') {
+            detailsPaneScript.innerHTML = `<div class="script-empty">${message}</div>`;
+        }
+
+        function renderEmptyClusterPane(message = 'Select a cluster component to preview internal diff') {
+            detailsPaneCluster.innerHTML = `<div class="cluster-empty">${message}</div>`;
         }
 
         function setupResizer() {
-            let isResizing = false;
+            let isLeftResizing = false;
+            let isRightResizing = false;
 
             resizer.addEventListener('mousedown', (e) => {
-                isResizing = true;
+                isLeftResizing = true;
                 resizer.classList.add('active');
                 document.body.style.cursor = 'col-resize';
                 e.preventDefault(); // Prevent text selection
             });
 
+            if (detailsResizer) {
+                detailsResizer.addEventListener('mousedown', (e) => {
+                    isRightResizing = true;
+                    detailsResizer.classList.add('active');
+                    document.body.style.cursor = 'col-resize';
+                    e.preventDefault();
+                });
+            }
+
             window.addEventListener('mousemove', (e) => {
-                if (!isResizing) return;
+                if (isLeftResizing) {
+                    let newWidth = e.clientX;
+                    if (newWidth < 220) newWidth = 220;
+                    if (newWidth > 640) newWidth = 640;
 
-                // Constrain width
-                let newWidth = e.clientX;
-                if (newWidth < 200) newWidth = 200;
-                if (newWidth > 600) newWidth = 600;
+                    sidebar.style.width = newWidth + 'px';
+                    resize();
+                }
 
-                sidebar.style.width = newWidth + 'px';
-                resize(); // Resize canvas immediately
+                if (isRightResizing && detailsPanel) {
+                    let newWidth = window.innerWidth - e.clientX;
+                    if (newWidth < 300) newWidth = 300;
+                    if (newWidth > 760) newWidth = 760;
+
+                    detailsPanel.style.width = `${newWidth}px`;
+                    resize();
+                }
             });
 
             window.addEventListener('mouseup', () => {
-                if (isResizing) {
-                    isResizing = false;
+                if (isLeftResizing || isRightResizing) {
+                    isLeftResizing = false;
+                    isRightResizing = false;
                     resizer.classList.remove('active');
+                    if (detailsResizer) detailsResizer.classList.remove('active');
                     document.body.style.cursor = '';
-                    resize(); // Final resize
+                    resize();
                 }
             });
         }
@@ -981,42 +1327,358 @@
             }
         }
 
-        function processData() {
-            state.nodes = GRAPH_DATA.nodes.map(n => ({
+        function renderInsights() {
+            const meta = GRAPH_DATA.meta || {};
+            const stageElem = document.getElementById('insights-stage');
+            const riskElem = document.getElementById('insights-risk');
+            const diagnosticsElem = document.getElementById('insights-diagnostics');
+
+            const timings = meta.stageTimings || meta.StageTimings || [];
+            if (stageElem) {
+                stageElem.textContent = timings.length
+                    ? `Stage timings: ${timings.map(t => `${(t.name || t.Name)} ${t.durationMs ?? t.DurationMs}ms`).join(' · ')}`
+                    : 'Stage timings: n/a';
+            }
+
+            const risk = meta.riskSummary || meta.RiskSummary;
+            if (riskElem) {
+                if (risk) {
+                    riskElem.textContent = `Risk summary: C${risk.criticalCount ?? risk.CriticalCount ?? 0} H${risk.highCount ?? risk.HighCount ?? 0} M${risk.mediumCount ?? risk.MediumCount ?? 0} L${risk.lowCount ?? risk.LowCount ?? 0}`;
+                } else {
+                    riskElem.textContent = 'Risk summary: n/a';
+                }
+            }
+
+            const diagnostics = meta.diagnostics || meta.Diagnostics || [];
+            if (diagnosticsElem) {
+                if (diagnostics.length) {
+                    diagnosticsElem.innerHTML = 'Diagnostics:<br>' + diagnostics
+                        .slice(0, 6)
+                        .map(d => {
+                            const code = d.code || d.Code || 'INFO';
+                            const msg = d.message || d.Message || '';
+                            const sev = (d.severity || d.Severity || 'info').toUpperCase();
+                            return `<div style="margin-top:4px;"><strong>${sev}</strong> [${code}] ${escapeHtml(msg)}</div>`;
+                        })
+                        .join('');
+                } else {
+                    diagnosticsElem.textContent = 'Diagnostics: none';
+                }
+            }
+        }
+
+        async function exportForensicReport() {
+            const meta = GRAPH_DATA.meta || {};
+            const payload = {
+                fileOld: meta.fileOld || meta.FileOld || null,
+                fileNew: meta.fileNew || meta.FileNew || null,
+                nodeCount: state.nodes.length,
+                edgeCount: state.edges.length,
+                diagnostics: meta.diagnostics || meta.Diagnostics || [],
+                topRisks: meta.topRisks || meta.TopRisks || [],
+                riskSummary: meta.riskSummary || meta.RiskSummary || null,
+                baselineName: meta.baselineName || meta.BaselineName || null
+            };
+
+            try {
+                const res = await fetch('/review/report/from_diff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    alert(`Forensic export failed: ${data.error || res.statusText}`);
+                    return;
+                }
+
+                const stemBase = `hoptracer_forensic_${Date.now()}`;
+                downloadTextFile(`${stemBase}.json`, data.report_json || '{}', 'application/json;charset=utf-8');
+                downloadTextFile(`${stemBase}.html`, data.report_html || '<html><body>Empty report</body></html>', 'text/html;charset=utf-8');
+            } catch (err) {
+                alert(`Forensic export failed: ${err}`);
+            }
+        }
+
+        async function saveBaselinePrompt() {
+            const path = prompt('Enter full file path to save as baseline (.gh/.ghx):');
+            if (!path) return;
+            const name = prompt('Baseline name:');
+            if (!name) return;
+
+            const res = await fetch('/review/baseline/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path, name })
+            });
+            const data = await res.json().catch(() => ({}));
+            alert(res.ok ? `Baseline saved: ${name}` : `Baseline save failed: ${data.error || res.statusText}`);
+        }
+
+        async function checkBaselinePrompt() {
+            const path = prompt('Enter full file path to validate against baseline (.gh/.ghx):');
+            if (!path) return;
+            const name = prompt('Baseline name to compare:');
+            if (!name) return;
+
+            const res = await fetch('/review/baseline/compare', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path, name })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(`Baseline compare failed: ${data.error || res.statusText}`);
+                return;
+            }
+            const verdict = data.passed ? 'PASSED' : 'FAILED';
+            alert(`Baseline ${verdict}\nFingerprint Match: ${data.fingerprint_match}\nCritical: ${data.risk_summary?.criticalCount ?? 0}\nHigh: ${data.risk_summary?.highCount ?? 0}`);
+        }
+
+        function downloadTextFile(filename, content, contentType = 'application/json;charset=utf-8') {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        async function processData() {
+            const rawNodes = GRAPH_DATA.nodes || GRAPH_DATA.Nodes || [];
+            const rawEdges = GRAPH_DATA.edges || GRAPH_DATA.Edges || [];
+            console.log('Processing Data:', { nodes: rawNodes.length, edges: rawEdges.length });
+
+            state.processingData = true;
+            state.largeModelMode = rawNodes.length >= 4000 || rawEdges.length >= 12000;
+            showPerf(`Preparing ${rawNodes.length.toLocaleString()} nodes...`);
+
+            if (rawNodes.length < 2500) {
+                state.nodes = rawNodes.map(normalizeNode);
+            } else {
+                const chunkSize = 1200;
+                state.nodes = [];
+                for (let i = 0; i < rawNodes.length; i += chunkSize) {
+                    const chunk = rawNodes.slice(i, i + chunkSize).map(normalizeNode);
+                    state.nodes.push(...chunk);
+                    showPerf(`Preparing nodes ${Math.min(rawNodes.length, i + chunk.length).toLocaleString()} / ${rawNodes.length.toLocaleString()}...`);
+                    await waitFrame();
+                }
+            }
+
+            const nodeMap = buildNodeLookupMap(state.nodes);
+
+            const attachEdgeNodes = e => {
+                const sourceNode = nodeMap.get(e.source) || nodeMap.get(canonicalizeId(e.source));
+                const targetNode = nodeMap.get(e.target) || nodeMap.get(canonicalizeId(e.target));
+                if (!sourceNode || !targetNode) return null;
+
+                return {
+                    ...e,
+                    source: sourceNode.id,
+                    target: targetNode.id,
+                    sourceNode,
+                    targetNode
+                };
+            };
+
+            if (rawEdges.length < 6000) {
+                state.edges = rawEdges
+                    .map(normalizeEdge)
+                    .map(attachEdgeNodes)
+                    .filter(e => !!e);
+            } else {
+                const chunkSize = 2500;
+                state.edges = [];
+                for (let i = 0; i < rawEdges.length; i += chunkSize) {
+                    const mapped = rawEdges.slice(i, i + chunkSize)
+                        .map(normalizeEdge)
+                        .map(attachEdgeNodes)
+                        .filter(e => !!e);
+                    state.edges.push(...mapped);
+                    showPerf(`Preparing edges ${Math.min(rawEdges.length, i + chunkSize).toLocaleString()} / ${rawEdges.length.toLocaleString()}...`);
+                    await waitFrame();
+                }
+            }
+
+            updateBounds();
+            state.processingData = false;
+            let perfMessage = '';
+            if (rawEdges.length > 0 && state.edges.length === 0) {
+                perfMessage = 'No wires could be mapped to visible nodes. Check node/edge ID format.';
+            } else if (state.largeModelMode) {
+                perfMessage = `Large-model mode: viewport culling enabled (${state.nodes.length.toLocaleString()} nodes, ${state.edges.length.toLocaleString()} wires)`;
+            }
+            showPerf(perfMessage);
+        }
+
+        function normalizeNode(n) {
+            const id = n.id || n.Id || `node_${Math.random().toString(36).slice(2, 10)}`;
+            const name = n.name || n.Name || 'Unknown';
+            const nickname = n.nickname || n.Nickname || name;
+            const rawX = n.x !== undefined ? n.x : (n.X !== undefined ? n.X : 0);
+            const rawY = n.y !== undefined ? n.y : (n.Y !== undefined ? n.Y : 0);
+            const rawW = n.w !== undefined ? n.w : (n.W !== undefined ? n.W : CONFIG.node.width);
+            const rawH = n.h !== undefined ? n.h : (n.H !== undefined ? n.H : CONFIG.node.height);
+            const xNum = Number(rawX);
+            const yNum = Number(rawY);
+            const wNum = Number(rawW);
+            const hNum = Number(rawH);
+            const x = Number.isFinite(xNum) ? xNum : 0;
+            const y = Number.isFinite(yNum) ? yNum : 0;
+            const w = Number.isFinite(wNum) && wNum > 0 ? wNum : CONFIG.node.width;
+            const h = Number.isFinite(hNum) && hNum > 0 ? hNum : CONFIG.node.height;
+
+            return {
                 ...n,
-                x: n.x || 0,
-                y: n.y || 0,
-                w: CONFIG.node.width,
-                h: CONFIG.node.height,
-                inputs: n.inputs || [],
-                outputs: n.outputs || [],
+                id,
+                name,
+                nickname,
+                status: n.status || n.Status || 'same',
+                x,
+                y,
+                w,
+                h,
+                inputs: n.inputs || n.Inputs || [],
+                outputs: n.outputs || n.Outputs || [],
                 vx: 0,
                 vy: 0,
                 fx: 0,
                 fy: 0
-            }));
+            };
+        }
 
-            // Create maps for fast lookup
-            const nodeMap = new Map(state.nodes.map(n => [n.id, n]));
+        function normalizeEdge(e) {
+            const source = e.source || e.Source || e.from || e.From || e.start || e.Start || '';
+            const target = e.target || e.Target || e.to || e.To || e.end || e.End || '';
+            return {
+                ...e,
+                source,
+                target,
+                sourcePort: e.sourcePort || e.SourcePort,
+                targetPort: e.targetPort || e.TargetPort,
+                status: e.status || e.Status || 'same'
+            };
+        }
 
-            state.edges = GRAPH_DATA.edges
-                .filter(e => nodeMap.has(e.source) && nodeMap.has(e.target))
-                .map(e => ({
-                    ...e,
-                    sourceNode: nodeMap.get(e.source),
-                    targetNode: nodeMap.get(e.target)
-                }));
+        function canonicalizeId(value) {
+            if (value === null || value === undefined) return '';
+            return String(value).trim().replace(/[{}]/g, '').toLowerCase();
+        }
 
-            updateBounds();
+        function canonicalizePortId(value) {
+            if (value === null || value === undefined) return '';
+            return String(value).trim().replace(/[{}]/g, '').toLowerCase();
+        }
+
+        function buildNodeLookupMap(nodes) {
+            const map = new Map();
+            nodes.forEach(n => {
+                map.set(n.id, n);
+                const canonical = canonicalizeId(n.id);
+                if (canonical && !map.has(canonical)) {
+                    map.set(canonical, n);
+                }
+            });
+            return map;
+        }
+
+        function findPortIndex(ports, portId) {
+            if (!Array.isArray(ports) || ports.length === 0 || !portId) return -1;
+            const targetId = canonicalizePortId(portId);
+            if (!targetId) return -1;
+
+            for (let i = 0; i < ports.length; i++) {
+                const port = ports[i];
+                const currentId = port?.id || port?.Id || '';
+                if (canonicalizePortId(currentId) === targetId) {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        function getNodePortAnchor(node, side, portId) {
+            const isOutput = side === 'output';
+            const x = isOutput ? node.x + node.w : node.x;
+            const ports = isOutput
+                ? (node.outputs || node.Outputs || [])
+                : (node.inputs || node.Inputs || []);
+            const index = findPortIndex(ports, portId);
+
+            if (index < 0 || ports.length === 0) {
+                return { x, y: node.y + node.h / 2 };
+            }
+
+            const step = node.h / (ports.length + 1);
+            return { x, y: node.y + (index + 1) * step };
+        }
+
+        function getPreviewPortAnchor(node, side, portId) {
+            const isOutput = side === 'output';
+            const x = isOutput ? node.rx + node.rw : node.rx;
+            const ports = isOutput
+                ? (node.outputs || node.Outputs || [])
+                : (node.inputs || node.Inputs || []);
+            const index = findPortIndex(ports, portId);
+
+            if (index < 0 || ports.length === 0) {
+                return { x, y: node.ry + node.rh / 2 };
+            }
+
+            const step = node.rh / (ports.length + 1);
+            return { x, y: node.ry + (index + 1) * step };
+        }
+
+        function waitFrame() {
+            return new Promise(resolve => requestAnimationFrame(resolve));
+        }
+
+        function showPerf(message) {
+            if (!perfIndicator) return;
+            if (!message) {
+                perfIndicator.style.display = 'none';
+                return;
+            }
+            perfIndicator.textContent = message;
+            perfIndicator.style.display = 'block';
         }
 
         function updateBounds() {
-            if (state.nodes.length > 0) {
-                state.bounds.minX = Math.min(...state.nodes.map(n => n.x));
-                state.bounds.maxX = Math.max(...state.nodes.map(n => n.x + n.w));
-                state.bounds.minY = Math.min(...state.nodes.map(n => n.y));
-                state.bounds.maxY = Math.max(...state.nodes.map(n => n.y + n.h));
+            if (state.nodes.length === 0) return;
+
+            let minX = Infinity;
+            let maxX = -Infinity;
+            let minY = Infinity;
+            let maxY = -Infinity;
+
+            for (let i = 0; i < state.nodes.length; i++) {
+                const n = state.nodes[i];
+                if (!Number.isFinite(n.x) || !Number.isFinite(n.y)) continue;
+
+                if (n.x < minX) minX = n.x;
+                if (n.x + n.w > maxX) maxX = n.x + n.w;
+                if (n.y < minY) minY = n.y;
+                if (n.y + n.h > maxY) maxY = n.y + n.h;
             }
+
+            if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+                state.bounds.minX = 0;
+                state.bounds.maxX = 0;
+                state.bounds.minY = 0;
+                state.bounds.maxY = 0;
+                return;
+            }
+
+            state.bounds.minX = minX;
+            state.bounds.maxX = maxX;
+            state.bounds.minY = minY;
+            state.bounds.maxY = maxY;
         }
 
         function setupEventListeners() {
@@ -1028,6 +1690,7 @@
             window.addEventListener('mouseup', onMouseUp);
             canvas.addEventListener('wheel', onWheel, { passive: false });
             canvas.addEventListener('click', onClick);
+            canvas.addEventListener('dblclick', onDoubleClick);
 
             // Minimap interactions
             minimap.addEventListener('mousedown', onMinimapDown);
@@ -1057,9 +1720,9 @@
                 draw();
             });
 
-            document.querySelectorAll('.filter-btn').forEach(btn => {
+            document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
                     e.target.classList.add('active');
                     state.filter = e.target.dataset.filter;
                     draw();
@@ -1074,6 +1737,23 @@
                 });
             }
 
+            const toggleChangedEdges = document.getElementById('toggle-changed-edges');
+            if (toggleChangedEdges) {
+                toggleChangedEdges.addEventListener('change', (e) => {
+                    state.showChangedEdgesOnly = !!e.target.checked;
+                    draw();
+                });
+            }
+
+            const exportBtn = document.getElementById('btn-export-forensic');
+            if (exportBtn) exportBtn.addEventListener('click', exportForensicReport);
+
+            const saveBaselineBtn = document.getElementById('btn-save-baseline');
+            if (saveBaselineBtn) saveBaselineBtn.addEventListener('click', saveBaselinePrompt);
+
+            const checkBaselineBtn = document.getElementById('btn-check-baseline');
+            if (checkBaselineBtn) checkBaselineBtn.addEventListener('click', checkBaselinePrompt);
+
             document.getElementById('btn-fit').addEventListener('click', fitView);
             document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
             document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
@@ -1082,8 +1762,12 @@
             const wireSlider = document.getElementById('wire-slider');
             const wireLabel = document.getElementById('wire-label');
 
-            wireSlider.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value);
+            function applyWireThreshold(val) {
+                if (!Number.isFinite(val)) {
+                    state.wireThreshold = Infinity;
+                    wireLabel.textContent = "Show All";
+                    return;
+                }
 
                 if (val === 0) {
                     state.wireThreshold = Infinity; // Show all
@@ -1100,12 +1784,29 @@
                     if (state.wireThreshold < 100) state.wireThreshold = 100;
                     wireLabel.textContent = `> ${Math.round(state.wireThreshold)}px Hidden`;
                 }
+            }
+
+            wireSlider.addEventListener('input', (e) => {
+                applyWireThreshold(parseInt(e.target.value, 10));
                 draw();
             });
+
+            // Force predictable defaults on load (browser/webview can restore prior input states).
+            wireSlider.value = '0';
+            applyWireThreshold(parseInt(wireSlider.value, 10));
 
             // Version Slider
             const verSlider = document.getElementById('version-slider');
             const verLabel = document.getElementById('version-label');
+
+            verSlider.value = '50';
+            state.versionMix = 0.5;
+            verLabel.textContent = "Mixed";
+
+            if (toggleChangedEdges) {
+                toggleChangedEdges.checked = false;
+                state.showChangedEdgesOnly = false;
+            }
 
             verSlider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
@@ -1205,11 +1906,23 @@
                 });
             });
 
+            const viewLeft = (-state.view.x / state.view.scale) - 200;
+            const viewTop = (-state.view.y / state.view.scale) - 200;
+            const viewRight = ((canvas.width - state.view.x) / state.view.scale) + 200;
+            const viewBottom = ((canvas.height - state.view.y) / state.view.scale) + 200;
+
             // Determine visibility/dimming
             const nodesToDraw = [];
             renderNodes.forEach(n => {
+                if (state.largeModelMode && !state.selected) {
+                    const outside = n.x + n.w < viewLeft || n.x > viewRight || n.y + n.h < viewTop || n.y > viewBottom;
+                    if (outside) return;
+                }
+
+                const name = (n.name || '').toLowerCase();
+                const nickname = (n.nickname || '').toLowerCase();
                 const matchesFilter = (state.filter === 'all' || n.status === state.filter) &&
-                    (!state.search || n.name.toLowerCase().includes(state.search) || n.nickname.toLowerCase().includes(state.search));
+                    (!state.search || name.includes(state.search) || nickname.includes(state.search));
 
                 nodesToDraw.push({ node: n, dimmed: !matchesFilter, alpha: n.alpha });
             });
@@ -1228,17 +1941,25 @@
 
             // Draw Edges
             state.edges.forEach(e => {
+                if (state.showChangedEdgesOnly && e.status === 'same') return;
+
                 const sourceNode = renderNodes.get(e.source);
                 const targetNode = renderNodes.get(e.target);
 
                 if (!sourceNode || !targetNode) return;
 
+                if (state.largeModelMode && !state.selected) {
+                    const sourceOff = sourceNode.x + sourceNode.w < viewLeft || sourceNode.x > viewRight || sourceNode.y + sourceNode.h < viewTop || sourceNode.y > viewBottom;
+                    const targetOff = targetNode.x + targetNode.w < viewLeft || targetNode.x > viewRight || targetNode.y + targetNode.h < viewTop || targetNode.y > viewBottom;
+                    if (sourceOff && targetOff) return;
+                }
+
                 const sourceDimmed = !visibleNodeSet.has(e.source);
                 const targetDimmed = !visibleNodeSet.has(e.target);
                 let isDimmed = sourceDimmed || targetDimmed;
 
-                const start = { x: sourceNode.x + sourceNode.w, y: sourceNode.y + sourceNode.h / 2 };
-                const end = { x: targetNode.x, y: targetNode.y + targetNode.h / 2 };
+                const start = getNodePortAnchor(sourceNode, 'output', e.sourcePort);
+                const end = getNodePortAnchor(targetNode, 'input', e.targetPort);
 
                 // Long wire logic
                 const dx = end.x - start.x;
@@ -1254,16 +1975,16 @@
                 if (state.selected) {
                     if (isConnected) {
                         isDimmed = false; // Force visible
-                        ctx.lineWidth = 2 / state.view.scale;
+                        ctx.lineWidth = Math.max(1.2 / state.view.scale, 0.8);
                         ctx.globalAlpha = 1.0;
                     } else {
                         isDimmed = true; // Dim unrelated
-                        ctx.lineWidth = 1 / state.view.scale;
-                        ctx.globalAlpha = 0.05; // Very faint
+                        ctx.lineWidth = Math.max(0.9 / state.view.scale, 0.65);
+                        ctx.globalAlpha = 0.18;
                     }
                 } else {
-                    ctx.lineWidth = 1 / state.view.scale;
-                    ctx.globalAlpha = isDimmed ? 0.1 : 0.6;
+                    ctx.lineWidth = Math.max(1.0 / state.view.scale, 0.7);
+                    ctx.globalAlpha = isDimmed ? 0.28 : 0.9;
                 }
 
                 // Apply version alpha to edges too
@@ -1283,7 +2004,7 @@
 
                 ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y);
 
-                ctx.strokeStyle = CONFIG.colors.same;
+                ctx.strokeStyle = CONFIG.colors.edgeSame;
                 if (e.status === 'added') ctx.strokeStyle = CONFIG.colors.added;
                 if (e.status === 'removed') ctx.strokeStyle = CONFIG.colors.removed;
 
@@ -1357,6 +2078,31 @@
                     ctx.fillText(sub, n.x + 8, n.y + 38);
                 }
 
+                // Cluster indicator: draw a special double-border and icon
+                const props = n.properties || n.Properties || {};
+                const isCluster = isTrueish(props.isCluster) || isTrueish(props.IsCluster) || /cluster/i.test(String(n.name || ''));
+                if (isCluster) {
+                    // Inner dashed border for cluster nodes
+                    ctx.save();
+                    ctx.strokeStyle = '#b388ff';
+                    ctx.lineWidth = 1.5 / state.view.scale;
+                    ctx.setLineDash([4 / state.view.scale, 3 / state.view.scale]);
+                    roundRect(ctx, n.x + 2, n.y + 2, n.w - 4, n.h - 4, CONFIG.node.radius - 1);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.restore();
+
+                    // Cluster icon (small box-in-box) in top-right corner
+                    if (state.view.scale > 0.35) {
+                        const ix = n.x + n.w - 16;
+                        const iy = n.y + 8;
+                        ctx.strokeStyle = '#b388ff';
+                        ctx.lineWidth = 1 / state.view.scale;
+                        ctx.strokeRect(ix, iy, 8, 6);
+                        ctx.strokeRect(ix + 2, iy + 2, 8, 6);
+                    }
+                }
+
                 ctx.globalAlpha = 1.0;
             });
 
@@ -1416,10 +2162,30 @@
             ctx.closePath();
         }
 
+        function getNodeAtCanvasPoint(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = (clientX - rect.left - state.view.x) / state.view.scale;
+            const my = (clientY - rect.top - state.view.y) / state.view.scale;
+            const mix = state.versionMix;
+
+            for (let i = state.nodes.length - 1; i >= 0; i--) {
+                const n = state.nodes[i];
+                const rx = n.x - (n.dx || 0) * (1 - mix);
+                const ry = n.y - (n.dy || 0) * (1 - mix);
+
+                if (mx >= rx && mx <= rx + n.w && my >= ry && my <= ry + n.h) {
+                    return n;
+                }
+            }
+
+            return null;
+        }
+
         // --- Interaction Handlers ---
 
         function onMouseDown(e) {
             state.dragging = true;
+            state.dragMoved = false;
             state.lastPos = { x: e.clientX, y: e.clientY };
         }
 
@@ -1427,6 +2193,9 @@
             if (state.dragging) {
                 const dx = e.clientX - state.lastPos.x;
                 const dy = e.clientY - state.lastPos.y;
+                if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                    state.dragMoved = true;
+                }
                 state.view.x += dx;
                 state.view.y += dy;
                 state.lastPos = { x: e.clientX, y: e.clientY };
@@ -1434,18 +2203,7 @@
             }
 
             // Tooltip Logic
-            const rect = canvas.getBoundingClientRect();
-            const mx = (e.clientX - rect.left - state.view.x) / state.view.scale;
-            const my = (e.clientY - rect.top - state.view.y) / state.view.scale;
-
-            let hovered = null;
-            for (let i = state.nodes.length - 1; i >= 0; i--) {
-                const n = state.nodes[i];
-                if (mx >= n.x && mx <= n.x + n.w && my >= n.y && my <= n.y + n.h) {
-                    hovered = n;
-                    break;
-                }
-            }
+            const hovered = getNodeAtCanvasPoint(e.clientX, e.clientY);
 
             if (hovered) {
                 tooltip.style.display = 'block';
@@ -1518,30 +2276,40 @@
         }
 
         function onClick(e) {
-            if (state.dragging) return; // Don't select if we were dragging
+            if (state.dragMoved) return;
 
-            const rect = canvas.getBoundingClientRect();
-            const mx = (e.clientX - rect.left - state.view.x) / state.view.scale;
-            const my = (e.clientY - rect.top - state.view.y) / state.view.scale;
-
-            // Find clicked node (reverse order to hit top ones first)
-            let clicked = null;
-            for (let i = state.nodes.length - 1; i >= 0; i--) {
-                const n = state.nodes[i];
-                if (mx >= n.x && mx <= n.x + n.w && my >= n.y && my <= n.y + n.h) {
-                    clicked = n;
-                    break;
-                }
-            }
+            const clicked = getNodeAtCanvasPoint(e.clientX, e.clientY);
 
             state.selected = clicked ? clicked.id : null;
             updateDetailsPanel(clicked);
             draw();
         }
 
+        function onDoubleClick(e) {
+            const clicked = getNodeAtCanvasPoint(e.clientX, e.clientY);
+
+            if (!clicked) return;
+
+            state.selected = clicked.id;
+            updateDetailsPanel(clicked);
+
+            const clusterPreview = getClusterPreviewData(clicked);
+            if (clusterPreview.isCluster) {
+                setDetailsTab('cluster');
+            }
+
+            draw();
+        }
+
         function updateDetailsPanel(node) {
             if (!node) {
-                detailsPanel.innerHTML = '<div class="empty-state">Select a node in the graph<br>to view details</div>';
+                detailsPaneInspector.innerHTML = '<div class="empty-state">Select a node in the graph<br>to view details</div>';
+                setScriptTabVisibility(false);
+                setClusterTabVisibility(false);
+                state.scriptContext = null;
+                state.clusterContext = null;
+                renderEmptyScriptPane();
+                renderEmptyClusterPane();
                 return;
             }
 
@@ -1567,6 +2335,11 @@
                         <span class="prop-label">Position</span>
                         <span class="prop-value">${Math.round(node.x)}, ${Math.round(node.y)}</span>
                     </div>
+                    ${node.riskScore !== undefined ? `
+                    <div class="prop-row">
+                        <span class="prop-label">Risk Score</span>
+                        <span class="prop-value">${node.riskScore}${node.riskReasons && node.riskReasons.length ? ` (${(node.riskReasons || []).slice(0, 2).join(', ')})` : ''}</span>
+                    </div>` : ''}
                     ${node.dx !== undefined ? `
                     <div class="prop-row">
                         <span class="prop-label">Movement</span>
@@ -1591,27 +2364,523 @@
                 </div>
             `;
 
-            detailsPanel.innerHTML = html;
+            detailsPaneInspector.innerHTML = html;
+            bindInspectorActions();
+
+            const scriptEntries = getScriptPropertyEntries(node);
+            const scriptComponent = isScriptComponent(node);
+            const showScriptTab = scriptEntries.length > 0 || scriptComponent;
+            setScriptTabVisibility(showScriptTab, scriptEntries.length);
+
+            if (scriptEntries.length === 0) {
+                state.scriptContext = null;
+                renderEmptyScriptPane(scriptComponent
+                    ? 'Script component detected, but no extractable code was found in this file.'
+                    : 'No script source found for this component');
+            } else {
+                const selectedScriptKey = state.scriptContext && state.scriptContext.nodeId === node.id
+                    ? state.scriptContext.key
+                    : scriptEntries[0].key;
+
+                renderScriptPane(node, scriptEntries, selectedScriptKey);
+            }
+
+            const clusterPreview = getClusterPreviewData(node);
+            setClusterTabVisibility(clusterPreview.isCluster);
+
+            if (clusterPreview.isCluster) {
+                renderClusterPane(node, clusterPreview);
+            } else {
+                state.clusterContext = null;
+                renderEmptyClusterPane('No cluster preview available for this component');
+            }
+        }
+
+        function bindInspectorActions() {
+            detailsPaneInspector.querySelectorAll('.script-diff-open').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const encoded = btn.dataset.scriptKey || '';
+                    const key = decodeURIComponent(encoded);
+                    openScriptDiff(key);
+                });
+            });
+
+            detailsPaneInspector.querySelectorAll('.cluster-preview-open').forEach(btn => {
+                btn.addEventListener('click', () => openClusterPreview());
+            });
+        }
+
+        function isLikelyScriptPropertyKey(key) {
+            if (!key) return false;
+            return SCRIPT_PROPERTY_KEYS.has(key) || SCRIPT_KEY_PATTERN.test(String(key));
+        }
+
+        function looksLikeScriptContent(value) {
+            const text = String(value ?? '');
+            if (!text || text.length < 20) return false;
+            if (text.includes('\n')) return true;
+            return /(def\s+\w+\s*\(|using\s+[A-Za-z0-9_.]+;|public\s+class|return\s+.+;|for\s*\(|while\s*\(|if\s*\(|\/\/|#\!|import\s+\w+)/.test(text);
+        }
+
+        function isTrueish(value) {
+            if (value === true) return true;
+            if (typeof value === 'string') {
+                const v = value.trim().toLowerCase();
+                return v === 'true' || v === '1' || v === 'yes';
+            }
+            if (typeof value === 'number') return value !== 0;
+            return false;
+        }
+
+        function isScriptComponent(node) {
+            const name = String(node?.name || '');
+            const nickname = String(node?.nickname || '');
+            if (SCRIPT_COMPONENT_PATTERN.test(name) || SCRIPT_COMPONENT_PATTERN.test(nickname)) {
+                return true;
+            }
+
+            const props = node?.properties || {};
+            const oldProps = node?.propertiesOld || {};
+            const keys = [...Object.keys(props), ...Object.keys(oldProps)];
+            return keys.some(k => isLikelyScriptPropertyKey(k));
+        }
+
+        function getScriptPropertyEntries(node) {
+            const props = node.properties || {};
+            const oldProps = node.propertiesOld || {};
+            const keys = new Set([...Object.keys(props), ...Object.keys(oldProps)]);
+            const entries = [];
+
+            keys.forEach(key => {
+                const hasNew = Object.prototype.hasOwnProperty.call(props, key);
+                const hasOld = Object.prototype.hasOwnProperty.call(oldProps, key);
+                const newValue = hasNew ? String(props[key] ?? '') : '';
+                const oldValue = hasOld ? String(oldProps[key] ?? '') : '';
+
+                const includeKey = isLikelyScriptPropertyKey(key) ||
+                    looksLikeScriptContent(newValue) ||
+                    looksLikeScriptContent(oldValue);
+                if (!includeKey) return;
+
+                entries.push({
+                    key,
+                    oldValue,
+                    newValue,
+                    isChanged: oldValue !== newValue
+                });
+            });
+
+            entries.sort((a, b) => {
+                const ai = SCRIPT_PROPERTY_KEYS.has(a.key) ? 0 : 1;
+                const bi = SCRIPT_PROPERTY_KEYS.has(b.key) ? 0 : 1;
+                if (ai !== bi) return ai - bi;
+                return a.key.localeCompare(b.key);
+            });
+
+            return entries;
+        }
+
+        function renderScriptPane(node, entries, requestedKey) {
+            const activeEntry = entries.find(e => e.key === requestedKey) || entries[0];
+            if (!activeEntry) {
+                renderEmptyScriptPane('No script source found for this component');
+                return;
+            }
+
+            state.scriptContext = {
+                nodeId: node.id,
+                key: activeEntry.key
+            };
+
+            const diffHtml = computeDiff(activeEntry.oldValue, activeEntry.newValue);
+            const diffState = activeEntry.isChanged ? 'Modified in diff' : 'No script changes between versions';
+            const safeNodeName = escapeHtml(node.nickname || node.name || node.id);
+            const safeKey = escapeHtml(activeEntry.key);
+
+            const selectorHtml = entries.length > 1
+                ? `
+                    <select class="script-key-select" onchange="switchScriptProperty(this.value)">
+                        ${entries.map(entry => `
+                            <option value="${escapeHtml(entry.key)}" ${entry.key === activeEntry.key ? 'selected' : ''}>
+                                ${escapeHtml(entry.key)}${entry.isChanged ? ' (modified)' : ''}
+                            </option>
+                        `).join('')}
+                    </select>
+                `
+                : '';
+
+            detailsPaneScript.innerHTML = `
+                <div class="script-panel-header">
+                    <div class="script-panel-title">${safeNodeName} · ${safeKey}</div>
+                    <div class="script-panel-meta">${diffState}</div>
+                    ${selectorHtml}
+                </div>
+                <div class="diff-container">
+                    ${diffHtml}
+                </div>
+            `;
+        }
+
+        function switchScriptProperty(key) {
+            openScriptDiff(key, false);
+        }
+
+        function getClusterPreviewData(node) {
+            const props = node.properties || {};
+            const oldProps = node.propertiesOld || {};
+
+            const isCluster = isTrueish(props.isCluster) ||
+                isTrueish(props.IsCluster) ||
+                isTrueish(oldProps.isCluster) ||
+                isTrueish(oldProps.IsCluster) ||
+                /cluster/i.test(String(node.name || '')) ||
+                /cluster/i.test(String(node.nickname || ''));
+            if (!isCluster) {
+                return { isCluster: false };
+            }
+
+            const status = props.clusterPreviewStatus || props.ClusterPreviewStatus ||
+                oldProps.clusterPreviewStatus || oldProps.ClusterPreviewStatus || 'unavailable';
+            const message = props.clusterPreviewMessage || props.ClusterPreviewMessage ||
+                oldProps.clusterPreviewMessage || oldProps.ClusterPreviewMessage || 'Cluster internals are not available in this diff.';
+
+            const oldGraphRaw = oldProps.clusterPreviewGraph || oldProps.ClusterPreviewGraph || '';
+            const newGraphRaw = props.clusterPreviewGraph || props.ClusterPreviewGraph || '';
+
+            return {
+                isCluster: true,
+                status: String(status),
+                message: String(message),
+                oldGraph: parseClusterPreviewGraph(oldGraphRaw),
+                newGraph: parseClusterPreviewGraph(newGraphRaw),
+                oldHash: oldProps.clusterHash || oldProps.ClusterHash || props.clusterHash || props.ClusterHash || '',
+                newHash: props.clusterHash || props.ClusterHash || oldProps.clusterHash || oldProps.ClusterHash || '',
+                oldSize: oldProps.clusterSize || oldProps.ClusterSize || props.clusterSize || props.ClusterSize || '',
+                newSize: props.clusterSize || props.ClusterSize || oldProps.clusterSize || oldProps.ClusterSize || ''
+            };
+        }
+
+        function parseClusterPreviewGraph(raw) {
+            if (!raw) return null;
+            try {
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                const nodes = Array.isArray(parsed.nodes) ? parsed.nodes : (Array.isArray(parsed.Nodes) ? parsed.Nodes : []);
+                const edges = Array.isArray(parsed.edges) ? parsed.edges : (Array.isArray(parsed.Edges) ? parsed.Edges : []);
+                const truncated = parsed.truncated !== undefined ? !!parsed.truncated : !!parsed.Truncated;
+                return { nodes, edges, truncated };
+            } catch {
+                return null;
+            }
+        }
+
+        function buildClusterDiffGraph(oldGraph, newGraph) {
+            const oldNodes = new Map((oldGraph?.nodes || []).map(n => [n.id || n.Id, n]));
+            const newNodes = new Map((newGraph?.nodes || []).map(n => [n.id || n.Id, n]));
+
+            const nodeIds = new Set([...oldNodes.keys(), ...newNodes.keys()]);
+            const nodes = [];
+
+            nodeIds.forEach(id => {
+                const o = oldNodes.get(id);
+                const n = newNodes.get(id);
+                const base = n || o || {};
+                nodes.push({
+                    id,
+                    name: base.nickname || base.Nickname || base.name || base.Name || id,
+                    x: Number(base.x ?? base.X ?? 0),
+                    y: Number(base.y ?? base.Y ?? 0),
+                    w: Number(base.w ?? base.W ?? 110),
+                    h: Number(base.h ?? base.H ?? 38),
+                    inputs: base.inputs || base.Inputs || [],
+                    outputs: base.outputs || base.Outputs || [],
+                    status: o && n ? 'same' : (n ? 'added' : 'removed')
+                });
+            });
+
+            const edgeKey = edge => {
+                const source = edge.source || edge.Source || '';
+                const sourcePort = edge.sourcePort || edge.SourcePort || '';
+                const target = edge.target || edge.Target || '';
+                const targetPort = edge.targetPort || edge.TargetPort || '';
+                return `${source}:${sourcePort}->${target}:${targetPort}`;
+            };
+
+            const oldEdges = new Map((oldGraph?.edges || []).map(e => [edgeKey(e), e]));
+            const newEdges = new Map((newGraph?.edges || []).map(e => [edgeKey(e), e]));
+            const edgeKeys = new Set([...oldEdges.keys(), ...newEdges.keys()]);
+            const edges = [];
+
+            edgeKeys.forEach(key => {
+                const o = oldEdges.get(key);
+                const n = newEdges.get(key);
+                const base = n || o || {};
+                edges.push({
+                    source: base.source || base.Source,
+                    sourcePort: base.sourcePort || base.SourcePort || '',
+                    target: base.target || base.Target,
+                    targetPort: base.targetPort || base.TargetPort || '',
+                    status: o && n ? 'same' : (n ? 'added' : 'removed')
+                });
+            });
+
+            return { nodes, edges };
+        }
+
+        function renderClusterPane(node, preview) {
+            state.clusterContext = { nodeId: node.id };
+
+            const diffGraph = buildClusterDiffGraph(preview.oldGraph, preview.newGraph);
+            const addedNodes = diffGraph.nodes.filter(n => n.status === 'added').length;
+            const removedNodes = diffGraph.nodes.filter(n => n.status === 'removed').length;
+            const addedEdges = diffGraph.edges.filter(e => e.status === 'added').length;
+            const removedEdges = diffGraph.edges.filter(e => e.status === 'removed').length;
+
+            const oldSizeKb = preview.oldSize ? `${(parseInt(preview.oldSize, 10) / 1024).toFixed(1)} KB` : 'Unknown';
+            const newSizeKb = preview.newSize ? `${(parseInt(preview.newSize, 10) / 1024).toFixed(1)} KB` : 'Unknown';
+
+            detailsPaneCluster.innerHTML = `
+                <div class="script-panel-header">
+                    <div class="script-panel-title">${escapeHtml(node.nickname || node.name)} · Cluster Diff</div>
+                    <div class="script-panel-meta">${escapeHtml(preview.message)}</div>
+                    <div class="script-panel-meta">Hash: ${escapeHtml((preview.oldHash || '').substring(0, 12))} → ${escapeHtml((preview.newHash || '').substring(0, 12))}</div>
+                    <div class="script-panel-meta">Size: ${escapeHtml(oldSizeKb)} → ${escapeHtml(newSizeKb)}</div>
+                    <div class="script-panel-meta">Nodes +${addedNodes} / -${removedNodes} · Edges +${addedEdges} / -${removedEdges}</div>
+                </div>
+                <div class="cluster-canvas-wrap">
+                    <canvas id="cluster-preview-canvas" class="cluster-canvas"></canvas>
+                    <div class="cluster-legend">
+                        <span class="added">Added</span>
+                        <span class="removed">Removed</span>
+                        <span class="same">Unchanged</span>
+                    </div>
+                </div>
+            `;
+
+            drawClusterPreviewCanvas('cluster-preview-canvas', diffGraph);
+        }
+
+        function drawClusterPreviewCanvas(canvasId, graph) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            const cw = Math.max(100, Math.floor(canvas.clientWidth));
+            const ch = Math.max(100, Math.floor(canvas.clientHeight));
+            canvas.width = Math.floor(cw * dpr);
+            canvas.height = Math.floor(ch * dpr);
+
+            const c = canvas.getContext('2d');
+            if (!c) return;
+
+            c.setTransform(dpr, 0, 0, dpr, 0, 0);
+            c.clearRect(0, 0, cw, ch);
+            c.fillStyle = '#0f1115';
+            c.fillRect(0, 0, cw, ch);
+
+            if (!graph.nodes.length) {
+                c.fillStyle = '#8b949e';
+                c.font = '12px ui-monospace, monospace';
+                c.fillText('No internal cluster graph available.', 12, 24);
+                return;
+            }
+            const pad = 24;
+
+            const minX = Math.min(...graph.nodes.map(n => n.x));
+            const maxX = Math.max(...graph.nodes.map(n => n.x + (Number.isFinite(n.w) && n.w > 0 ? n.w : 110)));
+            const minY = Math.min(...graph.nodes.map(n => n.y));
+            const maxY = Math.max(...graph.nodes.map(n => n.y + (Number.isFinite(n.h) && n.h > 0 ? n.h : 38)));
+            const worldW = Math.max(1, maxX - minX);
+            const worldH = Math.max(1, maxY - minY);
+
+            const scale = Math.min((cw - pad * 2) / worldW, (ch - pad * 2) / worldH);
+            const safeScale = Math.max(0.2, Math.min(2.0, scale));
+            const offsetX = (cw - worldW * safeScale) / 2 - minX * safeScale;
+            const offsetY = (ch - worldH * safeScale) / 2 - minY * safeScale;
+
+            const nodeMap = new Map();
+            graph.nodes.forEach(n => {
+                nodeMap.set(n.id, {
+                    ...n,
+                    rx: n.x * safeScale + offsetX,
+                    ry: n.y * safeScale + offsetY,
+                    rw: (Number.isFinite(n.w) && n.w > 0 ? n.w : 110) * safeScale,
+                    rh: (Number.isFinite(n.h) && n.h > 0 ? n.h : 38) * safeScale
+                });
+            });
+
+            const edgeColor = status => {
+                if (status === 'added') return '#2ea043';
+                if (status === 'removed') return '#f85149';
+                return '#8b949e';
+            };
+
+            graph.edges.forEach(e => {
+                const s = nodeMap.get(e.source);
+                const t = nodeMap.get(e.target);
+                if (!s || !t) return;
+
+                const sourceAnchor = getPreviewPortAnchor(s, 'output', e.sourcePort);
+                const targetAnchor = getPreviewPortAnchor(t, 'input', e.targetPort);
+                const sx = sourceAnchor.x;
+                const sy = sourceAnchor.y;
+                const tx = targetAnchor.x;
+                const ty = targetAnchor.y;
+                const dx = (tx - sx) * 0.5;
+
+                c.beginPath();
+                c.moveTo(sx, sy);
+                c.bezierCurveTo(sx + dx, sy, tx - dx, ty, tx, ty);
+                c.lineWidth = 1.2;
+                c.strokeStyle = edgeColor(e.status);
+                c.globalAlpha = 0.75;
+                c.stroke();
+                c.globalAlpha = 1;
+            });
+
+            const nodeStroke = status => {
+                if (status === 'added') return '#2ea043';
+                if (status === 'removed') return '#f85149';
+                return '#6e7681';
+            };
+
+            graph.nodes.forEach(n => {
+                const d = nodeMap.get(n.id);
+                if (!d) return;
+
+                const w = d.rw;
+                const h = d.rh;
+
+                c.fillStyle = '#161b22';
+                c.strokeStyle = nodeStroke(n.status);
+                c.lineWidth = 1;
+                roundRect(c, d.rx, d.ry, w, h, 6);
+                c.fill();
+                c.stroke();
+
+                c.fillStyle = '#c9d1d9';
+                c.font = `${Math.max(9, 10 * safeScale)}px ui-monospace, monospace`;
+                c.textBaseline = 'middle';
+                c.fillText(String(n.name || n.id).slice(0, 18), d.rx + 6, d.ry + h / 2);
+            });
+        }
+
+        function openClusterPreview() {
+            if (detailsTabCluster.style.display !== 'none') {
+                setDetailsTab('cluster');
+            }
         }
 
         function renderProperties(node) {
             if (!node.properties || Object.keys(node.properties).length === 0) return '';
 
-            let rows = '';
-            for (const [key, val] of Object.entries(node.properties)) {
-                // Check if this property changed (has old value)
-                const hasOldValue = node.propertiesOld && node.propertiesOld[key];
-                const oldValue = hasOldValue ? node.propertiesOld[key] : null;
+            // Check if this is a cluster node
+            const isCluster = isTrueish(node.properties.isCluster) || isTrueish(node.properties.IsCluster);
+            const clusterHash = node.properties.clusterHash || node.properties.ClusterHash;
+            const clusterSize = node.properties.clusterSize || node.properties.ClusterSize;
+            const oldClusterHash = node.propertiesOld && (node.propertiesOld.clusterHash || node.propertiesOld.ClusterHash);
+            const oldClusterSize = node.propertiesOld && (node.propertiesOld.clusterSize || node.propertiesOld.ClusterSize);
 
-                if (hasOldValue) {
-                    // Show before → after comparison
+            let clusterSection = '';
+            if (isCluster) {
+                const hashChanged = oldClusterHash && oldClusterHash !== clusterHash;
+                const sizeFormatted = clusterSize ? `${(parseInt(clusterSize) / 1024).toFixed(1)} KB` : 'Unknown';
+                const oldSizeFormatted = oldClusterSize ? `${(parseInt(oldClusterSize) / 1024).toFixed(1)} KB` : null;
+
+                clusterSection = `
+                    <div class="detail-card" style="border-left: 3px solid #7c4dff;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <span style="font-size: 16px;">📦</span>
+                            <div class="node-name" style="font-size: 13px; margin-bottom: 0; color: #b388ff;">Cluster Component</div>
+                        </div>
+                        <div class="prop-row">
+                            <span class="prop-label">Type</span>
+                            <span class="prop-value" style="color: #b388ff;">Embedded Sub-Definition</span>
+                        </div>
+                        <div class="prop-row">
+                            <span class="prop-label">Size</span>
+                            <span class="prop-value">${sizeFormatted}</span>
+                        </div>
+                        ${hashChanged ? `
+                        <div style="margin-top: 8px; padding: 8px; background: rgba(245, 127, 23, 0.15); border: 1px solid rgba(245, 127, 23, 0.3); border-radius: 6px;">
+                            <div style="font-size: 11px; font-weight: 600; color: var(--modified); margin-bottom: 4px;">⚠ Cluster Internals Modified</div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">
+                                The embedded sub-definition has changed.
+                                ${oldSizeFormatted ? `<br>Size: ${oldSizeFormatted} → ${sizeFormatted}` : ''}
+                            </div>
+                            <div class="prop-row" style="margin-top: 6px;">
+                                <span class="prop-label">Old Hash</span>
+                                <span class="prop-value" style="font-size: 10px;">${(oldClusterHash || '').substring(0, 12)}...</span>
+                            </div>
+                            <div class="prop-row">
+                                <span class="prop-label">New Hash</span>
+                                <span class="prop-value" style="font-size: 10px;">${(clusterHash || '').substring(0, 12)}...</span>
+                            </div>
+                        </div>
+                        ` : `
+                        <div style="margin-top: 8px; padding: 6px 8px; background: rgba(76, 175, 80, 0.1); border-radius: 4px; font-size: 11px; color: var(--success);">
+                            ✓ Cluster internals unchanged
+                        </div>
+                        `}
+                        <button class="cluster-preview-open"
+                            style="width: 100%; margin-top: 10px; background: var(--bg-card); border: 1px solid var(--border-color); color: #b388ff; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                            Open Cluster Preview
+                        </button>
+                    </div>
+                `;
+            }
+
+            let rows = '';
+            // Filter out cluster-specific properties from the generic display
+            const clusterKeys = [
+                'isCluster', 'IsCluster',
+                'clusterHash', 'ClusterHash',
+                'clusterSize', 'ClusterSize',
+                'clusterPreviewStatus', 'ClusterPreviewStatus',
+                'clusterPreviewMessage', 'ClusterPreviewMessage',
+                'clusterPreviewGraph', 'ClusterPreviewGraph'
+            ];
+
+            for (const [key, val] of Object.entries(node.properties)) {
+                // Skip cluster-specific keys (rendered in the dedicated section above)
+                if (clusterKeys.includes(key)) continue;
+
+                // Check if this property changed (has old value)
+                const hasOldValue = node.propertiesOld && Object.prototype.hasOwnProperty.call(node.propertiesOld, key);
+                const oldValue = hasOldValue ? String(node.propertiesOld[key] ?? '') : '';
+                const newValue = String(val ?? '');
+
+                // Check if it's a script/code property
+                const isScript = isLikelyScriptPropertyKey(key);
+
+                if (isScript) {
+                    const scriptChanged = hasOldValue && oldValue !== newValue;
+                    rows += `
+                        <div class="prop-row" style="flex-direction: column; gap: 8px; align-items: flex-start; padding-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                                <span class="prop-label">${escapeHtml(key)}</span>
+                                <span style="font-size: 10px; color: ${scriptChanged ? 'var(--modified)' : 'var(--text-secondary)'}; font-weight: 600;">
+                                    ${scriptChanged ? 'MODIFIED' : 'UNCHANGED'}
+                                </span>
+                            </div>
+                            <button class="script-diff-open" data-script-key="${encodeURIComponent(key)}"
+                                style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--accent-color); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Open in Script Diff Tab
+                            </button>
+                        </div>
+                    `;
+                } else if (hasOldValue) {
+                    // Regular property changed
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
                             <span class="prop-label">${key}</span>
                             <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${oldValue}</span>
+                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${escapeHtml(oldValue)}</span>
                                 <span style="color: var(--text-secondary);">→</span>
-                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px;">${val}</span>
+                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px;">${escapeHtml(newValue)}</span>
                             </div>
                         </div>
                     `;
@@ -1620,17 +2889,20 @@
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
                             <span class="prop-label">${key}</span>
-                            <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 150px; overflow-y: auto;">${val}</span>
+                            <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 150px; overflow-y: auto;">${escapeHtml(newValue)}</span>
                         </div>
                     `;
                 }
             }
 
             return `
+                ${clusterSection}
+                ${rows ? `
                 <div class="detail-card">
                     <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Component Values</div>
                     ${rows}
                 </div>
+                ` : ''}
             `;
         }
 
@@ -1674,6 +2946,126 @@
             document.getElementById('stat-added').textContent = counts.added;
             document.getElementById('stat-removed').textContent = counts.removed;
             document.getElementById('stat-modified').textContent = counts.modified;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Script Diff Logic
+        function openScriptDiff(key, switchTab = true) {
+            const selectedNode = state.nodes.find(n => n.id === state.selected);
+            if (!selectedNode) return;
+
+            const scriptEntries = getScriptPropertyEntries(selectedNode);
+            const scriptComponent = isScriptComponent(selectedNode);
+            if (scriptEntries.length === 0) {
+                setScriptTabVisibility(scriptComponent, 0);
+                renderEmptyScriptPane(scriptComponent
+                    ? 'Script component detected, but no extractable code was found in this file.'
+                    : 'No script source found for this component');
+                return;
+            }
+
+            setScriptTabVisibility(true, scriptEntries.length);
+            renderScriptPane(selectedNode, scriptEntries, key);
+
+            if (switchTab) {
+                setDetailsTab('script');
+            }
+        }
+
+        function openScriptView(key) {
+            openScriptDiff(key, true);
+        }
+
+        // Simple line-based diff (Myers algorithm simplified or just line comparison)
+        function computeDiff(oldText, newText, isViewOnly = false) {
+            const oldLines = String(oldText ?? '').split(/\r?\n/);
+            const newLines = String(newText ?? '').split(/\r?\n/);
+
+            if (isViewOnly) {
+                return renderUnifiedDiff(newLines.map(l => ({ type: 'same', content: l })), 1);
+            }
+
+            // Simple LCS-based diff implementation
+            const matrix = Array(oldLines.length + 1).fill(null).map(() => Array(newLines.length + 1).fill(0));
+
+            for (let i = 1; i <= oldLines.length; i++) {
+                for (let j = 1; j <= newLines.length; j++) {
+                    if (oldLines[i - 1] === newLines[j - 1]) {
+                        matrix[i][j] = matrix[i - 1][j - 1] + 1;
+                    } else {
+                        matrix[i][j] = Math.max(matrix[i - 1][j], matrix[i][j - 1]);
+                    }
+                }
+            }
+
+            // Backtrack to find diff
+            let i = oldLines.length;
+            let j = newLines.length;
+            const changes = [];
+
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+                    changes.unshift({ type: 'same', content: oldLines[i - 1] });
+                    i--;
+                    j--;
+                } else if (j > 0 && (i === 0 || matrix[i][j - 1] >= matrix[i - 1][j])) {
+                    changes.unshift({ type: 'added', content: newLines[j - 1] });
+                    j--;
+                } else {
+                    changes.unshift({ type: 'removed', content: oldLines[i - 1] });
+                    i--;
+                }
+            }
+
+            return renderUnifiedDiff(changes);
+        }
+
+        function renderUnifiedDiff(changes, startLine = 1) {
+            let html = '<div class="diff-table">';
+            let oldLineNum = startLine;
+            let newLineNum = startLine;
+
+            changes.forEach(change => {
+                let oldNumStr = '';
+                let newNumStr = '';
+                let className = '';
+                let symbol = ' ';
+
+                if (change.type === 'same') {
+                    oldNumStr = oldLineNum++;
+                    newNumStr = newLineNum++;
+                    className = '';
+                    symbol = ' ';
+                } else if (change.type === 'added') {
+                    newNumStr = newLineNum++;
+                    className = 'diff-added';
+                    symbol = '+';
+                } else if (change.type === 'removed') {
+                    oldNumStr = oldLineNum++;
+                    className = 'diff-removed';
+                    symbol = '-';
+                }
+
+                html += `
+                    <div class="diff-line ${className}">
+                        <div class="diff-num">${oldNumStr}</div>
+                        <div class="diff-num">${newNumStr}</div>
+                        <div class="diff-code">${escapeHtml(symbol + ' ' + change.content)}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            return html;
         }
 
         // Start

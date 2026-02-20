@@ -340,6 +340,25 @@
             gitStatusText.textContent = message || '';
         }
 
+        function setGitLoadingState(message) {
+            const list = document.getElementById('commitList');
+            const btn = document.getElementById('loadCommitBtn');
+            setStatus(message, 'info');
+            list.style.pointerEvents = 'none';
+            list.style.opacity = '0.6';
+            btn.innerText = 'Downloading...';
+            btn.disabled = true;
+        }
+
+        function clearGitLoadingState() {
+            const list = document.getElementById('commitList');
+            const btn = document.getElementById('loadCommitBtn');
+            list.style.pointerEvents = '';
+            list.style.opacity = '';
+            btn.innerText = 'Load Selected';
+            btn.disabled = false;
+        }
+
         async function openGitModal() {
             document.getElementById('gitModal').style.display = 'flex';
             const list = document.getElementById('commitList');
@@ -441,7 +460,10 @@
             list.innerHTML = '';
             const loadBtn = document.getElementById('loadCommitBtn');
             loadBtn.disabled = true;
+            loadBtn.innerText = 'Load Selected';
             selectedCommit = null;
+            list.style.pointerEvents = '';
+            list.style.opacity = '';
 
             if (commits.length === 0) {
                 list.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-dim);"><div style="font-size:32px; margin-bottom:12px;">📭</div><strong>No Commits Found</strong><br><br>This file has no Git history.</div>';
@@ -480,13 +502,11 @@
                 item.ondblclick = () => {
                     selectedCommit = c.hash;
                     if (selectedCommit && currentGitPath) {
-                        loadBtn.innerText = 'Loading...';
-                        loadBtn.disabled = true;
+                        setGitLoadingState('Downloading file from commit…');
                         postData('/git/view_diff', {
                             path: currentGitPath,
                             hash_old: selectedCommit
                         });
-                        closeGitModal();
                     }
                 };
 
@@ -496,10 +516,7 @@
 
         document.getElementById('loadCommitBtn').onclick = async () => {
             if (!selectedCommit || !currentGitPath) return;
-
-            const btn = document.getElementById('loadCommitBtn');
-            btn.innerText = 'Loading...';
-            btn.disabled = true;
+            setGitLoadingState('Downloading file from commit…');
 
             try {
                 postData('/git/view_diff', {
@@ -507,11 +524,8 @@
                     hash_old: selectedCommit
                 });
             } catch (e) {
-                alert("Error loading diff");
-            } finally {
-                btn.innerText = 'Load Selected';
-                btn.disabled = false;
-                closeGitModal();
+                setStatus('Error loading diff', 'error');
+                clearGitLoadingState();
             }
         };
 

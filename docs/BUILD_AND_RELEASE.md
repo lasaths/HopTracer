@@ -7,7 +7,7 @@ This document provides instructions for building and releasing HopTracer.
 ### Quick Build
 
 ```powershell
-.\Scripts\build.ps1
+.\scripts\build.ps1
 ```
 
 **Options:**
@@ -18,11 +18,11 @@ This document provides instructions for building and releasing HopTracer.
 ### What the Build Script Does
 
 1. Cleans previous builds (bin/obj folders, Release directory)
-2. Removes unused files and internal docs
-3. Restores NuGet dependencies for all projects
-4. Runs tests (unless `-SkipTests` is used)
-5. Builds Release configuration
-6. Publishes portable multi-file package (~106MB, 575 files)
+2. Restores NuGet dependencies for all projects
+3. Runs tests (unless `-SkipTests` is used)
+4. Builds Release configuration
+5. Publishes a portable multi-file package
+6. Creates `Release\HopTracer-Windows-x64.zip` for GitHub releases
 
 The build process takes approximately 3-5 minutes depending on system performance.
 
@@ -32,20 +32,19 @@ The build process takes approximately 3-5 minutes depending on system performanc
 
 The build uses the following .NET publish settings:
 
-- **Target Framework**: `net9.0-windows10.0.19041.0`
+- **Target Framework**: `net10.0-windows10.0.19041.0`
 - **Configuration**: Release
 - **Self-Contained**: Yes (includes .NET runtime)
 - **Single File**: No (WindowsAppSDK requires external files)
-- **Trimming**: Enabled (full trim mode)
+- **Trimming**: Disabled for reliability with ASP.NET controller discovery
 - **WindowsAppSDK**: Self-contained mode
 
 ### Output
 
-The build creates a portable package in `Release/HopTracer_Portable/` containing:
+The build creates:
 
-- **HopTracer.exe** (~290KB) - Main executable
-- **575 support files** - .NET runtime, MAUI framework, WindowsAppSDK, dependencies
-- **Total size**: ~106MB
+- `Release\HopTracer_Portable\` (self-contained app folder)
+- `Release\HopTracer-Windows-x64.zip` (ready to upload to GitHub Releases)
 
 The entire `HopTracer_Portable` folder must be distributed together. Run `HopTracer.exe` to start the application.
 
@@ -57,7 +56,7 @@ The entire `HopTracer_Portable` folder must be distributed together. Run `HopTra
 - The app requires WindowsAppSDK files that must remain external
 
 **Build Fails with "Assets file doesn't have a target"**
-- Ensure you're using .NET 9 SDK: `dotnet --version`
+- Ensure you're using .NET 10 SDK: `dotnet --version`
 - Clean and restore: `dotnet clean && dotnet restore`
 
 **Build Script Syntax Error**
@@ -109,7 +108,7 @@ git push origin v1.0.0
 2. **Tag**: `v1.0.0` (or appropriate version)
 3. **Title**: `HopTracer v1.0.0 - Release Title`
 4. **Description**: Copy from CHANGELOG.md
-5. **Assets**: Upload `HopTracer.exe` from `Release\HopTracer_Portable\`
+5. **Assets**: Upload `HopTracer-Windows-x64.zip` from `Release\`
 6. Check: **Set as latest release**
 7. Click: **Publish release**
 
@@ -131,7 +130,7 @@ HopTracer/
 ├── LICENSE
 ├── .gitignore
 │
-├── Scripts/
+├── scripts/
 │   ├── setup_dependencies.ps1
 │   └── build.ps1
 │
@@ -146,5 +145,6 @@ HopTracer/
 ├── Assets/                 # Logo & images
 │
 └── Release/
-    └── HopTracer_Portable/  # Build output
+    ├── HopTracer_Portable/      # Build output folder
+    └── HopTracer-Windows-x64.zip # GitHub release artifact
 ```

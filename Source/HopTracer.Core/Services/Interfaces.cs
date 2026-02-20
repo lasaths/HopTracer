@@ -10,9 +10,11 @@ public interface IGhxParser
 public interface IDiffer
 {
     (List<Node> Nodes, List<Edge> Edges) Diff(Graph oldGraph, Graph newGraph);
+    DiffComputation DiffDetailed(Graph oldGraph, Graph newGraph);
 }
 
 public interface IConverterService
 {
     string ConvertGhToGhx(string inputPath);
+    bool TryCheckDependencies(out string message);
 }
