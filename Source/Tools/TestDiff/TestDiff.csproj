@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HopTracer.Core\HopTracer.Core.csproj" />
+    <ProjectReference Include="..\..\HopTracer.Core\HopTracer.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
