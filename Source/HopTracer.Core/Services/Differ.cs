@@ -274,7 +274,8 @@ public class Differ : IDiffer
             Status = src.Status,
             ValueChanged = src.ValueChanged,
             ValueOld = src.ValueOld,
-            ValueNew = src.ValueNew
+            ValueNew = src.ValueNew,
+            WireDisplay = src.WireDisplay
         };
     }
 
@@ -356,7 +357,12 @@ public class Differ : IDiffer
             if (inOld != null && inNew != null)
             {
                 var valueChanged = (inOld.Value ?? string.Empty) != (inNew.Value ?? string.Empty);
-                var status = valueChanged || inOld.Name != inNew.Name || inOld.Nickname != inNew.Nickname ? "modified" : "same";
+                var status = valueChanged ||
+                    inOld.Name != inNew.Name ||
+                    inOld.Nickname != inNew.Nickname ||
+                    inOld.WireDisplay != inNew.WireDisplay
+                    ? "modified"
+                    : "same";
 
                 result.Add(new Port
                 {
@@ -369,7 +375,8 @@ public class Differ : IDiffer
                     ValueOld = inOld.Value,
                     ValueNew = inNew.Value,
                     ValueChanged = valueChanged,
-                    Status = status
+                    Status = status,
+                    WireDisplay = inNew.WireDisplay
                 });
             }
             else if (inNew != null)

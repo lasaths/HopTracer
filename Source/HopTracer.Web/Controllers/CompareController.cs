@@ -175,6 +175,12 @@ public class CompareController : ControllerBase
                     FileOld = originalFileNameOld,
                     FileNew = originalFileNameNew,
                     CommitHash = null, // Not a Git comparison
+                    SourcePathOld = finalPathOld,
+                    SourcePathNew = finalPathNew,
+                    SourceTypeOld = "file",
+                    SourceTypeNew = "file",
+                    SourceHashOld = null,
+                    SourceHashNew = null,
                     Diagnostics = diff.Diagnostics,
                     TopRisks = diff.TopRisks,
                     RiskSummary = diff.RiskSummary,

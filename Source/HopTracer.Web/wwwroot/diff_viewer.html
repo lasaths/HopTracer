@@ -165,6 +165,15 @@
             font-weight: 500;
         }
 
+        #file-metadata-header .metadata-value.source-link {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        #file-metadata-header .metadata-value.source-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         #file-metadata-header .metadata-arrow {
             font-size: 18px;
             opacity: 0.8;
@@ -174,6 +183,16 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+        }
+
+        #main-container.sidebar-hidden #sidebar,
+        #main-container.sidebar-hidden #resizer {
+            display: none;
+        }
+
+        #main-container.details-hidden #details-panel,
+        #main-container.details-hidden #details-resizer {
+            display: none;
         }
 
         /* Sidebar */
@@ -471,6 +490,33 @@
             color: var(--text-primary);
         }
 
+        .panel-toggle-controls {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 130;
+        }
+
+        .panel-toggle-btn {
+            background: rgba(20, 22, 28, 0.88);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .panel-toggle-btn.active {
+            color: #fff;
+            border-color: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color), var(--ring));
+        }
+
         /* Minimap */
         #minimap-container {
             position: absolute;
@@ -640,54 +686,70 @@
             display: block;
         }
 
-        .cluster-empty {
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 12px;
-            margin-top: 32px;
-            line-height: 1.5;
-        }
-
-        .cluster-canvas-wrap {
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            background: #0d1117;
-            padding: 8px;
-        }
-
-        .cluster-canvas {
-            width: 100%;
-            height: 320px;
-            display: block;
-            background: #0f1115;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-        }
-
-        .cluster-legend {
+        .graph-tabs {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 140;
             display: flex;
-            gap: 12px;
-            margin-top: 10px;
-            color: #8b949e;
-            font-size: 10px;
-            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            gap: 8px;
+            max-width: min(68vw, calc(100% - 340px));
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
         }
 
-        .cluster-legend span::before {
-            content: "■";
-            margin-right: 6px;
+        .graph-tab-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(20, 22, 28, 0.88);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            white-space: nowrap;
         }
 
-        .cluster-legend .added::before {
-            color: #2ea043;
+        .graph-tab-btn.active {
+            color: #fff;
+            border-color: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color), var(--ring));
         }
 
-        .cluster-legend .removed::before {
-            color: #f85149;
+        .graph-tab-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-color);
         }
 
-        .cluster-legend .same::before {
-            color: #8b949e;
+        .graph-tab-title {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .graph-tab-close {
+            border: none;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            padding: 0;
+            line-height: 1;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .graph-tab-close:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .script-panel-header {
@@ -809,15 +871,15 @@
 
     <!-- File Metadata Header -->
     <div id="file-metadata-header">
-        <div class="metadata-row">
-            <div class="metadata-item">
-                <span class="metadata-label">Comparing:</span>
-                <span class="metadata-value" id="meta-file-old">Loading...</span>
-                <span class="metadata-arrow">→</span>
-                <span class="metadata-value" id="meta-file-new">Loading...</span>
+            <div class="metadata-row">
+                <div class="metadata-item">
+                    <span class="metadata-label">Comparing:</span>
+                    <span class="metadata-value source-link" id="meta-file-old" data-side="old">Loading...</span>
+                    <span class="metadata-arrow">→</span>
+                    <span class="metadata-value source-link" id="meta-file-new" data-side="new">Loading...</span>
+                </div>
             </div>
         </div>
-    </div>
 
     <div id="main-container">
         <div id="sidebar">
@@ -895,18 +957,10 @@
                 </div>
                 <div
                     style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-                    <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" checked />
-                    <span>Show port details (connections & values)</span>
-                </div>
-                <div
-                    style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-                    <input type="checkbox" id="toggle-changed-edges" style="accent-color: var(--accent-color);" />
-                    <span>Show changed wires only</span>
-                </div>
-                <div style="display:flex; gap:6px;">
-                    <button id="btn-export-forensic" class="filter-btn" style="flex:1;">Export Report</button>
-                    <button id="btn-save-baseline" class="filter-btn" style="flex:1;">Save Baseline</button>
-                    <button id="btn-check-baseline" class="filter-btn" style="flex:1;">Check Baseline</button>
+                    <label for="toggle-ports" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" checked />
+                        <span>Show port details (connections & values)</span>
+                    </label>
                 </div>
             </div>
 
@@ -915,6 +969,12 @@
         <div id="resizer"></div>
 
         <div id="main-view">
+            <div id="graph-tabs" class="graph-tabs"></div>
+            <div class="panel-toggle-controls">
+                <button type="button" id="btn-toggle-sidebar" class="panel-toggle-btn active">Left Panel</button>
+                <button type="button" id="btn-toggle-details" class="panel-toggle-btn active">Right Panel</button>
+            </div>
+
             <div class="legend">
                 <div class="legend-item">
                     <div class="legend-dot" style="background: var(--added)"></div> Added
@@ -993,7 +1053,6 @@
             <div class="details-tabs">
                 <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
                 <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script Diff</button>
-                <button id="details-tab-cluster" class="details-tab" data-tab="cluster" style="display:none;">Cluster Preview</button>
             </div>
             <div id="details-pane-inspector" class="details-pane active">
                 <div class="empty-state">
@@ -1001,7 +1060,6 @@
                 </div>
             </div>
             <div id="details-pane-script" class="details-pane"></div>
-            <div id="details-pane-cluster" class="details-pane"></div>
         </div>
 
     </div> <!-- End of main-container -->
@@ -1045,15 +1103,26 @@
             filter: 'all',
             search: '',
             bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
+            showPortDetails: true,
             wireThreshold: Infinity, // Show all wires by default
             versionMix: 0.5, // 0 = Old, 1 = New
             activeDetailsTab: 'inspector',
             scriptContext: null,
-            clusterContext: null,
+            graphTabs: [],
+            activeGraphTabId: null,
+            nextGraphTabId: 1,
+            sidebarHidden: false,
+            detailsHidden: false,
             showChangedEdgesOnly: false,
             largeModelMode: false,
-            processingData: false
+            processingData: false,
+            source: {
+                old: { type: 'file', path: '', hash: null },
+                new: { type: 'file', path: '', hash: null }
+            }
         };
+
+        const ROOT_GRAPH_TAB_ID = 'graph-root';
 
         // Elements
         const canvas = document.getElementById('graph-canvas');
@@ -1062,21 +1131,24 @@
         const miniCtx = minimap.getContext('2d');
         const detailsPaneInspector = document.getElementById('details-pane-inspector');
         const detailsPaneScript = document.getElementById('details-pane-script');
-        const detailsPaneCluster = document.getElementById('details-pane-cluster');
         const detailsTabInspector = document.getElementById('details-tab-inspector');
         const detailsTabScript = document.getElementById('details-tab-script');
-        const detailsTabCluster = document.getElementById('details-tab-cluster');
+        const graphTabsBar = document.getElementById('graph-tabs');
         const tooltip = document.getElementById('tooltip');
         const sidebar = document.getElementById('sidebar');
         const resizer = document.getElementById('resizer');
         const detailsPanel = document.getElementById('details-panel');
         const detailsResizer = document.getElementById('details-resizer');
         const perfIndicator = document.getElementById('perf-indicator');
+        const mainContainer = document.getElementById('main-container');
+        const metaFileOldElem = document.getElementById('meta-file-old');
+        const metaFileNewElem = document.getElementById('meta-file-new');
 
         // Initialization
         async function init() {
             try {
                 await processData();
+                initSourceContext();
                 setupDetailsTabs();
                 setupEventListeners();
                 setupResizer();
@@ -1102,10 +1174,8 @@
         function setupDetailsTabs() {
             detailsTabInspector.addEventListener('click', () => setDetailsTab('inspector'));
             detailsTabScript.addEventListener('click', () => setDetailsTab('script'));
-            detailsTabCluster.addEventListener('click', () => setDetailsTab('cluster'));
             setDetailsTab('inspector');
             renderEmptyScriptPane();
-            renderEmptyClusterPane();
         }
 
         function setDetailsTab(tab) {
@@ -1113,16 +1183,12 @@
 
             const isInspector = tab === 'inspector';
             const isScript = tab === 'script';
-            const isCluster = tab === 'cluster';
 
             detailsTabInspector.classList.toggle('active', isInspector);
             detailsPaneInspector.classList.toggle('active', isInspector);
 
             detailsTabScript.classList.toggle('active', isScript);
             detailsPaneScript.classList.toggle('active', isScript);
-
-            detailsTabCluster.classList.toggle('active', isCluster);
-            detailsPaneCluster.classList.toggle('active', isCluster);
         }
 
         function setScriptTabVisibility(visible, count = 0) {
@@ -1134,20 +1200,379 @@
             }
         }
 
-        function setClusterTabVisibility(visible) {
-            detailsTabCluster.style.display = visible ? '' : 'none';
-
-            if (!visible && state.activeDetailsTab === 'cluster') {
-                setDetailsTab('inspector');
-            }
-        }
-
         function renderEmptyScriptPane(message = 'Select a script component to view code diff') {
             detailsPaneScript.innerHTML = `<div class="script-empty">${message}</div>`;
         }
 
-        function renderEmptyClusterPane(message = 'Select a cluster component to preview internal diff') {
-            detailsPaneCluster.innerHTML = `<div class="cluster-empty">${message}</div>`;
+        function applyPanelVisibility() {
+            if (!mainContainer) return;
+
+            mainContainer.classList.toggle('sidebar-hidden', !!state.sidebarHidden);
+            mainContainer.classList.toggle('details-hidden', !!state.detailsHidden);
+
+            const leftBtn = document.getElementById('btn-toggle-sidebar');
+            const rightBtn = document.getElementById('btn-toggle-details');
+            if (leftBtn) {
+                leftBtn.classList.toggle('active', !state.sidebarHidden);
+                leftBtn.textContent = state.sidebarHidden ? 'Show Left' : 'Left Panel';
+            }
+            if (rightBtn) {
+                rightBtn.classList.toggle('active', !state.detailsHidden);
+                rightBtn.textContent = state.detailsHidden ? 'Show Right' : 'Right Panel';
+            }
+
+            resize();
+        }
+
+        function toggleSidebar() {
+            state.sidebarHidden = !state.sidebarHidden;
+            applyPanelVisibility();
+        }
+
+        function toggleDetailsPanel() {
+            state.detailsHidden = !state.detailsHidden;
+            applyPanelVisibility();
+        }
+
+        function postForm(url, data) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+
+            Object.entries(data).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') return;
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = String(value);
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        async function pickNativeFilePath() {
+            try {
+                const response = await fetch('/api/filepicker/pick-native-file');
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    if (err.error && !String(err.error).toLowerCase().includes('cancel')) {
+                        alert(err.error);
+                    }
+                    return null;
+                }
+
+                const data = await response.json().catch(() => ({}));
+                return data.path || null;
+            } catch {
+                alert('Failed to open file picker.');
+                return null;
+            }
+        }
+
+        async function fetchCommitsForPath(path) {
+            try {
+                const checkRes = await fetch('/git/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+                const checkData = await checkRes.json().catch(() => ({}));
+                if (!checkData.is_repo) {
+                    alert('Selected file is not inside a Git repository.');
+                    return [];
+                }
+
+                const res = await fetch('/git/commits', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+                if (!res.ok) return [];
+                const data = await res.json().catch(() => ({}));
+                return Array.isArray(data.commits) ? data.commits : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function initSourceContext() {
+            const meta = GRAPH_DATA.meta || {};
+
+            state.source.old = {
+                type: String(meta.sourceTypeOld || meta.SourceTypeOld || (meta.commitHash || meta.CommitHash ? 'commit' : 'file')),
+                path: String(meta.sourcePathOld || meta.SourcePathOld || ''),
+                hash: meta.sourceHashOld || meta.SourceHashOld || meta.commitHash || meta.CommitHash || null
+            };
+            state.source.new = {
+                type: String(meta.sourceTypeNew || meta.SourceTypeNew || 'file'),
+                path: String(meta.sourcePathNew || meta.SourcePathNew || ''),
+                hash: meta.sourceHashNew || meta.SourceHashNew || null
+            };
+        }
+
+        async function applyFileSourceChange(side) {
+            const pickedPath = await pickNativeFilePath();
+            if (!pickedPath) return;
+
+            state.source[side] = { type: 'file', path: pickedPath, hash: null };
+            const otherSide = side === 'old' ? 'new' : 'old';
+
+            // If current opposite side isn't a concrete file path, ask once.
+            if (!state.source[otherSide].path) {
+                const otherPath = await pickNativeFilePath();
+                if (!otherPath) {
+                    alert(`Pick a file for ${otherSide === 'old' ? 'left' : 'right'} side to continue.`);
+                    return;
+                }
+                state.source[otherSide] = { type: 'file', path: otherPath, hash: null };
+            }
+
+            postForm('/compare', {
+                path_old: state.source.old.path,
+                path_new: state.source.new.path
+            });
+        }
+
+        async function applyCommitSourceChange(side) {
+            let path = state.source[side].path || '';
+            if (!path) {
+                path = await pickNativeFilePath();
+                if (!path) return;
+            }
+
+            const commits = await fetchCommitsForPath(path);
+            if (!commits.length) {
+                alert('No commits found for this file.');
+                return;
+            }
+
+            const preview = commits.slice(0, 20)
+                .map((c, i) => `${i + 1}. ${(c.hash || '').slice(0, 7)}  ${c.message || ''}`)
+                .join('\n');
+            const raw = prompt(`Pick commit by number or hash:\n\n${preview}`);
+            if (!raw) return;
+
+            let hash = raw.trim();
+            const idx = Number.parseInt(hash, 10);
+            if (Number.isFinite(idx) && idx >= 1 && idx <= commits.length) {
+                hash = commits[idx - 1].hash;
+            }
+            const selected = commits.find(c => c.hash === hash || String(c.hash || '').startsWith(hash));
+            if (!selected || !selected.hash) {
+                alert('Commit not found in the fetched list.');
+                return;
+            }
+
+            // Git commit compare currently maps to old side commit vs working tree for that file.
+            if (side === 'new') {
+                alert('Commit source is currently applied as the left (old) side comparison.');
+            }
+
+            postForm('/git/view_diff', {
+                path,
+                hash_old: selected.hash
+            });
+        }
+
+        async function changeSourceForSide(side) {
+            const mode = prompt('Change source:\n1 = Select file\n2 = Select Git commit\n\nEnter 1 or 2');
+            if (!mode) return;
+
+            if (mode.trim() === '1') {
+                await applyFileSourceChange(side);
+                return;
+            }
+
+            if (mode.trim() === '2') {
+                await applyCommitSourceChange(side);
+                return;
+            }
+
+            alert('Unknown selection. Use 1 or 2.');
+        }
+
+        function calculateBoundsForNodes(nodes) {
+            if (!Array.isArray(nodes) || nodes.length === 0) {
+                return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+            }
+
+            let minX = Infinity;
+            let maxX = -Infinity;
+            let minY = Infinity;
+            let maxY = -Infinity;
+
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                if (!Number.isFinite(n.x) || !Number.isFinite(n.y)) continue;
+
+                if (n.x < minX) minX = n.x;
+                if (n.x + n.w > maxX) maxX = n.x + n.w;
+                if (n.y < minY) minY = n.y;
+                if (n.y + n.h > maxY) maxY = n.y + n.h;
+            }
+
+            if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minY) || !Number.isFinite(maxY)) {
+                return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+            }
+
+            return { minX, maxX, minY, maxY };
+        }
+
+        function createGraphTab({ id, title, type, sourceNodeId, parentTabId, breadcrumbSegments, nodes, edges }) {
+            const segments = Array.isArray(breadcrumbSegments) && breadcrumbSegments.length > 0
+                ? breadcrumbSegments
+                : ['Main'];
+
+            return {
+                id,
+                title: title || segments.join(' / '),
+                type,
+                sourceNodeId: sourceNodeId || null,
+                parentTabId: parentTabId || null,
+                breadcrumbSegments: segments,
+                nodes,
+                edges,
+                bounds: calculateBoundsForNodes(nodes),
+                view: null,
+                selected: null
+            };
+        }
+
+        function getGraphNodeTabLabel(node) {
+            const rawName = String(node?.nickname || node?.name || 'Cluster').trim();
+            return rawName || 'Cluster';
+        }
+
+        function getActiveGraphTab() {
+            return state.graphTabs.find(t => t.id === state.activeGraphTabId) || null;
+        }
+
+        function persistActiveGraphTabState() {
+            const active = getActiveGraphTab();
+            if (!active) return;
+
+            active.view = { ...state.view };
+            active.selected = state.selected;
+            active.bounds = { ...state.bounds };
+        }
+
+        function initializeGraphTabs(nodes, edges) {
+            state.graphTabs = [
+                createGraphTab({
+                    id: ROOT_GRAPH_TAB_ID,
+                    title: 'Main',
+                    type: 'root',
+                    breadcrumbSegments: ['Main'],
+                    nodes,
+                    edges
+                })
+            ];
+            state.activeGraphTabId = null;
+            switchGraphTab(ROOT_GRAPH_TAB_ID, { fit: true, preserveCurrent: false });
+        }
+
+        function renderGraphTabs() {
+            if (!graphTabsBar) return;
+
+            graphTabsBar.innerHTML = state.graphTabs.map(tab => {
+                const isActive = tab.id === state.activeGraphTabId;
+                const closable = tab.id !== ROOT_GRAPH_TAB_ID;
+                const closeButton = closable
+                    ? `<span class="graph-tab-close" data-close-tab-id="${escapeHtml(tab.id)}" title="Close tab">×</span>`
+                    : '';
+
+                return `
+                    <button type="button" class="graph-tab-btn ${isActive ? 'active' : ''}" data-tab-id="${escapeHtml(tab.id)}" title="${escapeHtml(tab.title)}">
+                        <span class="graph-tab-title">${escapeHtml(tab.title)}</span>
+                        ${closeButton}
+                    </button>
+                `;
+            }).join('');
+
+            graphTabsBar.querySelectorAll('[data-tab-id]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.dataset.tabId;
+                    if (!tabId || tabId === state.activeGraphTabId) return;
+                    switchGraphTab(tabId);
+                });
+            });
+
+            graphTabsBar.querySelectorAll('[data-close-tab-id]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const tabId = btn.dataset.closeTabId;
+                    if (!tabId) return;
+                    closeGraphTab(tabId);
+                });
+            });
+        }
+
+        function switchGraphTab(tabId, options = {}) {
+            const { fit = false, preserveCurrent = true } = options;
+            const tab = state.graphTabs.find(t => t.id === tabId);
+            if (!tab) return;
+
+            if (preserveCurrent) {
+                persistActiveGraphTabState();
+            }
+
+            state.activeGraphTabId = tab.id;
+            state.nodes = tab.nodes;
+            state.edges = tab.edges;
+            state.bounds = { ...tab.bounds };
+            state.selected = tab.selected || null;
+            state.view = tab.view ? { ...tab.view } : { x: 0, y: 0, scale: 1 };
+
+            const selectedNode = state.nodes.find(n => n.id === state.selected);
+            updateDetailsPanel(selectedNode || null);
+
+            if (fit || !tab.view) {
+                fitView();
+            } else {
+                draw();
+            }
+
+            renderGraphTabs();
+        }
+
+        function closeGraphTab(tabId) {
+            if (!tabId || tabId === ROOT_GRAPH_TAB_ID) return;
+            const targetTab = state.graphTabs.find(t => t.id === tabId);
+            if (!targetTab) return;
+
+            const tabsToClose = new Set([tabId]);
+            let expanded = true;
+            while (expanded) {
+                expanded = false;
+                state.graphTabs.forEach(tab => {
+                    if (tab.parentTabId && tabsToClose.has(tab.parentTabId) && !tabsToClose.has(tab.id)) {
+                        tabsToClose.add(tab.id);
+                        expanded = true;
+                    }
+                });
+            }
+
+            const activeWillClose = tabsToClose.has(state.activeGraphTabId);
+            let fallbackTabId = ROOT_GRAPH_TAB_ID;
+
+            if (targetTab.parentTabId &&
+                !tabsToClose.has(targetTab.parentTabId) &&
+                state.graphTabs.some(t => t.id === targetTab.parentTabId)) {
+                fallbackTabId = targetTab.parentTabId;
+            }
+
+            state.graphTabs = state.graphTabs.filter(tab => !tabsToClose.has(tab.id));
+
+            if (activeWillClose) {
+                if (!state.graphTabs.some(t => t.id === fallbackTabId)) {
+                    fallbackTabId = ROOT_GRAPH_TAB_ID;
+                }
+                switchGraphTab(fallbackTabId, { fit: false, preserveCurrent: false });
+            } else {
+                renderGraphTabs();
+            }
         }
 
         function setupResizer() {
@@ -1228,6 +1653,8 @@
             const commitDate = meta.commitDate || meta.CommitDate;
             const fileOld = meta.fileOld || meta.FileOld;
             const fileNew = meta.fileNew || meta.FileNew;
+            const sourcePathOld = meta.sourcePathOld || meta.SourcePathOld || '';
+            const sourcePathNew = meta.sourcePathNew || meta.SourcePathNew || '';
 
             const isGitComparison = !!commitHash;
 
@@ -1310,6 +1737,8 @@
                 if (fileOld && fileNew) {
                     metaFileOld.textContent = fileOld;
                     metaFileNew.textContent = fileNew;
+                    metaFileOld.title = sourcePathOld || fileOld;
+                    metaFileNew.title = sourcePathNew || fileNew;
                     metaHeader.style.display = 'block'; // Show the header
                     console.log('✅ File metadata header displayed', { fileOld, fileNew });
                 } else {
@@ -1318,6 +1747,8 @@
                     if (isGitComparison) {
                         metaFileOld.textContent = 'Old Version';
                         metaFileNew.textContent = 'New Version';
+                        metaFileOld.title = sourcePathOld || 'Select source';
+                        metaFileNew.title = sourcePathNew || 'Select source';
                         metaHeader.style.display = 'block';
                         console.warn('⚠️ Using fallback metadata display');
                     }
@@ -1505,6 +1936,7 @@
                 }
             }
 
+            initializeGraphTabs(state.nodes, state.edges);
             updateBounds();
             state.processingData = false;
             let perfMessage = '';
@@ -1543,13 +1975,51 @@
                 y,
                 w,
                 h,
-                inputs: n.inputs || n.Inputs || [],
-                outputs: n.outputs || n.Outputs || [],
+                inputs: normalizePorts(n.inputs || n.Inputs || [], 'input', id),
+                outputs: normalizePorts(n.outputs || n.Outputs || [], 'output', id),
                 vx: 0,
                 vy: 0,
                 fx: 0,
                 fy: 0
             };
+        }
+
+        function normalizePorts(ports, kind, nodeId) {
+            if (!Array.isArray(ports)) return [];
+
+            return ports.map((p, index) => {
+                const id = p?.id || p?.Id || `${nodeId}:${kind}:${index}`;
+                return {
+                    ...p,
+                    id,
+                    name: p?.name || p?.Name || '',
+                    nickname: p?.nickname || p?.Nickname || '',
+                    kind: p?.kind || p?.Kind || kind,
+                    status: p?.status || p?.Status || 'same',
+                    wireDisplay: parseWireDisplayMode(p?.wireDisplay ?? p?.WireDisplay ?? p?.wireDisplayMode ?? p?.WireDisplayMode)
+                };
+            });
+        }
+
+        function parseWireDisplayMode(raw) {
+            if (raw === null || raw === undefined) return 0;
+
+            if (typeof raw === 'number') {
+                return Math.max(0, Math.min(2, Math.trunc(raw)));
+            }
+
+            const text = String(raw).trim().toLowerCase();
+            if (!text) return 0;
+
+            if (text === '1' || text.includes('faint')) return 1;
+            if (text === '2' || text.includes('hidden')) return 2;
+
+            const numeric = Number.parseInt(text, 10);
+            if (Number.isFinite(numeric)) {
+                return Math.max(0, Math.min(2, numeric));
+            }
+
+            return 0;
         }
 
         function normalizeEdge(e) {
@@ -1619,20 +2089,34 @@
             return { x, y: node.y + (index + 1) * step };
         }
 
-        function getPreviewPortAnchor(node, side, portId) {
-            const isOutput = side === 'output';
-            const x = isOutput ? node.rx + node.rw : node.rx;
-            const ports = isOutput
-                ? (node.outputs || node.Outputs || [])
-                : (node.inputs || node.Inputs || []);
-            const index = findPortIndex(ports, portId);
+        function getEdgeWireDisplayMode(edge, targetNode) {
+            if (!edge || !targetNode) return 0;
 
-            if (index < 0 || ports.length === 0) {
-                return { x, y: node.ry + node.rh / 2 };
+            const inputs = targetNode.inputs || targetNode.Inputs || [];
+            const index = findPortIndex(inputs, edge.targetPort);
+            if (index < 0 || index >= inputs.length) return 0;
+
+            const port = inputs[index] || {};
+            return parseWireDisplayMode(port.wireDisplay ?? port.WireDisplay ?? port.wireDisplayMode ?? port.WireDisplayMode);
+        }
+
+        function getWireStyle(mode) {
+            if (mode === 2) {
+                return { hidden: true, widthFactor: 0, alphaFactor: 0 };
             }
 
-            const step = node.rh / (ports.length + 1);
-            return { x, y: node.ry + (index + 1) * step };
+            if (mode === 1) {
+                return { hidden: false, widthFactor: 0.72, alphaFactor: 0.45 };
+            }
+
+            return { hidden: false, widthFactor: 1.0, alphaFactor: 1.0 };
+        }
+
+        function wireDisplayModeLabel(raw) {
+            const mode = parseWireDisplayMode(raw);
+            if (mode === 1) return 'faint';
+            if (mode === 2) return 'hidden';
+            return 'default';
         }
 
         function waitFrame() {
@@ -1731,7 +2215,14 @@
 
             const togglePorts = document.getElementById('toggle-ports');
             if (togglePorts) {
+                state.showPortDetails = !!togglePorts.checked;
                 togglePorts.addEventListener('change', () => {
+                    state.showPortDetails = !!togglePorts.checked;
+                    const selectedNode = state.nodes.find(n => n.id === state.selected);
+                    updateDetailsPanel(selectedNode || null);
+                });
+                togglePorts.addEventListener('input', () => {
+                    state.showPortDetails = !!togglePorts.checked;
                     const selectedNode = state.nodes.find(n => n.id === state.selected);
                     updateDetailsPanel(selectedNode || null);
                 });
@@ -1757,6 +2248,18 @@
             document.getElementById('btn-fit').addEventListener('click', fitView);
             document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
             document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
+
+            const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+            if (btnToggleSidebar) btnToggleSidebar.addEventListener('click', toggleSidebar);
+            const btnToggleDetails = document.getElementById('btn-toggle-details');
+            if (btnToggleDetails) btnToggleDetails.addEventListener('click', toggleDetailsPanel);
+
+            if (metaFileOldElem) {
+                metaFileOldElem.addEventListener('click', () => changeSourceForSide('old'));
+            }
+            if (metaFileNewElem) {
+                metaFileNewElem.addEventListener('click', () => changeSourceForSide('new'));
+            }
 
             // Wire Slider
             const wireSlider = document.getElementById('wire-slider');
@@ -1820,6 +2323,8 @@
 
                 draw();
             });
+
+            applyPanelVisibility();
         }
 
         function resize() {
@@ -1948,6 +2453,15 @@
 
                 if (!sourceNode || !targetNode) return;
 
+                const wireMode = getEdgeWireDisplayMode(e, targetNode);
+                const isConnected = state.selected && (e.source === state.selected || e.target === state.selected);
+                let wireStyle = getWireStyle(wireMode);
+                if (isConnected) {
+                    // Grasshopper reveals faint/hidden wires when related components are selected.
+                    wireStyle = getWireStyle(0);
+                }
+                if (wireStyle.hidden) return;
+
                 if (state.largeModelMode && !state.selected) {
                     const sourceOff = sourceNode.x + sourceNode.w < viewLeft || sourceNode.x > viewRight || sourceNode.y + sourceNode.h < viewTop || sourceNode.y > viewBottom;
                     const targetOff = targetNode.x + targetNode.w < viewLeft || targetNode.x > viewRight || targetNode.y + targetNode.h < viewTop || targetNode.y > viewBottom;
@@ -1967,23 +2481,21 @@
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 const isLong = dist > state.wireThreshold;
 
-                const isConnected = state.selected && (e.source === state.selected || e.target === state.selected);
-
                 if (isLong && !isConnected) return;
 
                 // Highlight logic
                 if (state.selected) {
                     if (isConnected) {
                         isDimmed = false; // Force visible
-                        ctx.lineWidth = Math.max(1.2 / state.view.scale, 0.8);
+                        ctx.lineWidth = Math.max(1.2 / state.view.scale, 0.8) * wireStyle.widthFactor;
                         ctx.globalAlpha = 1.0;
                     } else {
                         isDimmed = true; // Dim unrelated
-                        ctx.lineWidth = Math.max(0.9 / state.view.scale, 0.65);
+                        ctx.lineWidth = Math.max(0.9 / state.view.scale, 0.65) * wireStyle.widthFactor;
                         ctx.globalAlpha = 0.18;
                     }
                 } else {
-                    ctx.lineWidth = Math.max(1.0 / state.view.scale, 0.7);
+                    ctx.lineWidth = Math.max(1.0 / state.view.scale, 0.7) * wireStyle.widthFactor;
                     ctx.globalAlpha = isDimmed ? 0.28 : 0.9;
                 }
 
@@ -1992,7 +2504,7 @@
                 if (e.status === 'added') edgeAlpha = 1.0 - mix;
                 if (e.status === 'removed') edgeAlpha = mix;
 
-                ctx.globalAlpha *= edgeAlpha;
+                ctx.globalAlpha *= edgeAlpha * wireStyle.alphaFactor;
                 if (ctx.globalAlpha < 0.01) return; // Skip invisible
 
                 ctx.beginPath();
@@ -2295,7 +2807,7 @@
 
             const clusterPreview = getClusterPreviewData(clicked);
             if (clusterPreview.isCluster) {
-                setDetailsTab('cluster');
+                openClusterGraphTab(clicked, clusterPreview);
             }
 
             draw();
@@ -2305,15 +2817,12 @@
             if (!node) {
                 detailsPaneInspector.innerHTML = '<div class="empty-state">Select a node in the graph<br>to view details</div>';
                 setScriptTabVisibility(false);
-                setClusterTabVisibility(false);
                 state.scriptContext = null;
-                state.clusterContext = null;
                 renderEmptyScriptPane();
-                renderEmptyClusterPane();
                 return;
             }
 
-            const showPorts = document.getElementById('toggle-ports').checked;
+            const showPorts = !!state.showPortDetails;
 
             const html = `
                 <div class="detail-card">
@@ -2383,16 +2892,6 @@
                     : scriptEntries[0].key;
 
                 renderScriptPane(node, scriptEntries, selectedScriptKey);
-            }
-
-            const clusterPreview = getClusterPreviewData(node);
-            setClusterTabVisibility(clusterPreview.isCluster);
-
-            if (clusterPreview.isCluster) {
-                renderClusterPane(node, clusterPreview);
-            } else {
-                state.clusterContext = null;
-                renderEmptyClusterPane('No cluster preview available for this component');
             }
         }
 
@@ -2560,6 +3059,27 @@
             };
         }
 
+        function clusterInternalsChanged(node, preview) {
+            const nodeStatus = String(node?.status || '').toLowerCase();
+            if (nodeStatus === 'added' || nodeStatus === 'removed') return true;
+
+            const statusText = String(preview?.status || '').toLowerCase();
+            if (statusText.includes('unchanged') || statusText.includes('same') || statusText.includes('identical')) {
+                return false;
+            }
+            if (statusText.includes('modified') || statusText.includes('changed') || statusText.includes('diff')) {
+                return true;
+            }
+
+            const oldHash = String(preview?.oldHash || '').trim();
+            const newHash = String(preview?.newHash || '').trim();
+            if (oldHash && newHash) {
+                return oldHash !== newHash;
+            }
+
+            return nodeStatus === 'modified';
+        }
+
         function parseClusterPreviewGraph(raw) {
             if (!raw) return null;
             try {
@@ -2574,8 +3094,18 @@
         }
 
         function buildClusterDiffGraph(oldGraph, newGraph) {
-            const oldNodes = new Map((oldGraph?.nodes || []).map(n => [n.id || n.Id, n]));
-            const newNodes = new Map((newGraph?.nodes || []).map(n => [n.id || n.Id, n]));
+            const oldNodes = new Map();
+            const newNodes = new Map();
+
+            (oldGraph?.nodes || []).forEach((n, i) => {
+                const id = String(n.id || n.Id || `old_node_${i}`);
+                oldNodes.set(id, n);
+            });
+
+            (newGraph?.nodes || []).forEach((n, i) => {
+                const id = String(n.id || n.Id || `new_node_${i}`);
+                newNodes.set(id, n);
+            });
 
             const nodeIds = new Set([...oldNodes.keys(), ...newNodes.keys()]);
             const nodes = [];
@@ -2585,7 +3115,7 @@
                 const n = newNodes.get(id);
                 const base = n || o || {};
                 nodes.push({
-                    id,
+                    id: String(id),
                     name: base.nickname || base.Nickname || base.name || base.Name || id,
                     x: Number(base.x ?? base.X ?? 0),
                     y: Number(base.y ?? base.Y ?? 0),
@@ -2614,10 +3144,14 @@
                 const o = oldEdges.get(key);
                 const n = newEdges.get(key);
                 const base = n || o || {};
+                const source = base.source || base.Source;
+                const target = base.target || base.Target;
+                if (!source || !target) return;
+
                 edges.push({
-                    source: base.source || base.Source,
+                    source: String(source),
                     sourcePort: base.sourcePort || base.SourcePort || '',
-                    target: base.target || base.Target,
+                    target: String(target),
                     targetPort: base.targetPort || base.TargetPort || '',
                     status: o && n ? 'same' : (n ? 'added' : 'removed')
                 });
@@ -2626,148 +3160,114 @@
             return { nodes, edges };
         }
 
-        function renderClusterPane(node, preview) {
-            state.clusterContext = { nodeId: node.id };
+        function openClusterGraphTab(node, preview) {
+            if (!node) return false;
+            const clusterPreview = preview && preview.isCluster ? preview : getClusterPreviewData(node);
+            if (!clusterPreview.isCluster) return false;
 
-            const diffGraph = buildClusterDiffGraph(preview.oldGraph, preview.newGraph);
-            const addedNodes = diffGraph.nodes.filter(n => n.status === 'added').length;
-            const removedNodes = diffGraph.nodes.filter(n => n.status === 'removed').length;
-            const addedEdges = diffGraph.edges.filter(e => e.status === 'added').length;
-            const removedEdges = diffGraph.edges.filter(e => e.status === 'removed').length;
+            const parentTab = getActiveGraphTab();
+            const parentTabId = parentTab?.id || ROOT_GRAPH_TAB_ID;
+            const existingTab = state.graphTabs.find(t =>
+                t.type === 'cluster' &&
+                t.sourceNodeId === node.id &&
+                t.parentTabId === parentTabId
+            );
+            const internalsChanged = clusterInternalsChanged(node, clusterPreview);
+            const nodeStatus = String(node.status || '').toLowerCase();
 
-            const oldSizeKb = preview.oldSize ? `${(parseInt(preview.oldSize, 10) / 1024).toFixed(1)} KB` : 'Unknown';
-            const newSizeKb = preview.newSize ? `${(parseInt(preview.newSize, 10) / 1024).toFixed(1)} KB` : 'Unknown';
+            let oldGraph = clusterPreview.oldGraph;
+            let newGraph = clusterPreview.newGraph;
+            const hasBothSides = !!oldGraph && !!newGraph;
 
-            detailsPaneCluster.innerHTML = `
-                <div class="script-panel-header">
-                    <div class="script-panel-title">${escapeHtml(node.nickname || node.name)} · Cluster Diff</div>
-                    <div class="script-panel-meta">${escapeHtml(preview.message)}</div>
-                    <div class="script-panel-meta">Hash: ${escapeHtml((preview.oldHash || '').substring(0, 12))} → ${escapeHtml((preview.newHash || '').substring(0, 12))}</div>
-                    <div class="script-panel-meta">Size: ${escapeHtml(oldSizeKb)} → ${escapeHtml(newSizeKb)}</div>
-                    <div class="script-panel-meta">Nodes +${addedNodes} / -${removedNodes} · Edges +${addedEdges} / -${removedEdges}</div>
-                </div>
-                <div class="cluster-canvas-wrap">
-                    <canvas id="cluster-preview-canvas" class="cluster-canvas"></canvas>
-                    <div class="cluster-legend">
-                        <span class="added">Added</span>
-                        <span class="removed">Removed</span>
-                        <span class="same">Unchanged</span>
-                    </div>
-                </div>
-            `;
-
-            drawClusterPreviewCanvas('cluster-preview-canvas', diffGraph);
-        }
-
-        function drawClusterPreviewCanvas(canvasId, graph) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-
-            const dpr = window.devicePixelRatio || 1;
-            const cw = Math.max(100, Math.floor(canvas.clientWidth));
-            const ch = Math.max(100, Math.floor(canvas.clientHeight));
-            canvas.width = Math.floor(cw * dpr);
-            canvas.height = Math.floor(ch * dpr);
-
-            const c = canvas.getContext('2d');
-            if (!c) return;
-
-            c.setTransform(dpr, 0, 0, dpr, 0, 0);
-            c.clearRect(0, 0, cw, ch);
-            c.fillStyle = '#0f1115';
-            c.fillRect(0, 0, cw, ch);
-
-            if (!graph.nodes.length) {
-                c.fillStyle = '#8b949e';
-                c.font = '12px ui-monospace, monospace';
-                c.fillText('No internal cluster graph available.', 12, 24);
-                return;
+            if (!hasBothSides) {
+                // Avoid misleading "all added/removed" views when we only have one side for unchanged nodes.
+                if (nodeStatus !== 'added' && nodeStatus !== 'removed') {
+                    const stable = newGraph || oldGraph;
+                    oldGraph = stable;
+                    newGraph = stable;
+                }
             }
-            const pad = 24;
 
-            const minX = Math.min(...graph.nodes.map(n => n.x));
-            const maxX = Math.max(...graph.nodes.map(n => n.x + (Number.isFinite(n.w) && n.w > 0 ? n.w : 110)));
-            const minY = Math.min(...graph.nodes.map(n => n.y));
-            const maxY = Math.max(...graph.nodes.map(n => n.y + (Number.isFinite(n.h) && n.h > 0 ? n.h : 38)));
-            const worldW = Math.max(1, maxX - minX);
-            const worldH = Math.max(1, maxY - minY);
+            if (!internalsChanged) {
+                const stable = newGraph || oldGraph;
+                oldGraph = stable;
+                newGraph = stable;
+            }
 
-            const scale = Math.min((cw - pad * 2) / worldW, (ch - pad * 2) / worldH);
-            const safeScale = Math.max(0.2, Math.min(2.0, scale));
-            const offsetX = (cw - worldW * safeScale) / 2 - minX * safeScale;
-            const offsetY = (ch - worldH * safeScale) / 2 - minY * safeScale;
+            const diffGraph = buildClusterDiffGraph(oldGraph, newGraph);
+            const nodes = diffGraph.nodes.map(n => normalizeNode({
+                ...n,
+                name: n.name || n.id || 'Cluster Component',
+                nickname: n.name || n.id || 'Cluster Component'
+            }));
 
-            const nodeMap = new Map();
-            graph.nodes.forEach(n => {
-                nodeMap.set(n.id, {
-                    ...n,
-                    rx: n.x * safeScale + offsetX,
-                    ry: n.y * safeScale + offsetY,
-                    rw: (Number.isFinite(n.w) && n.w > 0 ? n.w : 110) * safeScale,
-                    rh: (Number.isFinite(n.h) && n.h > 0 ? n.h : 38) * safeScale
+            const nodeMap = buildNodeLookupMap(nodes);
+            const edges = diffGraph.edges
+                .map(normalizeEdge)
+                .map(e => {
+                    const sourceNode = nodeMap.get(e.source) || nodeMap.get(canonicalizeId(e.source));
+                    const targetNode = nodeMap.get(e.target) || nodeMap.get(canonicalizeId(e.target));
+                    if (!sourceNode || !targetNode) return null;
+
+                    return {
+                        ...e,
+                        source: sourceNode.id,
+                        target: targetNode.id,
+                        sourceNode,
+                        targetNode
+                    };
+                })
+                .filter(e => !!e);
+
+            const baseName = getGraphNodeTabLabel(node);
+            const parentSegments = Array.isArray(parentTab?.breadcrumbSegments) && parentTab.breadcrumbSegments.length
+                ? parentTab.breadcrumbSegments
+                : ['Main'];
+            const breadcrumbSegments = [...parentSegments, baseName];
+            const tabTitle = breadcrumbSegments.join(' / ');
+
+            let targetTab = existingTab;
+            if (!targetTab) {
+                targetTab = createGraphTab({
+                    id: `graph-cluster-${state.nextGraphTabId++}`,
+                    title: tabTitle,
+                    type: 'cluster',
+                    sourceNodeId: node.id,
+                    parentTabId,
+                    breadcrumbSegments,
+                    nodes,
+                    edges
                 });
-            });
+                state.graphTabs.push(targetTab);
+            } else {
+                targetTab.title = tabTitle;
+                targetTab.parentTabId = parentTabId;
+                targetTab.breadcrumbSegments = breadcrumbSegments;
+                targetTab.nodes = nodes;
+                targetTab.edges = edges;
+                targetTab.bounds = calculateBoundsForNodes(nodes);
+                targetTab.view = null;
+                targetTab.selected = null;
+            }
 
-            const edgeColor = status => {
-                if (status === 'added') return '#2ea043';
-                if (status === 'removed') return '#f85149';
-                return '#8b949e';
-            };
+            switchGraphTab(targetTab.id, { fit: true });
 
-            graph.edges.forEach(e => {
-                const s = nodeMap.get(e.source);
-                const t = nodeMap.get(e.target);
-                if (!s || !t) return;
+            if (nodes.length === 0) {
+                showPerf(clusterPreview.message || 'No internal cluster graph available for this component.');
+                window.setTimeout(() => {
+                    if (!state.processingData && !state.largeModelMode) {
+                        showPerf('');
+                    }
+                }, 2200);
+            }
 
-                const sourceAnchor = getPreviewPortAnchor(s, 'output', e.sourcePort);
-                const targetAnchor = getPreviewPortAnchor(t, 'input', e.targetPort);
-                const sx = sourceAnchor.x;
-                const sy = sourceAnchor.y;
-                const tx = targetAnchor.x;
-                const ty = targetAnchor.y;
-                const dx = (tx - sx) * 0.5;
-
-                c.beginPath();
-                c.moveTo(sx, sy);
-                c.bezierCurveTo(sx + dx, sy, tx - dx, ty, tx, ty);
-                c.lineWidth = 1.2;
-                c.strokeStyle = edgeColor(e.status);
-                c.globalAlpha = 0.75;
-                c.stroke();
-                c.globalAlpha = 1;
-            });
-
-            const nodeStroke = status => {
-                if (status === 'added') return '#2ea043';
-                if (status === 'removed') return '#f85149';
-                return '#6e7681';
-            };
-
-            graph.nodes.forEach(n => {
-                const d = nodeMap.get(n.id);
-                if (!d) return;
-
-                const w = d.rw;
-                const h = d.rh;
-
-                c.fillStyle = '#161b22';
-                c.strokeStyle = nodeStroke(n.status);
-                c.lineWidth = 1;
-                roundRect(c, d.rx, d.ry, w, h, 6);
-                c.fill();
-                c.stroke();
-
-                c.fillStyle = '#c9d1d9';
-                c.font = `${Math.max(9, 10 * safeScale)}px ui-monospace, monospace`;
-                c.textBaseline = 'middle';
-                c.fillText(String(n.name || n.id).slice(0, 18), d.rx + 6, d.ry + h / 2);
-            });
+            return true;
         }
 
         function openClusterPreview() {
-            if (detailsTabCluster.style.display !== 'none') {
-                setDetailsTab('cluster');
-            }
+            const selectedNode = state.nodes.find(n => n.id === state.selected);
+            if (!selectedNode) return;
+            openClusterGraphTab(selectedNode);
         }
 
         function renderProperties(node) {
@@ -2823,7 +3323,7 @@
                         `}
                         <button class="cluster-preview-open"
                             style="width: 100%; margin-top: 10px; background: var(--bg-card); border: 1px solid var(--border-color); color: #b388ff; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                            Open Cluster Preview
+                            Open Cluster Tab
                         </button>
                     </div>
                 `;
@@ -2911,6 +3411,10 @@
 
             const portItems = ports.map(p => {
                 const statusColor = CONFIG.colors[p.status] || CONFIG.colors.same;
+                const isInput = String(p.kind || p.Kind || '').toLowerCase() === 'input' || title.toLowerCase().startsWith('input');
+                const wireDisplayLine = isInput
+                    ? `<div class="port-value">Wire: ${wireDisplayModeLabel(p.wireDisplay ?? p.WireDisplay)}</div>`
+                    : '';
                 const valueLine = p.valueChanged
                     ? `<div class="port-value">Δ ${(p.valueOld || '')} → ${(p.valueNew || '')}</div>`
                     : (p.value ? `<div class="port-value">${p.value}</div>` : '');
@@ -2920,6 +3424,7 @@
                         <div class="port-meta">
                             <div class="port-name">${p.nickname || p.name || p.id}</div>
                             ${valueLine || ''}
+                            ${wireDisplayLine}
                             <div class="port-value" style="opacity:0.7;">${p.id}</div>
                         </div>
                         <span class="port-status" style="background:${statusColor}; color:white;">${p.status}</span>
