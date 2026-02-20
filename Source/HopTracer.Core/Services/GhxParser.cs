@@ -307,7 +307,8 @@ public class GhxParser : IGhxParser
                     Name = name,
                     Nickname = nick,
                     Kind = "input",
-                    Status = "same"
+                    Status = "same",
+                    WireDisplay = ParseWireDisplayMode(inChunk)
                 }, sources));
             }
         }
@@ -332,7 +333,8 @@ public class GhxParser : IGhxParser
                 Name = name,
                 Nickname = nick,
                 Kind = "input",
-                Status = "same"
+                Status = "same",
+                WireDisplay = ParseWireDisplayMode(inChunk)
             }, sources));
         }
 
@@ -348,7 +350,8 @@ public class GhxParser : IGhxParser
                     Name = "Input",
                     Nickname = "",
                     Kind = "input",
-                    Status = "same"
+                    Status = "same",
+                    WireDisplay = 0
                 }, directSources));
             }
         }
@@ -373,10 +376,32 @@ public class GhxParser : IGhxParser
                 Name = name,
                 Nickname = nickname,
                 Kind = "output",
-                Status = "same"
+                Status = "same",
+                WireDisplay = 0
             },
             LookupIds = lookupIds.ToList()
         };
+    }
+
+    private int ParseWireDisplayMode(XElement? paramChunk)
+    {
+        if (paramChunk == null) return 0;
+
+        var raw = GetDirectValue(paramChunk, "WireDisplay")
+            ?? GetValue(paramChunk, "WireDisplay")
+            ?? GetDirectValue(paramChunk, "WireDisplayMode")
+            ?? GetValue(paramChunk, "WireDisplayMode");
+        if (string.IsNullOrWhiteSpace(raw)) return 0;
+
+        if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var numeric))
+        {
+            return Math.Clamp(numeric, 0, 2);
+        }
+
+        var normalized = raw.Trim().ToLowerInvariant();
+        if (normalized.Contains("faint")) return 1;
+        if (normalized.Contains("hidden")) return 2;
+        return 0;
     }
 
     private string? GetObjectInstanceGuid(XElement objectChunk)
