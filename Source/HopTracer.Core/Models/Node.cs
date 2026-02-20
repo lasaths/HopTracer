@@ -36,6 +36,16 @@ public class Node
     /// Old property values for modified nodes (used for comparison).
     /// </summary>
     public Dictionary<string, string>? PropertiesOld { get; set; }
+
+    /// <summary>
+    /// Heuristic impact score for review prioritization (0-100).
+    /// </summary>
+    public int RiskScore { get; set; } = 0;
+
+    /// <summary>
+    /// Human-readable reasons that contributed to the risk score.
+    /// </summary>
+    public List<string> RiskReasons { get; set; } = new();
 }
 
 public class Port

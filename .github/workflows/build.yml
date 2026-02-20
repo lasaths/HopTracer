@@ -9,8 +9,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '10.0.x'
 
 jobs:
   build:
@@ -29,7 +32,7 @@ jobs:
       run: dotnet workload install maui-windows
 
     - name: Setup Dependencies
-      run: .\Scripts\setup_dependencies.ps1
+      run: .\scripts\setup_dependencies.ps1
       shell: pwsh
 
     - name: Restore dependencies
@@ -41,25 +44,28 @@ jobs:
     - name: Build
       run: dotnet build Source/HopTracer.sln --configuration Release --no-restore
 
-    - name: Publish Single-File Executable
+    - name: Publish Portable Package
       run: |
         dotnet publish Source/HopTracer/HopTracer.csproj `
-          -f net9.0-windows10.0.19041.0 `
+          -f net10.0-windows10.0.19041.0 `
           -c Release `
           -r win-x64 `
           -p:WindowsPackageType=None `
           -p:WindowsAppSDKSelfContained=true `
           -p:SelfContained=true `
-          -p:PublishSingleFile=true `
-          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:PublishSingleFile=false `
           -o ./Release/HopTracer_Portable
+      shell: pwsh
+
+    - name: Create Release Archive
+      run: Compress-Archive -Path ./Release/HopTracer_Portable/* -DestinationPath ./Release/HopTracer-Windows-x64.zip -Force
       shell: pwsh
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: HopTracer-Windows-x64
-        path: ./Release/HopTracer_Portable/HopTracer.exe
+        path: ./Release/HopTracer-Windows-x64.zip
         retention-days: 30
 
   release:
@@ -78,7 +84,7 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: ./artifacts/HopTracer.exe
+        files: ./artifacts/HopTracer-Windows-x64.zip
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

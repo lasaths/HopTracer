@@ -22,4 +22,10 @@ public class DiffMeta
     public string? CommitAuthor { get; set; }
     public string? CommitDate { get; set; }
     public string? CommitMessage { get; set; }
+    public List<DiffDiagnostic> Diagnostics { get; set; } = new();
+    public List<NodeRiskFinding> TopRisks { get; set; } = new();
+    public DiffRiskSummary RiskSummary { get; set; } = new();
+    public List<DiffStageTiming> StageTimings { get; set; } = new();
+    public string? BaselineName { get; set; }
+    public bool? BaselinePassed { get; set; }
 }

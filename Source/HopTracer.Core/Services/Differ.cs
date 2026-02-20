@@ -9,177 +9,344 @@ namespace HopTracer.Core.Services;
 public class Differ : IDiffer
 {
     private readonly ILogger<Differ> _logger;
+    private static readonly HashSet<string> ScriptPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ScriptSource", "Code", "Script", "Expression",
+        "CodeInput", "CodeOutput", "PythonScript", "PythonCode",
+        "CSharpCode", "VBCode", "SourceCode", "ScriptBody"
+    };
 
     public Differ(ILogger<Differ> logger)
     {
         _logger = logger;
     }
 
-    /// <summary>
-    /// Computes the diff between old and new graphs.
-    /// Returns a tuple of (diffNodes, diffEdges).
-    /// </summary>
     public (List<Node> Nodes, List<Edge> Edges) Diff(Graph oldGraph, Graph newGraph)
+    {
+        var detailed = DiffDetailed(oldGraph, newGraph);
+        return (detailed.Nodes, detailed.Edges);
+    }
+
+    public DiffComputation DiffDetailed(Graph oldGraph, Graph newGraph)
     {
         _logger.LogInformation("Starting diff between graphs. Old nodes: {OldCount}, New nodes: {NewCount}", oldGraph.Nodes.Count, newGraph.Nodes.Count);
 
-        // 1. Diff Nodes
-        var allIds = oldGraph.Nodes.Keys.Union(newGraph.Nodes.Keys).ToHashSet();
-        var diffNodes = new List<Node>();
+        var result = new DiffComputation();
+        var matches = BuildNodeMatches(oldGraph, newGraph);
 
-        foreach (var nid in allIds)
+        if (matches.FallbackMatchedCount > 0)
         {
-            var inOld = oldGraph.Nodes.ContainsKey(nid);
-            var inNew = newGraph.Nodes.ContainsKey(nid);
-
-            if (inOld && inNew)
-            {
-                // Node exists in both - check for modifications
-                var nOld = oldGraph.Nodes[nid];
-                var nNew = newGraph.Nodes[nid];
-
-                var dx = nNew.X - nOld.X;
-                var dy = nNew.Y - nOld.Y;
-                var status = "same";
-
-                var modified = nOld.Name != nNew.Name || nOld.Nickname != nNew.Nickname;
-
-                // Port-level diff
-                var mergedInputs = DiffPorts(nOld.Inputs, nNew.Inputs);
-                var mergedOutputs = DiffPorts(nOld.Outputs, nNew.Outputs);
-
-                // Property-level diff
-                var properties = new Dictionary<string, string>();
-                var propertiesOld = new Dictionary<string, string>();
-                bool propertiesChanged = false;
-                
-                foreach (var kv in nNew.Properties) properties[kv.Key] = kv.Value;
-                foreach (var kv in nOld.Properties)
-                {
-                    if (!properties.ContainsKey(kv.Key)) properties[kv.Key] = kv.Value;
-                    if (nNew.Properties.TryGetValue(kv.Key, out var newVal) && kv.Value != newVal)
-                    {
-                        modified = true;
-                        propertiesChanged = true;
-                        propertiesOld[kv.Key] = kv.Value; // Store old value
-                    }
-                }
-
-                if (mergedInputs.Any(p => p.Status != "same" || p.ValueChanged) ||
-                    mergedOutputs.Any(p => p.Status != "same" || p.ValueChanged))
-                {
-                    modified = true;
-                }
-
-                if (modified)
-                {
-                    status = "modified";
-                }
-
-                var nodeOut = new Node
-                {
-                    Id = nNew.Id,
-                    Name = nNew.Name,
-                    Nickname = nNew.Nickname,
-                    X = nNew.X,
-                    Y = nNew.Y,
-                    W = nNew.W,
-                    H = nNew.H,
-                    Status = status,
-                    Dx = dx,
-                    Dy = dy,
-                    Inputs = mergedInputs,
-                    Outputs = mergedOutputs,
-                    Properties = properties,
-                    PropertiesOld = propertiesChanged ? propertiesOld : null
-                };
-
-                diffNodes.Add(nodeOut);
-            }
-            else if (inNew)
-            {
-                // Node added
-                var n = newGraph.Nodes[nid];
-                n.Status = "added";
-                diffNodes.Add(n);
-            }
-            else if (inOld)
-            {
-                // Node removed
-                var n = oldGraph.Nodes[nid];
-                n.Status = "removed";
-                diffNodes.Add(n);
-            }
+            AddDiagnostic(result.Diagnostics, "NODE_IDENTITY_FALLBACK", "warning",
+                $"Matched {matches.FallbackMatchedCount} node(s) with fallback identity logic after GUID churn.");
         }
 
-        // 2. Diff Edges
+        foreach (var pair in matches.OldToNew.OrderBy(p => p.Value, StringComparer.Ordinal).ThenBy(p => p.Key, StringComparer.Ordinal))
+        {
+            var nOld = oldGraph.Nodes[pair.Key];
+            var nNew = newGraph.Nodes[pair.Value];
+            var merged = BuildMergedNode(nOld, nNew);
+            ScoreNodeRisk(merged, nOld, nNew);
+            result.Nodes.Add(merged);
+        }
+
+        var matchedOldIds = matches.OldToNew.Keys.ToHashSet(StringComparer.Ordinal);
+        var matchedNewIds = matches.OldToNew.Values.ToHashSet(StringComparer.Ordinal);
+
+        foreach (var n in newGraph.Nodes.Values.Where(n => !matchedNewIds.Contains(n.Id)).OrderBy(n => n.Id, StringComparer.Ordinal))
+        {
+            var added = CloneNode(n);
+            added.Status = "added";
+            ScoreNodeRisk(added, null, n);
+            result.Nodes.Add(added);
+        }
+
+        foreach (var n in oldGraph.Nodes.Values.Where(n => !matchedOldIds.Contains(n.Id)).OrderBy(n => n.Id, StringComparer.Ordinal))
+        {
+            var removed = CloneNode(n);
+            removed.Status = "removed";
+            ScoreNodeRisk(removed, n, null);
+            result.Nodes.Add(removed);
+        }
+
         var edgeComparer = new EdgeComparer();
-        var oldEdges = oldGraph.Edges.ToHashSet(edgeComparer);
-        var newEdges = newGraph.Edges.ToHashSet(edgeComparer);
-        var allEdges = oldEdges.Union(newEdges, edgeComparer);
+        var oldCanonicalEdges = oldGraph.Edges
+            .Select(e => CanonicalizeEdge(e, matches.OldToNew))
+            .ToHashSet(edgeComparer);
+        var newCanonicalEdges = newGraph.Edges
+            .Select(CloneEdge)
+            .ToHashSet(edgeComparer);
+        var allCanonicalEdges = oldCanonicalEdges.Union(newCanonicalEdges, edgeComparer);
 
-        var diffEdges = new List<Edge>();
-        var nodeIoStats = new Dictionary<string, (int InAdded, int InRemoved, int OutAdded, int OutRemoved)>();
+        var nodeIoStats = result.Nodes.ToDictionary(
+            n => n.Id,
+            _ => (InAdded: 0, InRemoved: 0, OutAdded: 0, OutRemoved: 0),
+            StringComparer.Ordinal);
 
-        foreach (var nid in allIds)
+        var danglingEndpoints = 0;
+        foreach (var edge in allCanonicalEdges)
         {
-            nodeIoStats[nid] = (0, 0, 0, 0);
-        }
-
-        foreach (var edge in allEdges)
-        {
-            var isOld = oldEdges.Contains(edge);
-            var isNew = newEdges.Contains(edge);
+            var isOld = oldCanonicalEdges.Contains(edge);
+            var isNew = newCanonicalEdges.Contains(edge);
 
             var status = "same";
-            
-            if (isOld && isNew)
+            if (isOld && !isNew)
             {
-                status = "same";
+                status = "removed";
             }
-            else if (isNew)
+            else if (!isOld && isNew)
             {
                 status = "added";
+            }
+
+            if (status == "added")
+            {
                 UpdateStats(nodeIoStats, edge.Target, stats => (stats.InAdded + 1, stats.InRemoved, stats.OutAdded, stats.OutRemoved));
                 UpdateStats(nodeIoStats, edge.Source, stats => (stats.InAdded, stats.InRemoved, stats.OutAdded + 1, stats.OutRemoved));
             }
-            else // isOld
+            else if (status == "removed")
             {
-                status = "removed";
                 UpdateStats(nodeIoStats, edge.Target, stats => (stats.InAdded, stats.InRemoved + 1, stats.OutAdded, stats.OutRemoved));
                 UpdateStats(nodeIoStats, edge.Source, stats => (stats.InAdded, stats.InRemoved, stats.OutAdded, stats.OutRemoved + 1));
             }
 
-            diffEdges.Add(new Edge { Source = edge.Source, Target = edge.Target, SourcePort = edge.SourcePort, TargetPort = edge.TargetPort, Status = status });
+            if (!nodeIoStats.ContainsKey(edge.Source) || !nodeIoStats.ContainsKey(edge.Target))
+            {
+                danglingEndpoints++;
+            }
+
+            result.Edges.Add(new Edge
+            {
+                Source = edge.Source,
+                SourcePort = edge.SourcePort,
+                Target = edge.Target,
+                TargetPort = edge.TargetPort,
+                Status = status
+            });
         }
 
-        // Update nodes with IO stats
-        foreach (var n in diffNodes)
+        foreach (var node in result.Nodes)
         {
-            if (nodeIoStats.TryGetValue(n.Id, out var stats))
+            if (nodeIoStats.TryGetValue(node.Id, out var stats))
             {
-                n.InAdded = stats.InAdded;
-                n.InRemoved = stats.InRemoved;
-                n.OutAdded = stats.OutAdded;
-                n.OutRemoved = stats.OutRemoved;
+                node.InAdded = stats.InAdded;
+                node.InRemoved = stats.InRemoved;
+                node.OutAdded = stats.OutAdded;
+                node.OutRemoved = stats.OutRemoved;
 
-                // Mark as modified if status is 'same' but has IO changes
-                if (n.Status == "same" && 
+                if (node.Status == "same" &&
                     (stats.InAdded > 0 || stats.InRemoved > 0 || stats.OutAdded > 0 || stats.OutRemoved > 0))
                 {
-                    n.Status = "modified";
+                    node.Status = "modified";
+                }
+
+                if (node.RiskScore > 0 && (stats.InAdded + stats.InRemoved + stats.OutAdded + stats.OutRemoved) > 0 && !node.RiskReasons.Contains("Connection changes"))
+                {
+                    node.RiskReasons.Add("Connection changes");
                 }
             }
         }
 
-        _logger.LogInformation("Diff complete. Found {DiffNodeCount} nodes and {DiffEdgeCount} edges.", diffNodes.Count, diffEdges.Count);
-        return (diffNodes, diffEdges);
+        if (danglingEndpoints > 0)
+        {
+            AddDiagnostic(result.Diagnostics, "DANGLING_EDGE_ENDPOINTS", "warning",
+                $"{danglingEndpoints} edge(s) reference node ids not present in diff output.");
+        }
+
+        AppendGraphDiagnostics(result.Diagnostics, oldGraph.Metadata, "Old");
+        AppendGraphDiagnostics(result.Diagnostics, newGraph.Metadata, "New");
+
+        result.TopRisks = result.Nodes
+            .Where(n => n.RiskScore > 0)
+            .OrderByDescending(n => n.RiskScore)
+            .ThenBy(n => n.Status, StringComparer.Ordinal)
+            .ThenBy(n => n.Id, StringComparer.Ordinal)
+            .Take(10)
+            .Select(n => new NodeRiskFinding
+            {
+                NodeId = n.Id,
+                NodeName = string.IsNullOrWhiteSpace(n.Nickname) ? n.Name : n.Nickname,
+                NodeStatus = n.Status,
+                RiskScore = n.RiskScore,
+                Reasons = n.RiskReasons.Take(5).ToList()
+            })
+            .ToList();
+
+        result.RiskSummary = BuildRiskSummary(result.Nodes);
+
+        _logger.LogInformation("Diff complete. Found {DiffNodeCount} nodes and {DiffEdgeCount} edges.", result.Nodes.Count, result.Edges.Count);
+        return result;
+    }
+
+    private static DiffRiskSummary BuildRiskSummary(IEnumerable<Node> nodes)
+    {
+        var summary = new DiffRiskSummary();
+        foreach (var node in nodes)
+        {
+            if (node.RiskScore >= 80) summary.CriticalCount++;
+            else if (node.RiskScore >= 60) summary.HighCount++;
+            else if (node.RiskScore >= 30) summary.MediumCount++;
+            else if (node.RiskScore > 0) summary.LowCount++;
+        }
+
+        return summary;
+    }
+
+    private static void AppendGraphDiagnostics(List<DiffDiagnostic> diagnostics, GraphMetadata meta, string side)
+    {
+        if (meta.UnresolvedEdgeReferences > 0)
+        {
+            diagnostics.Add(new DiffDiagnostic
+            {
+                Code = "UNRESOLVED_EDGE_REFERENCE",
+                Severity = "warning",
+                Message = $"{side} graph contains {meta.UnresolvedEdgeReferences} unresolved edge reference(s)."
+            });
+        }
+
+        if (meta.ClusterPreviewFailed > 0)
+        {
+            diagnostics.Add(new DiffDiagnostic
+            {
+                Code = "CLUSTER_PREVIEW_FAILED",
+                Severity = "warning",
+                Message = $"{side} graph failed to decode {meta.ClusterPreviewFailed} cluster preview payload(s)."
+            });
+        }
+
+        if (meta.ClusterPreviewDepthLimitHits > 0)
+        {
+            diagnostics.Add(new DiffDiagnostic
+            {
+                Code = "CLUSTER_PREVIEW_DEPTH_LIMIT",
+                Severity = "info",
+                Message = $"{side} graph hit cluster preview depth limit {meta.ClusterPreviewDepthLimitHits} time(s)."
+            });
+        }
+    }
+
+    private static void AddDiagnostic(List<DiffDiagnostic> diagnostics, string code, string severity, string message)
+    {
+        diagnostics.Add(new DiffDiagnostic
+        {
+            Code = code,
+            Severity = severity,
+            Message = message
+        });
+    }
+
+    private static Node CloneNode(Node src)
+    {
+        return new Node
+        {
+            Id = src.Id,
+            Name = src.Name,
+            Nickname = src.Nickname,
+            X = src.X,
+            Y = src.Y,
+            W = src.W,
+            H = src.H,
+            Status = src.Status,
+            Dx = src.Dx,
+            Dy = src.Dy,
+            InAdded = src.InAdded,
+            InRemoved = src.InRemoved,
+            OutAdded = src.OutAdded,
+            OutRemoved = src.OutRemoved,
+            Inputs = src.Inputs.Select(ClonePort).ToList(),
+            Outputs = src.Outputs.Select(ClonePort).ToList(),
+            Properties = new Dictionary<string, string>(src.Properties, StringComparer.Ordinal),
+            PropertiesOld = src.PropertiesOld == null ? null : new Dictionary<string, string>(src.PropertiesOld, StringComparer.Ordinal),
+            RiskScore = src.RiskScore,
+            RiskReasons = src.RiskReasons.ToList()
+        };
+    }
+
+    private static Port ClonePort(Port src)
+    {
+        return new Port
+        {
+            Id = src.Id,
+            Name = src.Name,
+            Nickname = src.Nickname,
+            Kind = src.Kind,
+            Type = src.Type,
+            Value = src.Value,
+            Status = src.Status,
+            ValueChanged = src.ValueChanged,
+            ValueOld = src.ValueOld,
+            ValueNew = src.ValueNew
+        };
+    }
+
+    private static Edge CloneEdge(Edge src)
+    {
+        return new Edge
+        {
+            Source = src.Source,
+            SourcePort = src.SourcePort,
+            Target = src.Target,
+            TargetPort = src.TargetPort,
+            Status = src.Status
+        };
+    }
+
+    private Node BuildMergedNode(Node nOld, Node nNew)
+    {
+        var dx = nNew.X - nOld.X;
+        var dy = nNew.Y - nOld.Y;
+        var modified = nOld.Name != nNew.Name || nOld.Nickname != nNew.Nickname;
+
+        var mergedInputs = DiffPorts(nOld.Inputs, nNew.Inputs);
+        var mergedOutputs = DiffPorts(nOld.Outputs, nNew.Outputs);
+
+        var properties = new Dictionary<string, string>(nNew.Properties, StringComparer.Ordinal);
+        var propertiesOld = new Dictionary<string, string>(StringComparer.Ordinal);
+        var propertiesChanged = false;
+
+        foreach (var kv in nOld.Properties)
+        {
+            if (!properties.ContainsKey(kv.Key))
+            {
+                properties[kv.Key] = kv.Value;
+            }
+
+            if (nNew.Properties.TryGetValue(kv.Key, out var newVal) && kv.Value != newVal)
+            {
+                modified = true;
+                propertiesChanged = true;
+                propertiesOld[kv.Key] = kv.Value;
+            }
+        }
+
+        if (mergedInputs.Any(p => p.Status != "same" || p.ValueChanged) ||
+            mergedOutputs.Any(p => p.Status != "same" || p.ValueChanged))
+        {
+            modified = true;
+        }
+
+        return new Node
+        {
+            Id = nNew.Id,
+            Name = nNew.Name,
+            Nickname = nNew.Nickname,
+            X = nNew.X,
+            Y = nNew.Y,
+            W = nNew.W,
+            H = nNew.H,
+            Status = modified ? "modified" : "same",
+            Dx = dx,
+            Dy = dy,
+            Inputs = mergedInputs,
+            Outputs = mergedOutputs,
+            Properties = properties,
+            PropertiesOld = propertiesChanged ? propertiesOld : null
+        };
     }
 
     private List<Port> DiffPorts(List<Port> oldPorts, List<Port> newPorts)
     {
         var result = new List<Port>();
-        var allIds = oldPorts.Select(p => p.Id).Union(newPorts.Select(p => p.Id)).ToHashSet();
+        var allIds = oldPorts.Select(p => p.Id).Union(newPorts.Select(p => p.Id), StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
 
         foreach (var pid in allIds)
         {
@@ -188,7 +355,7 @@ public class Differ : IDiffer
 
             if (inOld != null && inNew != null)
             {
-                var valueChanged = (inOld.Value ?? "") != (inNew.Value ?? "");
+                var valueChanged = (inOld.Value ?? string.Empty) != (inNew.Value ?? string.Empty);
                 var status = valueChanged || inOld.Name != inNew.Name || inOld.Nickname != inNew.Nickname ? "modified" : "same";
 
                 result.Add(new Port
@@ -207,25 +374,287 @@ public class Differ : IDiffer
             }
             else if (inNew != null)
             {
-                inNew.Status = "added";
-                result.Add(inNew);
+                var clone = ClonePort(inNew);
+                clone.Status = "added";
+                result.Add(clone);
             }
             else if (inOld != null)
             {
-                inOld.Status = "removed";
-                result.Add(inOld);
+                var clone = ClonePort(inOld);
+                clone.Status = "removed";
+                result.Add(clone);
             }
         }
 
-        return result.OrderBy(p => p.Id).ToList();
+        return result.OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
     }
 
-    private void UpdateStats(Dictionary<string, (int InAdded, int InRemoved, int OutAdded, int OutRemoved)> statsDict, string id, Func<(int InAdded, int InRemoved, int OutAdded, int OutRemoved), (int, int, int, int)> updateFunc)
+    private static void UpdateStats(
+        Dictionary<string, (int InAdded, int InRemoved, int OutAdded, int OutRemoved)> statsDict,
+        string id,
+        Func<(int InAdded, int InRemoved, int OutAdded, int OutRemoved), (int, int, int, int)> updateFunc)
     {
         if (statsDict.TryGetValue(id, out var currentStats))
         {
             statsDict[id] = updateFunc(currentStats);
         }
+    }
+
+    private static Edge CanonicalizeEdge(Edge edge, Dictionary<string, string> oldToNew)
+    {
+        var canonicalSource = oldToNew.TryGetValue(edge.Source, out var mappedSource) ? mappedSource : edge.Source;
+        var canonicalTarget = oldToNew.TryGetValue(edge.Target, out var mappedTarget) ? mappedTarget : edge.Target;
+
+        return new Edge
+        {
+            Source = canonicalSource,
+            Target = canonicalTarget,
+            SourcePort = CanonicalizePort(edge.SourcePort, edge.Source, canonicalSource),
+            TargetPort = CanonicalizePort(edge.TargetPort, edge.Target, canonicalTarget),
+            Status = edge.Status
+        };
+    }
+
+    private static string CanonicalizePort(string portId, string originalNodeId, string canonicalNodeId)
+    {
+        if (string.IsNullOrEmpty(portId) || originalNodeId == canonicalNodeId)
+        {
+            return portId;
+        }
+
+        if (portId.StartsWith(originalNodeId + ":", StringComparison.Ordinal))
+        {
+            return canonicalNodeId + portId[originalNodeId.Length..];
+        }
+
+        return portId;
+    }
+
+    private static void ScoreNodeRisk(Node target, Node? oldNode, Node? newNode)
+    {
+        var score = 0;
+        var reasons = new List<string>();
+
+        if (target.Status == "removed")
+        {
+            score += 85;
+            reasons.Add("Node removed");
+        }
+        else if (target.Status == "added")
+        {
+            score += 65;
+            reasons.Add("Node added");
+        }
+        else if (target.Status == "modified")
+        {
+            score += 35;
+            reasons.Add("Node modified");
+        }
+
+        var oldProps = oldNode?.Properties ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        var newProps = newNode?.Properties ?? target.Properties;
+
+        if (HasScriptChange(oldProps, newProps))
+        {
+            score += 40;
+            reasons.Add("Script/code change");
+        }
+
+        if (HasClusterHashChange(oldProps, newProps))
+        {
+            score += 40;
+            reasons.Add("Cluster internals changed");
+        }
+
+        if (target.Dx != 0 || target.Dy != 0)
+        {
+            score += 10;
+            reasons.Add("Component moved");
+        }
+
+        score = Math.Min(score, 100);
+        target.RiskScore = score;
+        target.RiskReasons = reasons;
+    }
+
+    private static bool HasClusterHashChange(Dictionary<string, string> oldProps, Dictionary<string, string> newProps)
+    {
+        var oldHash = GetProp(oldProps, "ClusterHash");
+        var newHash = GetProp(newProps, "ClusterHash");
+        return !string.IsNullOrEmpty(oldHash) && !string.IsNullOrEmpty(newHash) && !string.Equals(oldHash, newHash, StringComparison.Ordinal);
+    }
+
+    private static bool HasScriptChange(Dictionary<string, string> oldProps, Dictionary<string, string> newProps)
+    {
+        foreach (var key in ScriptPropertyKeys)
+        {
+            var oldVal = GetProp(oldProps, key);
+            var newVal = GetProp(newProps, key);
+            if (oldVal != null && newVal != null && oldVal != newVal)
+            {
+                return true;
+            }
+        }
+
+        var keyUnion = oldProps.Keys.Union(newProps.Keys, StringComparer.OrdinalIgnoreCase);
+        foreach (var key in keyUnion.Where(IsScriptLikeKey))
+        {
+            oldProps.TryGetValue(key, out var oldVal);
+            newProps.TryGetValue(key, out var newVal);
+            if (!string.Equals(oldVal, newVal, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsScriptLikeKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return false;
+
+        return key.Contains("script", StringComparison.OrdinalIgnoreCase) ||
+               key.Contains("code", StringComparison.OrdinalIgnoreCase) ||
+               key.Contains("python", StringComparison.OrdinalIgnoreCase) ||
+               key.Contains("csharp", StringComparison.OrdinalIgnoreCase) ||
+               key.Contains("expression", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? GetProp(Dictionary<string, string> props, string key)
+    {
+        if (props.TryGetValue(key, out var value))
+        {
+            return value;
+        }
+
+        var alt = char.ToLowerInvariant(key[0]) + key[1..];
+        return props.TryGetValue(alt, out var altValue) ? altValue : null;
+    }
+
+    private static NodeMatchResult BuildNodeMatches(Graph oldGraph, Graph newGraph)
+    {
+        var oldToNew = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var id in oldGraph.Nodes.Keys.Intersect(newGraph.Nodes.Keys, StringComparer.Ordinal))
+        {
+            oldToNew[id] = id;
+        }
+
+        var unmatchedOld = oldGraph.Nodes.Values
+            .Where(n => !oldToNew.ContainsKey(n.Id))
+            .OrderBy(n => n.Id, StringComparer.Ordinal)
+            .ToList();
+
+        var unmatchedNew = newGraph.Nodes.Values
+            .Where(n => !oldToNew.ContainsValue(n.Id))
+            .OrderBy(n => n.Id, StringComparer.Ordinal)
+            .ToList();
+
+        var usedNew = new HashSet<string>(oldToNew.Values, StringComparer.Ordinal);
+        var fallbackCount = 0;
+
+        foreach (var oldNode in unmatchedOld)
+        {
+            Node? best = null;
+            var bestScore = 0;
+
+            foreach (var candidate in unmatchedNew)
+            {
+                if (usedNew.Contains(candidate.Id))
+                {
+                    continue;
+                }
+
+                var score = IdentityScore(oldNode, candidate);
+                if (score > bestScore || (score == bestScore && best != null &&
+                    string.CompareOrdinal(candidate.Id, best.Id) < 0))
+                {
+                    bestScore = score;
+                    best = candidate;
+                }
+            }
+
+            if (best != null && bestScore >= 60)
+            {
+                oldToNew[oldNode.Id] = best.Id;
+                usedNew.Add(best.Id);
+                fallbackCount++;
+            }
+        }
+
+        return new NodeMatchResult
+        {
+            OldToNew = oldToNew,
+            FallbackMatchedCount = fallbackCount
+        };
+    }
+
+    private static int IdentityScore(Node oldNode, Node newNode)
+    {
+        var score = 0;
+
+        if (string.Equals(oldNode.Name, newNode.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 35;
+        }
+
+        if (!string.IsNullOrWhiteSpace(oldNode.Nickname) &&
+            string.Equals(oldNode.Nickname, newNode.Nickname, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 20;
+        }
+
+        if (oldNode.Inputs.Count == newNode.Inputs.Count)
+        {
+            score += 10;
+        }
+
+        if (oldNode.Outputs.Count == newNode.Outputs.Count)
+        {
+            score += 10;
+        }
+
+        if (BuildPortSchema(oldNode) == BuildPortSchema(newNode))
+        {
+            score += 15;
+        }
+
+        var distance = Math.Sqrt(Math.Pow(newNode.X - oldNode.X, 2) + Math.Pow(newNode.Y - oldNode.Y, 2));
+        if (distance <= 50) score += 20;
+        else if (distance <= 150) score += 10;
+        else if (distance <= 400) score += 5;
+
+        var oldHash = GetProp(oldNode.Properties, "ClusterHash");
+        var newHash = GetProp(newNode.Properties, "ClusterHash");
+        if (!string.IsNullOrEmpty(oldHash) && !string.IsNullOrEmpty(newHash))
+        {
+            score += string.Equals(oldHash, newHash, StringComparison.Ordinal) ? 25 : 10;
+        }
+
+        if (HasScriptChange(oldNode.Properties, newNode.Properties))
+        {
+            score += 5;
+        }
+        else if (ScriptPropertyKeys.Any(k => oldNode.Properties.ContainsKey(k) && newNode.Properties.ContainsKey(k)))
+        {
+            score += 20;
+        }
+
+        return score;
+    }
+
+    private static string BuildPortSchema(Node node)
+    {
+        var inputs = string.Join("|", node.Inputs.Select(p => (p.Name ?? p.Nickname ?? string.Empty).Trim().ToLowerInvariant()).OrderBy(x => x, StringComparer.Ordinal));
+        var outputs = string.Join("|", node.Outputs.Select(p => (p.Name ?? p.Nickname ?? string.Empty).Trim().ToLowerInvariant()).OrderBy(x => x, StringComparer.Ordinal));
+        return $"{inputs}>>{outputs}";
+    }
+
+    private sealed class NodeMatchResult
+    {
+        public Dictionary<string, string> OldToNew { get; set; } = new(StringComparer.Ordinal);
+        public int FallbackMatchedCount { get; set; }
     }
 }
 

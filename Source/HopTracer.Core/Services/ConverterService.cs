@@ -14,6 +14,11 @@ public class ConverterService : IConverterService
 
     public string ConvertGhToGhx(string inputPath)
     {
+        if (!TryCheckDependencies(out var dependencyMessage))
+        {
+            throw new InvalidOperationException(dependencyMessage);
+        }
+
         if (!File.Exists(inputPath))
         {
             _logger.LogError("Input file not found: {Path}", inputPath);
@@ -43,5 +48,21 @@ public class ConverterService : IConverterService
         }
 
         return outputPath;
+    }
+
+    public bool TryCheckDependencies(out string message)
+    {
+        try
+        {
+            var version = GH_Archive.GH_IO_Version.ToString();
+            message = $"GH_IO ready (version {version})";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            message = $"GH_IO dependency unavailable: {ex.Message}. Ensure Rhino/Grasshopper runtime and GH_IO.dll are accessible.";
+            _logger.LogError(ex, "GH_IO dependency health check failed");
+            return false;
+        }
     }
 }

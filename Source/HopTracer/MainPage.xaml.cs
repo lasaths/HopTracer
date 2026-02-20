@@ -31,10 +31,13 @@ public partial class MainPage : ContentPage
     {
         try
         {
+            var port = GetAvailablePort(5000);
+            var url = $"http://localhost:{port}";
+
             _webHost = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseUrls("http://localhost:5000");
+                    webBuilder.UseUrls(url);
                     
                     // Use Embedded File Provider for single-file portability
                     // In portable builds, wwwroot files are embedded in the main assembly (HopTracer.Maui)
@@ -60,7 +63,7 @@ public partial class MainPage : ContentPage
                         env.WebRootFileProvider = embeddedProvider;
 
                         // Restrict CORS to localhost only for security
-                        app.UseCors(x => x.WithOrigins("http://localhost:5000", "http://127.0.0.1:5000")
+                        app.UseCors(x => x.WithOrigins(url, $"http://127.0.0.1:{port}")
                                           .AllowAnyMethod()
                                           .AllowAnyHeader());
                         
@@ -96,11 +99,24 @@ public partial class MainPage : ContentPage
             await _webHost.StartAsync();
             
             // Navigate to localhost
-            DiffWebView.Source = "http://localhost:5000";
+            DiffWebView.Source = url;
         }
         catch (Exception ex)
         {
             await DisplayAlert("Error", "Failed to start web server: " + ex.Message, "OK");
         }
+    }
+
+    private int GetAvailablePort(int startingPort)
+    {
+        var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+        var listeners = properties.GetActiveTcpListeners();
+        var port = startingPort;
+
+        while (listeners.Any(x => x.Port == port))
+        {
+            port++;
+        }
+        return port;
     }
 }

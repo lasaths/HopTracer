@@ -4,6 +4,7 @@ using HopTracer.Core.Services;
 using HopTracer.Web.Models;
 using HopTracer.Web.Serialization;
 using HopTracer.Web.Services;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace HopTracer.Web.Controllers;
@@ -50,6 +51,7 @@ public class CompareController : ControllerBase
             string finalPathNew;
             string originalFileNameOld;
             string originalFileNameNew;
+            var stageTimings = new List<DiffStageTiming>();
 
             // Handle Old File
             if (!string.IsNullOrEmpty(path_old))
@@ -127,34 +129,56 @@ public class CompareController : ControllerBase
             // Convert .gh to .ghx if necessary
             if (finalPathOld.ToLower().EndsWith(".gh"))
             {
+                if (!_converter.TryCheckDependencies(out var dependencyMessage))
+                {
+                    return await ReturnErrorPage(dependencyMessage);
+                }
                 finalPathOld = _converter.ConvertGhToGhx(finalPathOld);
                 _fileSelectionCache.Record(finalPathOld);
             }
 
             if (finalPathNew.ToLower().EndsWith(".gh"))
             {
+                if (!_converter.TryCheckDependencies(out var dependencyMessage))
+                {
+                    return await ReturnErrorPage(dependencyMessage);
+                }
                 finalPathNew = _converter.ConvertGhToGhx(finalPathNew);
                 _fileSelectionCache.Record(finalPathNew);
             }
 
             // Parse and diff
+            var sw = Stopwatch.StartNew();
             var graphOld = _parser.Parse(finalPathOld);
-            var graphNew = _parser.Parse(finalPathNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "parse_old", DurationMs = sw.ElapsedMilliseconds });
 
-            var (nodes, edges) = _differ.Diff(graphOld, graphNew);
+            sw.Restart();
+            var graphNew = _parser.Parse(finalPathNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "parse_new", DurationMs = sw.ElapsedMilliseconds });
+
+            sw.Restart();
+            var diff = _differ.DiffDetailed(graphOld, graphNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "diff_compute", DurationMs = sw.ElapsedMilliseconds });
 
             var diffData = new DiffResponse
             {
-                Nodes = nodes,
-                Edges = edges,
+                Nodes = diff.Nodes,
+                Edges = diff.Edges,
                 Meta = new DiffMeta
                 {
                     GeneratedAt = DateTime.Now.ToString("o"),
-                    NodeCount = nodes.Count,
-                    EdgeCount = edges.Count,
+                    NodeCount = diff.Nodes.Count,
+                    EdgeCount = diff.Edges.Count,
                     FileOld = originalFileNameOld,
                     FileNew = originalFileNameNew,
-                    CommitHash = null // Not a Git comparison
+                    CommitHash = null, // Not a Git comparison
+                    Diagnostics = diff.Diagnostics,
+                    TopRisks = diff.TopRisks,
+                    RiskSummary = diff.RiskSummary,
+                    StageTimings = stageTimings
                 },
                 OldMeta = graphOld.Metadata,
                 NewMeta = graphNew.Metadata

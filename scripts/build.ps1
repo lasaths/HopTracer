@@ -1,5 +1,5 @@
 # HopTracer Build Script
-# Builds production-ready portable executable
+# Builds production-ready portable package for GitHub releases
 
 param(
     [switch]$SkipClean = $false,
@@ -14,7 +14,7 @@ $releaseDir = Join-Path $rootDir "Release"
 Write-Host "=== HopTracer Production Build ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Step 1: Clean
+# Step 1: Clean build outputs
 if (-not $SkipClean) {
     Write-Host "[1/5] Cleaning..." -ForegroundColor Yellow
     
@@ -25,30 +25,6 @@ if (-not $SkipClean) {
     # Clean Release
     if (Test-Path $releaseDir) {
         Remove-Item "$releaseDir\*" -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    
-    # Remove unused files
-    $unusedFiles = @(
-        "$sourceDir\HopTracer.Web\Controllers\FileController.cs"
-    )
-    foreach ($file in $unusedFiles) {
-        if (Test-Path $file) {
-            Remove-Item $file -Force
-            Write-Host "  Removed unused file: $(Split-Path $file -Leaf)" -ForegroundColor DarkGray
-        }
-    }
-    
-    # Remove internal docs
-    $internalDocs = @(
-        "$rootDir\Production_Readiness_Summary.md",
-        "$rootDir\RELEASE_CHECKLIST.md",
-        "$rootDir\FINAL_RELEASE_SUMMARY.md"
-    )
-    foreach ($doc in $internalDocs) {
-        if (Test-Path $doc) {
-            Remove-Item $doc -Force
-            Write-Host "  Removed: $(Split-Path $doc -Leaf)" -ForegroundColor DarkGray
-        }
     }
     
     Write-Host "  ✓ Clean complete" -ForegroundColor Green
@@ -89,22 +65,26 @@ try {
     Pop-Location
 }
 
-# Step 5: Publish
-Write-Host "`n[5/5] Publishing single-file executable..." -ForegroundColor Yellow
+# Step 5: Publish and package
+Write-Host "`n[5/5] Publishing portable package..." -ForegroundColor Yellow
 $outputDir = Join-Path $releaseDir "HopTracer_Portable"
+$zipPath = Join-Path $releaseDir "HopTracer-Windows-x64.zip"
 $projectFile = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
 
 Push-Location $sourceDir
 try {
+    if (Test-Path $outputDir) {
+        Remove-Item $outputDir -Recurse -Force
+    }
+
     dotnet publish $projectFile `
-        -f net9.0-windows10.0.19041.0 `
+        -f net10.0-windows10.0.19041.0 `
         -c Release `
         -r win-x64 `
         -p:WindowsPackageType=None `
         -p:WindowsAppSDKSelfContained=true `
         -p:SelfContained=true `
-        -p:PublishSingleFile=true `
-        -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:PublishSingleFile=false `
         -o $outputDir `
         --verbosity quiet
     
@@ -112,19 +92,18 @@ try {
     
     $exePath = Join-Path $outputDir "HopTracer.exe"
     if (Test-Path $exePath) {
-        $size = [math]::Round((Get-Item $exePath).Length / 1MB, 2)
-        
-        Write-Host "  ✓ Single-file executable created: $size MB" -ForegroundColor Green
-        
-        # Move exe to release root and clean up folder
-        $finalExePath = Join-Path $releaseDir "HopTracer.exe"
-        if (Test-Path $finalExePath) {
-            Remove-Item $finalExePath -Force
+        $fileCount = (Get-ChildItem -Path $outputDir -Recurse -File).Count
+        $folderSizeMb = [math]::Round(((Get-ChildItem -Path $outputDir -Recurse -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 2)
+
+        Write-Host "  ✓ Portable package created: $folderSizeMb MB ($fileCount files)" -ForegroundColor Green
+
+        if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
         }
-        Move-Item $exePath $finalExePath -Force
-        Remove-Item $outputDir -Recurse -Force -ErrorAction SilentlyContinue
-        
-        Write-Host "  ✓ Executable moved to: $finalExePath" -ForegroundColor Green
+
+        Compress-Archive -Path (Join-Path $outputDir "*") -DestinationPath $zipPath -Force
+        $zipSizeMb = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+        Write-Host "  ✓ Release archive created: $zipPath ($zipSizeMb MB)" -ForegroundColor Green
     }
 } finally {
     Pop-Location
@@ -132,6 +111,7 @@ try {
 
 # Summary
 Write-Host "`n=== Build Complete ===" -ForegroundColor Green
-Write-Host "Executable: $releaseDir\HopTracer.exe" -ForegroundColor Cyan
-Write-Host "To test: .\Release\HopTracer.exe" -ForegroundColor White
+Write-Host "Portable folder: $outputDir" -ForegroundColor Cyan
+Write-Host "Release archive: $zipPath" -ForegroundColor Cyan
+Write-Host "To test: .\Release\HopTracer_Portable\HopTracer.exe" -ForegroundColor White
 Write-Host ""
