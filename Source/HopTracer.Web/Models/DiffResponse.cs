@@ -22,6 +22,12 @@ public class DiffMeta
     public string? CommitAuthor { get; set; }
     public string? CommitDate { get; set; }
     public string? CommitMessage { get; set; }
+    public string? SourcePathOld { get; set; }
+    public string? SourcePathNew { get; set; }
+    public string? SourceTypeOld { get; set; }
+    public string? SourceTypeNew { get; set; }
+    public string? SourceHashOld { get; set; }
+    public string? SourceHashNew { get; set; }
     public List<DiffDiagnostic> Diagnostics { get; set; } = new();
     public List<NodeRiskFinding> TopRisks { get; set; } = new();
     public DiffRiskSummary RiskSummary { get; set; } = new();

@@ -60,4 +60,10 @@ public class Port
     public bool ValueChanged { get; set; } = false;
     public string? ValueOld { get; set; }
     public string? ValueNew { get; set; }
+
+    /// <summary>
+    /// Grasshopper wire display mode for this parameter input.
+    /// 0 = default, 1 = faint, 2 = hidden.
+    /// </summary>
+    public int WireDisplay { get; set; } = 0;
 }
