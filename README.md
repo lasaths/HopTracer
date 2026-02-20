@@ -5,7 +5,7 @@
 # HopTracer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4.svg)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![Release](https://img.shields.io/github/v/release/lasaths/HopTracer)](https://github.com/lasaths/HopTracer/releases)
 
@@ -17,7 +17,7 @@ HopTracer is a powerful desktop tool designed to help architects and computation
 
 * **Visual Diffing**: See added, removed, and modified components on an interactive canvas.
 * **Git Integration**: View commit history for a file and compare against previous versions.
-* **Portable**: Single-file executable with no external dependencies.
+* **Portable**: Self-contained Windows package with no external .NET runtime dependency.
 * **Interactive UI**: Pan, zoom, filter by change type, and search for components.
 * **File Format Support**: Works with both binary `.gh` and XML `.ghx` files.
 
@@ -26,13 +26,14 @@ HopTracer is a powerful desktop tool designed to help architects and computation
 ## Installation
 
 1. Download the latest release from the [Releases](https://github.com/lasaths/HopTracer/releases) page.
-2. Run `HopTracer.exe`.
+2. Extract `HopTracer-Windows-x64.zip`.
+3. Run `HopTracer.exe` from the extracted `HopTracer_Portable` folder.
 
-No installation or .NET runtime required - just download and run!
+No installation or .NET runtime required.
 
 ## Usage
 
-1. **Launch the App**: Open `HopTracer.exe`.
+1. **Launch the App**: Open `HopTracer.exe` from the extracted `HopTracer_Portable` folder.
 2. **Select Files**:
    * Drag your "Old" file into the left box (supports both `.gh` and `.ghx`).
    * Drag your "New" file into the right box.
@@ -53,7 +54,7 @@ This section contains technical details for those interested in the backend or c
 
 ### Architecture
 
-The project is built using **.NET 9** and **.NET MAUI** for cross-platform desktop support (Windows/macOS). It uses a hybrid approach where the UI is rendered via a local ASP.NET Core server hosting a web-based visualization.
+The project is built using **.NET 10** and **.NET MAUI** for cross-platform desktop support (Windows/macOS). It uses a hybrid approach where the UI is rendered via a local ASP.NET Core server hosting a web-based visualization.
 
 * **Core**: Handles parsing of `.gh`/`.ghx` files and the diffing logic.
 * **Web**: Serves the HTML/JS visualization and API endpoints.
@@ -63,33 +64,36 @@ The project is built using **.NET 9** and **.NET MAUI** for cross-platform deskt
 
 #### Prerequisites
 
-* .NET 9 SDK
+* .NET 10 SDK
 * Visual Studio 2022 or VS Code
 * Rhino 7 or 8 (for GH_IO.dll dependency)
 
 #### Steps
 
 1. Clone the repository: `git clone https://github.com/lasaths/HopTracer.git`
-2. Run the setup script: `.\Scripts\setup_dependencies.ps1`
+2. Run the setup script: `.\scripts\setup_dependencies.ps1`
 3. Open `Source/HopTracer.sln`.
 4. Build the `HopTracer` project.
 5. Run the application.
 
 #### Production Build
 
-To create a portable single-file executable:
+To create a portable release package:
 
 ```powershell
-.\Scripts\build.ps1
+.\scripts\build.ps1
 ```
 
 **Options:**
 - `-SkipClean` - Keep previous builds
 - `-SkipTests` - Skip running tests
 
-The output is a ~100-120MB standalone `.exe` file in `Release/HopTracer_Portable/` with no external dependencies.
+The build creates:
 
-**Note**: The size includes the full .NET 9 runtime, MAUI framework, ASP.NET Core server, and all dependencies - this ensures the app works on any Windows 10+ machine without requiring .NET installation.
+- `Release\HopTracer_Portable\` (self-contained app folder)
+- `Release\HopTracer-Windows-x64.zip` (GitHub-ready release artifact)
+
+**Note**: The package includes the full .NET 10 runtime, MAUI framework, ASP.NET Core server, and all dependencies, so it works on Windows 10+ without a preinstalled runtime.
 
 ### Contributing
 

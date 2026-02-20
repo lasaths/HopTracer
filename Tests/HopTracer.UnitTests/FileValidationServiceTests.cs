@@ -36,7 +36,7 @@ public class FileValidationServiceTests : IDisposable
 
         Assert.DoesNotContain("?", sanitized);
         Assert.DoesNotContain("..", sanitized);
-        Assert.True(sanitized.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase));
+        Assert.EndsWith(".ghx", sanitized, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()

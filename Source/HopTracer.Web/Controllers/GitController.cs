@@ -4,6 +4,7 @@ using HopTracer.Core.Services;
 using HopTracer.Web.Models;
 using HopTracer.Web.Serialization;
 using HopTracer.Web.Services;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -112,6 +113,7 @@ public partial class GitController : ControllerBase
 
         try
         {
+            var stageTimings = new List<DiffStageTiming>();
             // Get old content
             var contentOld = wrapper.GetFileContentAtCommit(request.HashOld, normalizedPath);
             var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
@@ -134,20 +136,34 @@ public partial class GitController : ControllerBase
             }
 
             // Parse and diff
+            var sw = Stopwatch.StartNew();
             var graphOld = _parser.Parse(pathOld);
-            var graphNew = _parser.Parse(pathNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "parse_old", DurationMs = sw.ElapsedMilliseconds });
 
-            var (nodes, edges) = _differ.Diff(graphOld, graphNew);
+            sw.Restart();
+            var graphNew = _parser.Parse(pathNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "parse_new", DurationMs = sw.ElapsedMilliseconds });
+
+            sw.Restart();
+            var diff = _differ.DiffDetailed(graphOld, graphNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "diff_compute", DurationMs = sw.ElapsedMilliseconds });
 
             var diffData = new DiffResponse
             {
-                Nodes = nodes,
-                Edges = edges,
+                Nodes = diff.Nodes,
+                Edges = diff.Edges,
                 Meta = new DiffMeta
                 {
                     GeneratedAt = DateTime.Now.ToString("o"),
-                    NodeCount = nodes.Count,
-                    EdgeCount = edges.Count
+                    NodeCount = diff.Nodes.Count,
+                    EdgeCount = diff.Edges.Count,
+                    Diagnostics = diff.Diagnostics,
+                    TopRisks = diff.TopRisks,
+                    RiskSummary = diff.RiskSummary,
+                    StageTimings = stageTimings
                 }
             };
 
@@ -221,6 +237,10 @@ public partial class GitController : ControllerBase
                 _logger.LogInformation("Converting binary .gh to .ghx...");
                 try
                 {
+                    if (!_converter.TryCheckDependencies(out var dependencyMessage))
+                    {
+                        return StatusCode(500, dependencyMessage);
+                    }
                     pathOld = _converter.ConvertGhToGhx(pathOld);
                     _logger.LogInformation("Converted to: {PathOld}", pathOld);
                 }
@@ -240,6 +260,10 @@ public partial class GitController : ControllerBase
                 _logger.LogInformation("Converting current .gh file to .ghx...");
                 try
                 {
+                    if (!_converter.TryCheckDependencies(out var dependencyMessage))
+                    {
+                        return StatusCode(500, dependencyMessage);
+                    }
                     // Copy to temp directory to avoid modifying the repo
                     var tempCurrentFileName = $"git_current_{hash_old}.gh";
                     var tempCurrentPath = Path.Combine(uploadsPath, tempCurrentFileName);
@@ -260,33 +284,47 @@ public partial class GitController : ControllerBase
 
             // Parse and diff
             _logger.LogInformation("Parsing old file: {PathOld}", pathOld);
+            var stageTimings = new List<DiffStageTiming>();
+            var sw = Stopwatch.StartNew();
             var graphOld = _parser.Parse(pathOld);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "parse_old", DurationMs = sw.ElapsedMilliseconds });
             
             _logger.LogInformation("Parsing new file: {PathNew}", pathNew);
+            sw.Restart();
             var graphNew = _parser.Parse(pathNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "parse_new", DurationMs = sw.ElapsedMilliseconds });
 
             _logger.LogInformation("Computing diff...");
-            var (nodes, edges) = _differ.Diff(graphOld, graphNew);
+            sw.Restart();
+            var diff = _differ.DiffDetailed(graphOld, graphNew);
+            sw.Stop();
+            stageTimings.Add(new DiffStageTiming { Name = "diff_compute", DurationMs = sw.ElapsedMilliseconds });
 
             var diffData = new DiffResponse
             {
-                Nodes = nodes,
-                Edges = edges,
+                Nodes = diff.Nodes,
+                Edges = diff.Edges,
                 Meta = new DiffMeta
                 {
                     GeneratedAt = DateTime.Now.ToString("o"),
-                    NodeCount = nodes.Count,
-                    EdgeCount = edges.Count,
+                    NodeCount = diff.Nodes.Count,
+                    EdgeCount = diff.Edges.Count,
                     FileOld = $"{Path.GetFileName(path)} @ {hash_old.Substring(0, 7)}",
                     FileNew = $"{Path.GetFileName(path)} (current)",
                     CommitHash = hash_old,
                     CommitAuthor = commitInfo?.Author,
                     CommitDate = commitInfo?.Date,
-                    CommitMessage = commitInfo?.Message
+                    CommitMessage = commitInfo?.Message,
+                    Diagnostics = diff.Diagnostics,
+                    TopRisks = diff.TopRisks,
+                    RiskSummary = diff.RiskSummary,
+                    StageTimings = stageTimings
                 }
             };
             
-            _logger.LogInformation("Diff completed: {NodeCount} nodes, {EdgeCount} edges", nodes.Count, edges.Count);
+            _logger.LogInformation("Diff completed: {NodeCount} nodes, {EdgeCount} edges", diff.Nodes.Count, diff.Edges.Count);
 
             // Load the diff viewer template
             var fileInfo = _env.WebRootFileProvider.GetFileInfo("diff_viewer.html");
