@@ -490,31 +490,227 @@
             color: var(--text-primary);
         }
 
-        .panel-toggle-controls {
-            position: absolute;
-            top: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 8px;
-            z-index: 130;
+        .panel-icon-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            transition: all 0.2s;
         }
 
-        .panel-toggle-btn {
-            background: rgba(20, 22, 28, 0.88);
+        .panel-icon-btn:hover {
+            color: #fff;
+            border-color: var(--accent-color);
+            background: rgba(92, 128, 247, 0.2);
+        }
+
+        .panel-expand-btn {
+            position: absolute;
+            top: 16px;
+            width: 28px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(20, 22, 28, 0.9);
+            color: var(--text-secondary);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 130;
+            font-size: 16px;
+        }
+
+        .panel-expand-btn.left {
+            left: 8px;
+        }
+
+        .panel-expand-btn.right {
+            right: 8px;
+        }
+
+        #main-container.sidebar-hidden .panel-expand-btn.left,
+        #main-container.details-hidden .panel-expand-btn.right {
+            display: inline-flex;
+        }
+
+        .source-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 220;
+            backdrop-filter: blur(3px);
+        }
+
+        .source-modal-backdrop.open {
+            display: flex;
+        }
+
+        .source-modal {
+            width: min(760px, 92vw);
+            max-height: 84vh;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-panel);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .source-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .source-modal-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .source-modal-body {
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow: auto;
+        }
+
+        .source-mode-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .source-mode-btn {
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 11px;
+            padding: 7px 11px;
+            border-radius: 10px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
         }
 
-        .panel-toggle-btn.active {
+        .source-mode-btn.active {
             color: #fff;
             border-color: var(--accent-color);
             background: linear-gradient(135deg, var(--accent-color), var(--ring));
+        }
+
+        .source-mode-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .source-pane {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            background: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .source-field-label {
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .source-path {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 11px;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.22);
+            border-radius: 8px;
+            padding: 8px;
+            word-break: break-all;
+            min-height: 34px;
+        }
+
+        .source-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .source-commit-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.18);
+        }
+
+        .source-commit-row {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: grid;
+            grid-template-columns: 74px 1fr;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .source-commit-row:last-child {
+            border-bottom: none;
+        }
+
+        .source-commit-row:hover {
+            background: rgba(92, 128, 247, 0.12);
+            color: var(--text-primary);
+        }
+
+        .source-commit-row.selected {
+            background: rgba(92, 128, 247, 0.28);
+            color: #fff;
+        }
+
+        .source-commit-hash {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            color: var(--accent-color);
+        }
+
+        .source-commit-msg {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .source-modal-status {
+            min-height: 18px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .source-modal-footer {
+            padding: 12px 16px 14px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
         }
 
         /* Minimap */
@@ -881,9 +1077,12 @@
             </div>
         </div>
 
-    <div id="main-container">
+        <div id="main-container">
         <div id="sidebar">
             <div class="sidebar-header">
+                <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+                    <button type="button" id="btn-sidebar-collapse" class="panel-icon-btn" title="Hide left panel">◀</button>
+                </div>
                 <h1 style="display: flex; align-items: center; gap: 12px;">
                     <img src="/images/HopTrace_Logo_White.png" alt="HopTracer" style="height: 40px;">
                     <span style="font-size: 20px; font-weight: 600;">HopTracer</span>
@@ -970,10 +1169,8 @@
 
         <div id="main-view">
             <div id="graph-tabs" class="graph-tabs"></div>
-            <div class="panel-toggle-controls">
-                <button type="button" id="btn-toggle-sidebar" class="panel-toggle-btn active">Left Panel</button>
-                <button type="button" id="btn-toggle-details" class="panel-toggle-btn active">Right Panel</button>
-            </div>
+            <button type="button" id="btn-sidebar-expand" class="panel-expand-btn left" title="Show left panel">▶</button>
+            <button type="button" id="btn-details-expand" class="panel-expand-btn right" title="Show right panel">◀</button>
 
             <div class="legend">
                 <div class="legend-item">
@@ -1051,6 +1248,7 @@
 
         <div id="details-panel">
             <div class="details-tabs">
+                <button type="button" id="btn-details-collapse" class="panel-icon-btn" title="Hide right panel" style="margin-right:4px;">▶</button>
                 <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
                 <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script Diff</button>
             </div>
@@ -1063,6 +1261,45 @@
         </div>
 
     </div> <!-- End of main-container -->
+
+    <div id="source-modal" class="source-modal-backdrop">
+        <div class="source-modal">
+            <div class="source-modal-header">
+                <div class="source-modal-title" id="source-modal-title">Change Source</div>
+                <button type="button" id="btn-source-modal-close" class="panel-icon-btn" title="Close">✕</button>
+            </div>
+            <div class="source-modal-body">
+                <div class="source-mode-row">
+                    <button type="button" id="source-mode-file" class="source-mode-btn active">File</button>
+                    <button type="button" id="source-mode-commit" class="source-mode-btn">Git Commit</button>
+                </div>
+
+                <div id="source-pane-file" class="source-pane">
+                    <div class="source-field-label">Selected File</div>
+                    <div id="source-file-path" class="source-path">No file selected</div>
+                    <div class="source-actions">
+                        <button type="button" id="btn-source-pick-file" class="filter-btn">Choose File</button>
+                    </div>
+                </div>
+
+                <div id="source-pane-commit" class="source-pane" style="display:none;">
+                    <div class="source-field-label">Repository File</div>
+                    <div id="source-commit-path" class="source-path">No file selected</div>
+                    <div class="source-actions">
+                        <button type="button" id="btn-source-pick-commit-file" class="filter-btn">Choose File</button>
+                        <button type="button" id="btn-source-load-commits" class="filter-btn">Load Commits</button>
+                    </div>
+                    <div id="source-commit-list" class="source-commit-list"></div>
+                </div>
+
+                <div id="source-modal-status" class="source-modal-status"></div>
+            </div>
+            <div class="source-modal-footer">
+                <button type="button" id="btn-source-cancel" class="filter-btn">Cancel</button>
+                <button type="button" id="btn-source-apply" class="filter-btn active">Apply</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Placeholder for injected data
@@ -1092,6 +1329,7 @@
         // State
         let state = {
             nodes: [],
+            groups: [],
             edges: [],
             view: { x: 0, y: 0, scale: 1 },
             dragging: false,
@@ -1119,6 +1357,15 @@
             source: {
                 old: { type: 'file', path: '', hash: null },
                 new: { type: 'file', path: '', hash: null }
+            },
+            sourceModal: {
+                side: 'old',
+                mode: 'file',
+                filePath: '',
+                commitPath: '',
+                commits: [],
+                selectedCommit: null,
+                commitAvailable: null
             }
         };
 
@@ -1143,6 +1390,26 @@
         const mainContainer = document.getElementById('main-container');
         const metaFileOldElem = document.getElementById('meta-file-old');
         const metaFileNewElem = document.getElementById('meta-file-new');
+        const btnSidebarCollapse = document.getElementById('btn-sidebar-collapse');
+        const btnSidebarExpand = document.getElementById('btn-sidebar-expand');
+        const btnDetailsCollapse = document.getElementById('btn-details-collapse');
+        const btnDetailsExpand = document.getElementById('btn-details-expand');
+        const sourceModal = document.getElementById('source-modal');
+        const sourceModalTitle = document.getElementById('source-modal-title');
+        const sourceModalStatus = document.getElementById('source-modal-status');
+        const sourceModeFileBtn = document.getElementById('source-mode-file');
+        const sourceModeCommitBtn = document.getElementById('source-mode-commit');
+        const sourcePaneFile = document.getElementById('source-pane-file');
+        const sourcePaneCommit = document.getElementById('source-pane-commit');
+        const sourceFilePath = document.getElementById('source-file-path');
+        const sourceCommitPath = document.getElementById('source-commit-path');
+        const sourceCommitList = document.getElementById('source-commit-list');
+        const btnSourcePickFile = document.getElementById('btn-source-pick-file');
+        const btnSourcePickCommitFile = document.getElementById('btn-source-pick-commit-file');
+        const btnSourceLoadCommits = document.getElementById('btn-source-load-commits');
+        const btnSourceApply = document.getElementById('btn-source-apply');
+        const btnSourceCancel = document.getElementById('btn-source-cancel');
+        const btnSourceModalClose = document.getElementById('btn-source-modal-close');
 
         // Initialization
         async function init() {
@@ -1164,9 +1431,16 @@
         }
 
         const SCRIPT_PROPERTY_KEYS = new Set([
-            'ScriptSource', 'Code', 'Script', 'Expression',
-            'CodeInput', 'CodeOutput', 'PythonScript', 'PythonCode',
-            'CSharpCode', 'VBCode', 'SourceCode'
+            'scriptsource', 'code', 'script', 'expression',
+            'codeinput', 'codeoutput', 'pythonscript', 'pythoncode',
+            'csharpcode', 'vbcode', 'sourcecode'
+        ]);
+        const SCRIPT_NOISE_KEYS = new Set([
+            'scriptparamaccess', 'editorposition', 'editorlocation', 'editorbounds',
+            'cursorposition', 'caretposition', 'selectionstart', 'selectionlength',
+            'showtypehints', 'typehintid', 'allowtreeaccess',
+            'scriptcomponentversion', 'scriptparameterversion',
+            'usingscriptinputparam', 'usingscriptoutputparam'
         ]);
         const SCRIPT_KEY_PATTERN = /(script|code|python|ghpython|csharp|c#|vb\.?net|expression)/i;
         const SCRIPT_COMPONENT_PATTERN = /(python|ghpython|c#|csharp|vb|script)/i;
@@ -1210,17 +1484,6 @@
             mainContainer.classList.toggle('sidebar-hidden', !!state.sidebarHidden);
             mainContainer.classList.toggle('details-hidden', !!state.detailsHidden);
 
-            const leftBtn = document.getElementById('btn-toggle-sidebar');
-            const rightBtn = document.getElementById('btn-toggle-details');
-            if (leftBtn) {
-                leftBtn.classList.toggle('active', !state.sidebarHidden);
-                leftBtn.textContent = state.sidebarHidden ? 'Show Left' : 'Left Panel';
-            }
-            if (rightBtn) {
-                rightBtn.classList.toggle('active', !state.detailsHidden);
-                rightBtn.textContent = state.detailsHidden ? 'Show Right' : 'Right Panel';
-            }
-
             resize();
         }
 
@@ -1257,21 +1520,18 @@
                 const response = await fetch('/api/filepicker/pick-native-file');
                 if (!response.ok) {
                     const err = await response.json().catch(() => ({}));
-                    if (err.error && !String(err.error).toLowerCase().includes('cancel')) {
-                        alert(err.error);
-                    }
-                    return null;
+                    return { path: null, error: err.error || 'No file selected.' };
                 }
 
                 const data = await response.json().catch(() => ({}));
-                return data.path || null;
+                return { path: data.path || null, error: null };
             } catch {
-                alert('Failed to open file picker.');
-                return null;
+                return { path: null, error: 'Failed to open file picker.' };
             }
         }
 
-        async function fetchCommitsForPath(path) {
+        async function fetchCommitsForPath(path, options = {}) {
+            const { silent = false } = options;
             try {
                 const checkRes = await fetch('/git/check', {
                     method: 'POST',
@@ -1280,8 +1540,7 @@
                 });
                 const checkData = await checkRes.json().catch(() => ({}));
                 if (!checkData.is_repo) {
-                    alert('Selected file is not inside a Git repository.');
-                    return [];
+                    return { commits: [], error: silent ? null : 'Selected file is not inside a Git repository.' };
                 }
 
                 const res = await fetch('/git/commits', {
@@ -1289,11 +1548,14 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path })
                 });
-                if (!res.ok) return [];
+                if (!res.ok) return { commits: [], error: silent ? null : 'Failed to load commits.' };
                 const data = await res.json().catch(() => ({}));
-                return Array.isArray(data.commits) ? data.commits : [];
+                return {
+                    commits: Array.isArray(data.commits) ? data.commits : [],
+                    error: silent ? null : (data.error || null)
+                };
             } catch {
-                return [];
+                return { commits: [], error: silent ? null : 'Failed to fetch commits.' };
             }
         }
 
@@ -1312,85 +1574,191 @@
             };
         }
 
-        async function applyFileSourceChange(side) {
-            const pickedPath = await pickNativeFilePath();
-            if (!pickedPath) return;
+        function setSourceModalStatus(message = '', tone = 'muted') {
+            if (!sourceModalStatus) return;
+            const colors = {
+                muted: 'var(--text-secondary)',
+                info: 'var(--accent-color)',
+                warn: '#ffb74d',
+                error: '#ff6b6b'
+            };
+            sourceModalStatus.textContent = message;
+            sourceModalStatus.style.color = colors[tone] || colors.muted;
+        }
 
-            state.source[side] = { type: 'file', path: pickedPath, hash: null };
-            const otherSide = side === 'old' ? 'new' : 'old';
+        function renderSourceCommitList() {
+            if (!sourceCommitList) return;
+            const commits = state.sourceModal.commits || [];
+            sourceCommitList.innerHTML = '';
 
-            // If current opposite side isn't a concrete file path, ask once.
-            if (!state.source[otherSide].path) {
-                const otherPath = await pickNativeFilePath();
-                if (!otherPath) {
-                    alert(`Pick a file for ${otherSide === 'old' ? 'left' : 'right'} side to continue.`);
-                    return;
-                }
-                state.source[otherSide] = { type: 'file', path: otherPath, hash: null };
+            if (!commits.length) {
+                sourceCommitList.innerHTML = `<div style="padding:12px; color:var(--text-secondary); font-size:11px;">No commits loaded.</div>`;
+                return;
             }
 
+            commits.forEach(c => {
+                const hash = String(c.hash || '');
+                const row = document.createElement('div');
+                row.className = 'source-commit-row';
+                if (state.sourceModal.selectedCommit === hash) {
+                    row.classList.add('selected');
+                }
+                row.innerHTML = `
+                    <div class="source-commit-hash">${escapeHtml(hash.substring(0, 7))}</div>
+                    <div class="source-commit-msg" title="${escapeHtml(c.message || '')}">${escapeHtml(c.message || '(no message)')}</div>
+                `;
+                row.addEventListener('click', () => {
+                    state.sourceModal.selectedCommit = hash;
+                    renderSourceCommitList();
+                    setSourceModalStatus(`Selected commit ${hash.substring(0, 7)}`, 'info');
+                });
+                sourceCommitList.appendChild(row);
+            });
+        }
+
+        function renderSourceModal() {
+            const m = state.sourceModal;
+            const canUseCommit = m.side === 'old' && m.commitAvailable !== false;
+            if (!canUseCommit && m.mode === 'commit') {
+                m.mode = 'file';
+            }
+            const isCommit = m.mode === 'commit';
+            const isOld = m.side === 'old';
+
+            if (sourceModalTitle) {
+                sourceModalTitle.textContent = isOld ? 'Change Left Source' : 'Change Right Source';
+            }
+
+            if (sourceModeFileBtn) sourceModeFileBtn.classList.toggle('active', !isCommit);
+            if (sourceModeCommitBtn) {
+                sourceModeCommitBtn.style.display = canUseCommit ? '' : 'none';
+                sourceModeCommitBtn.classList.toggle('active', isCommit);
+                sourceModeCommitBtn.disabled = !isOld;
+            }
+
+            if (sourcePaneFile) sourcePaneFile.style.display = isCommit ? 'none' : '';
+            if (sourcePaneCommit) sourcePaneCommit.style.display = isCommit ? '' : 'none';
+
+            if (sourceFilePath) sourceFilePath.textContent = m.filePath || 'No file selected';
+            if (sourceCommitPath) sourceCommitPath.textContent = m.commitPath || 'No file selected';
+
+            renderSourceCommitList();
+
+            if (!isOld && isCommit) {
+                setSourceModalStatus('Git commit source currently supports left-side baseline only.', 'warn');
+            }
+        }
+
+        function openSourceModal(side) {
+            state.sourceModal.side = side;
+            state.sourceModal.mode = side === 'old' && state.source[side].type === 'commit' ? 'commit' : 'file';
+            state.sourceModal.filePath = state.source[side].path || '';
+            state.sourceModal.commitPath = state.source[side].path || state.source.old.path || '';
+            state.sourceModal.commits = [];
+            state.sourceModal.selectedCommit = state.source[side].hash || null;
+            state.sourceModal.commitAvailable = side === 'old' ? null : false;
+
+            renderSourceModal();
+            setSourceModalStatus('', 'muted');
+            if (sourceModal) sourceModal.classList.add('open');
+
+            if (side === 'old' && state.sourceModal.commitPath) {
+                (async () => {
+                    const { commits } = await fetchCommitsForPath(state.sourceModal.commitPath, { silent: true });
+                    if (!sourceModal || !sourceModal.classList.contains('open') || state.sourceModal.side !== 'old') return;
+                    state.sourceModal.commitAvailable = commits.length > 0;
+                    if (!state.sourceModal.commitAvailable) {
+                        state.sourceModal.mode = 'file';
+                    }
+                    renderSourceModal();
+                })();
+            }
+        }
+
+        function closeSourceModal() {
+            if (sourceModal) sourceModal.classList.remove('open');
+        }
+
+        async function loadSourceModalCommits() {
+            const path = state.sourceModal.commitPath;
+            if (!path) {
+                setSourceModalStatus('Choose a file first.', 'warn');
+                return;
+            }
+
+            setSourceModalStatus('Loading commits...', 'info');
+            const { commits, error } = await fetchCommitsForPath(path);
+            state.sourceModal.commits = commits;
+            state.sourceModal.selectedCommit = commits.length ? commits[0].hash : null;
+            renderSourceCommitList();
+            if (error) {
+                setSourceModalStatus(error, 'error');
+                return;
+            }
+            if (!commits.length) {
+                setSourceModalStatus('No commits found for this file.', 'warn');
+                return;
+            }
+            setSourceModalStatus(`Loaded ${commits.length} commits.`, 'info');
+        }
+
+        async function applySourceModalSelection() {
+            const m = state.sourceModal;
+            const side = m.side;
+
+            if (m.mode === 'file') {
+                if (!m.filePath) {
+                    setSourceModalStatus('Pick a file to continue.', 'warn');
+                    return;
+                }
+                state.source[side] = { type: 'file', path: m.filePath, hash: null };
+                const otherSide = side === 'old' ? 'new' : 'old';
+
+                if (!state.source[otherSide].path) {
+                    setSourceModalStatus(`Set the ${otherSide === 'old' ? 'left' : 'right'} file before comparing.`, 'warn');
+                    return;
+                }
+
+                postForm('/compare', {
+                    path_old: state.source.old.path,
+                    path_new: state.source.new.path
+                });
+                return;
+            }
+
+            if (side !== 'old') {
+                setSourceModalStatus('Git commit source currently applies to left side only.', 'warn');
+                return;
+            }
+            if (!m.commitPath) {
+                setSourceModalStatus('Choose a Git-tracked file first.', 'warn');
+                return;
+            }
+            if (!m.selectedCommit) {
+                setSourceModalStatus('Select a commit first.', 'warn');
+                return;
+            }
+
+            postForm('/git/view_diff', {
+                path: m.commitPath,
+                hash_old: m.selectedCommit
+            });
+        }
+
+        function tryApplyFileSelection(side, path) {
+            state.source[side] = { type: 'file', path, hash: null };
+            const otherSide = side === 'old' ? 'new' : 'old';
+            if (!state.source[otherSide].path) {
+                setSourceModalStatus(`Set the ${otherSide === 'old' ? 'left' : 'right'} file before comparing.`, 'warn');
+                return false;
+            }
+
+            closeSourceModal();
             postForm('/compare', {
                 path_old: state.source.old.path,
                 path_new: state.source.new.path
             });
-        }
-
-        async function applyCommitSourceChange(side) {
-            let path = state.source[side].path || '';
-            if (!path) {
-                path = await pickNativeFilePath();
-                if (!path) return;
-            }
-
-            const commits = await fetchCommitsForPath(path);
-            if (!commits.length) {
-                alert('No commits found for this file.');
-                return;
-            }
-
-            const preview = commits.slice(0, 20)
-                .map((c, i) => `${i + 1}. ${(c.hash || '').slice(0, 7)}  ${c.message || ''}`)
-                .join('\n');
-            const raw = prompt(`Pick commit by number or hash:\n\n${preview}`);
-            if (!raw) return;
-
-            let hash = raw.trim();
-            const idx = Number.parseInt(hash, 10);
-            if (Number.isFinite(idx) && idx >= 1 && idx <= commits.length) {
-                hash = commits[idx - 1].hash;
-            }
-            const selected = commits.find(c => c.hash === hash || String(c.hash || '').startsWith(hash));
-            if (!selected || !selected.hash) {
-                alert('Commit not found in the fetched list.');
-                return;
-            }
-
-            // Git commit compare currently maps to old side commit vs working tree for that file.
-            if (side === 'new') {
-                alert('Commit source is currently applied as the left (old) side comparison.');
-            }
-
-            postForm('/git/view_diff', {
-                path,
-                hash_old: selected.hash
-            });
-        }
-
-        async function changeSourceForSide(side) {
-            const mode = prompt('Change source:\n1 = Select file\n2 = Select Git commit\n\nEnter 1 or 2');
-            if (!mode) return;
-
-            if (mode.trim() === '1') {
-                await applyFileSourceChange(side);
-                return;
-            }
-
-            if (mode.trim() === '2') {
-                await applyCommitSourceChange(side);
-                return;
-            }
-
-            alert('Unknown selection. Use 1 or 2.');
+            return true;
         }
 
         function calculateBoundsForNodes(nodes) {
@@ -1420,7 +1788,7 @@
             return { minX, maxX, minY, maxY };
         }
 
-        function createGraphTab({ id, title, type, sourceNodeId, parentTabId, breadcrumbSegments, nodes, edges }) {
+        function createGraphTab({ id, title, type, sourceNodeId, parentTabId, breadcrumbSegments, nodes, groups, edges }) {
             const segments = Array.isArray(breadcrumbSegments) && breadcrumbSegments.length > 0
                 ? breadcrumbSegments
                 : ['Main'];
@@ -1433,6 +1801,7 @@
                 parentTabId: parentTabId || null,
                 breadcrumbSegments: segments,
                 nodes,
+                groups: Array.isArray(groups) ? groups : [],
                 edges,
                 bounds: calculateBoundsForNodes(nodes),
                 view: null,
@@ -1458,7 +1827,7 @@
             active.bounds = { ...state.bounds };
         }
 
-        function initializeGraphTabs(nodes, edges) {
+        function initializeGraphTabs(nodes, edges, groups = []) {
             state.graphTabs = [
                 createGraphTab({
                     id: ROOT_GRAPH_TAB_ID,
@@ -1466,6 +1835,7 @@
                     type: 'root',
                     breadcrumbSegments: ['Main'],
                     nodes,
+                    groups,
                     edges
                 })
             ];
@@ -1520,6 +1890,7 @@
 
             state.activeGraphTabId = tab.id;
             state.nodes = tab.nodes;
+            state.groups = tab.groups || [];
             state.edges = tab.edges;
             state.bounds = { ...tab.bounds };
             state.selected = tab.selected || null;
@@ -1888,18 +2259,23 @@
             state.largeModelMode = rawNodes.length >= 4000 || rawEdges.length >= 12000;
             showPerf(`Preparing ${rawNodes.length.toLocaleString()} nodes...`);
 
+            let normalizedNodes = [];
             if (rawNodes.length < 2500) {
-                state.nodes = rawNodes.map(normalizeNode);
+                normalizedNodes = rawNodes.map(normalizeNode);
             } else {
                 const chunkSize = 1200;
-                state.nodes = [];
+                normalizedNodes = [];
                 for (let i = 0; i < rawNodes.length; i += chunkSize) {
                     const chunk = rawNodes.slice(i, i + chunkSize).map(normalizeNode);
-                    state.nodes.push(...chunk);
+                    normalizedNodes.push(...chunk);
                     showPerf(`Preparing nodes ${Math.min(rawNodes.length, i + chunk.length).toLocaleString()} / ${rawNodes.length.toLocaleString()}...`);
                     await waitFrame();
                 }
             }
+
+            const { componentNodes, groupNodes } = splitComponentAndGroupNodes(normalizedNodes);
+            state.nodes = componentNodes;
+            state.groups = buildRenderableGroups(groupNodes, componentNodes);
 
             const nodeMap = buildNodeLookupMap(state.nodes);
 
@@ -1936,7 +2312,7 @@
                 }
             }
 
-            initializeGraphTabs(state.nodes, state.edges);
+            initializeGraphTabs(state.nodes, state.edges, state.groups);
             updateBounds();
             state.processingData = false;
             let perfMessage = '';
@@ -1952,6 +2328,8 @@
             const id = n.id || n.Id || `node_${Math.random().toString(36).slice(2, 10)}`;
             const name = n.name || n.Name || 'Unknown';
             const nickname = n.nickname || n.Nickname || name;
+            const properties = normalizePropertyMap(n.properties || n.Properties);
+            const propertiesOld = normalizePropertyMap(n.propertiesOld || n.PropertiesOld);
             const rawX = n.x !== undefined ? n.x : (n.X !== undefined ? n.X : 0);
             const rawY = n.y !== undefined ? n.y : (n.Y !== undefined ? n.Y : 0);
             const rawW = n.w !== undefined ? n.w : (n.W !== undefined ? n.W : CONFIG.node.width);
@@ -1975,6 +2353,8 @@
                 y,
                 w,
                 h,
+                properties,
+                propertiesOld,
                 inputs: normalizePorts(n.inputs || n.Inputs || [], 'input', id),
                 outputs: normalizePorts(n.outputs || n.Outputs || [], 'output', id),
                 vx: 0,
@@ -1982,6 +2362,173 @@
                 fx: 0,
                 fy: 0
             };
+        }
+
+        function normalizePropertyMap(props) {
+            if (!props || typeof props !== 'object') return {};
+            return { ...props };
+        }
+
+        function extractGroupMemberIds(nodeOrProps) {
+            const props = nodeOrProps && nodeOrProps.properties ? nodeOrProps.properties : (nodeOrProps || {});
+            const rawList = props.groupMemberIds || props.GroupMemberIds || '';
+            const parsed = [];
+
+            if (typeof rawList === 'string' && rawList.trim()) {
+                try {
+                    const value = JSON.parse(rawList);
+                    if (Array.isArray(value)) {
+                        value.forEach(v => {
+                            if (v !== null && v !== undefined) parsed.push(String(v));
+                        });
+                    }
+                } catch {
+                    rawList.split(/[;,]/).forEach(v => {
+                        if (v && v.trim()) parsed.push(v.trim());
+                    });
+                }
+            } else if (Array.isArray(rawList)) {
+                rawList.forEach(v => {
+                    if (v !== null && v !== undefined) parsed.push(String(v));
+                });
+            }
+
+            const fallbackId = props.id || props.Id || '';
+            if (fallbackId) {
+                parsed.push(String(fallbackId));
+            }
+
+            const unique = [];
+            const seen = new Set();
+            parsed.forEach(id => {
+                const canonical = canonicalizeId(id);
+                if (!canonical || seen.has(canonical)) return;
+                seen.add(canonical);
+                unique.push(id);
+            });
+            return unique;
+        }
+
+        function isGroupLikeNode(node) {
+            if (!node) return false;
+
+            const props = node.properties || {};
+            const oldProps = node.propertiesOld || {};
+            if (isTrueish(props.isGroup) || isTrueish(props.IsGroup) || isTrueish(oldProps.isGroup) || isTrueish(oldProps.IsGroup)) {
+                return true;
+            }
+
+            const name = String(node.name || '').trim().toLowerCase();
+            const nickname = String(node.nickname || '').trim().toLowerCase();
+            if (name === 'group' || nickname === 'group') {
+                return true;
+            }
+
+            const desc = String(props.description || props.Description || '').toLowerCase();
+            return desc.includes('group of grasshopper objects');
+        }
+
+        function splitComponentAndGroupNodes(nodes) {
+            const componentNodes = [];
+            const groupNodes = [];
+
+            (nodes || []).forEach(node => {
+                if (isGroupLikeNode(node)) {
+                    groupNodes.push(node);
+                } else {
+                    componentNodes.push(node);
+                }
+            });
+
+            return { componentNodes, groupNodes };
+        }
+
+        function parseGroupColorRaw(raw, fallbackAlpha = 0.18) {
+            const text = String(raw || '').trim();
+            const nums = (text.match(/\d+/g) || []).map(v => Number.parseInt(v, 10)).filter(v => Number.isFinite(v));
+            if (nums.length >= 4) {
+                const a = Math.max(0, Math.min(255, nums[0])) / 255;
+                const r = Math.max(0, Math.min(255, nums[1]));
+                const g = Math.max(0, Math.min(255, nums[2]));
+                const b = Math.max(0, Math.min(255, nums[3]));
+                return { r, g, b, a };
+            }
+            if (nums.length >= 3) {
+                return {
+                    r: Math.max(0, Math.min(255, nums[0])),
+                    g: Math.max(0, Math.min(255, nums[1])),
+                    b: Math.max(0, Math.min(255, nums[2])),
+                    a: fallbackAlpha
+                };
+            }
+            return { r: 255, g: 255, b: 255, a: fallbackAlpha };
+        }
+
+        function buildRenderableGroups(groupNodes, componentNodes) {
+            const groupMap = buildNodeLookupMap(groupNodes || []);
+            const componentMap = buildNodeLookupMap(componentNodes || []);
+            const resolvedCache = new Map();
+
+            const resolveMembers = (groupNode, stack = new Set()) => {
+                if (!groupNode) return [];
+                const cacheKey = canonicalizeId(groupNode.id);
+                if (cacheKey && resolvedCache.has(cacheKey)) {
+                    return resolvedCache.get(cacheKey);
+                }
+                if (cacheKey && stack.has(cacheKey)) return [];
+
+                if (cacheKey) stack.add(cacheKey);
+                const result = [];
+                const seen = new Set();
+                const members = extractGroupMemberIds(groupNode);
+                members.forEach(memberId => {
+                    const canonical = canonicalizeId(memberId);
+                    if (!canonical) return;
+
+                    const component = componentMap.get(memberId) || componentMap.get(canonical);
+                    if (component) {
+                        if (!seen.has(component.id)) {
+                            seen.add(component.id);
+                            result.push(component.id);
+                        }
+                        return;
+                    }
+
+                    const nestedGroup = groupMap.get(memberId) || groupMap.get(canonical);
+                    if (nestedGroup) {
+                        const nestedMembers = resolveMembers(nestedGroup, stack);
+                        nestedMembers.forEach(nestedId => {
+                            if (!seen.has(nestedId)) {
+                                seen.add(nestedId);
+                                result.push(nestedId);
+                            }
+                        });
+                    }
+                });
+
+                if (cacheKey) {
+                    stack.delete(cacheKey);
+                    resolvedCache.set(cacheKey, result);
+                }
+                return result;
+            };
+
+            return (groupNodes || []).map(group => {
+                const props = group.properties || {};
+                const colorRaw = props.groupColor || props.GroupColor || props.colour || props.Colour || '';
+                const memberIds = resolveMembers(group);
+                const hasFallbackRect = Number.isFinite(group.x) && Number.isFinite(group.y) &&
+                    Number.isFinite(group.w) && Number.isFinite(group.h) && group.w > 0 && group.h > 0;
+
+                return {
+                    id: group.id,
+                    name: String(group.nickname || group.name || 'Group').trim() || 'Group',
+                    status: group.status || 'same',
+                    color: parseGroupColorRaw(colorRaw),
+                    memberIds,
+                    fallbackRect: hasFallbackRect ? { x: group.x, y: group.y, w: group.w, h: group.h } : null
+                };
+            }).filter(group => group.memberIds.length > 0 || !!group.fallbackRect);
         }
 
         function normalizePorts(ports, kind, nodeId) {
@@ -2218,13 +2765,11 @@
                 state.showPortDetails = !!togglePorts.checked;
                 togglePorts.addEventListener('change', () => {
                     state.showPortDetails = !!togglePorts.checked;
-                    const selectedNode = state.nodes.find(n => n.id === state.selected);
-                    updateDetailsPanel(selectedNode || null);
+                    applyPortDetailsVisibility();
                 });
                 togglePorts.addEventListener('input', () => {
                     state.showPortDetails = !!togglePorts.checked;
-                    const selectedNode = state.nodes.find(n => n.id === state.selected);
-                    updateDetailsPanel(selectedNode || null);
+                    applyPortDetailsVisibility();
                 });
             }
 
@@ -2249,16 +2794,113 @@
             document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
             document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
 
-            const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
-            if (btnToggleSidebar) btnToggleSidebar.addEventListener('click', toggleSidebar);
-            const btnToggleDetails = document.getElementById('btn-toggle-details');
-            if (btnToggleDetails) btnToggleDetails.addEventListener('click', toggleDetailsPanel);
+            if (btnSidebarCollapse) btnSidebarCollapse.addEventListener('click', toggleSidebar);
+            if (btnSidebarExpand) btnSidebarExpand.addEventListener('click', toggleSidebar);
+            if (btnDetailsCollapse) btnDetailsCollapse.addEventListener('click', toggleDetailsPanel);
+            if (btnDetailsExpand) btnDetailsExpand.addEventListener('click', toggleDetailsPanel);
 
             if (metaFileOldElem) {
-                metaFileOldElem.addEventListener('click', () => changeSourceForSide('old'));
+                metaFileOldElem.addEventListener('click', () => openSourceModal('old'));
             }
             if (metaFileNewElem) {
-                metaFileNewElem.addEventListener('click', () => changeSourceForSide('new'));
+                metaFileNewElem.addEventListener('click', () => openSourceModal('new'));
+            }
+
+            if (sourceModeFileBtn) {
+                sourceModeFileBtn.addEventListener('click', () => {
+                    state.sourceModal.mode = 'file';
+                    renderSourceModal();
+                    setSourceModalStatus('', 'muted');
+                });
+            }
+
+            if (sourceModeCommitBtn) {
+                sourceModeCommitBtn.addEventListener('click', () => {
+                    if (state.sourceModal.side !== 'old') {
+                        setSourceModalStatus('Git commit source is available for left side only.', 'warn');
+                        return;
+                    }
+                    state.sourceModal.mode = 'commit';
+                    renderSourceModal();
+                    setSourceModalStatus('', 'muted');
+                });
+            }
+
+            if (btnSourcePickFile) {
+                btnSourcePickFile.addEventListener('click', async () => {
+                    const result = await pickNativeFilePath();
+                    if (!result.path) {
+                        if (result.error && !String(result.error).toLowerCase().includes('cancel')) {
+                            setSourceModalStatus(result.error, 'error');
+                        }
+                        return;
+                    }
+                    state.sourceModal.filePath = result.path;
+
+                    if (state.sourceModal.side === 'old') {
+                        const { commits } = await fetchCommitsForPath(result.path, { silent: true });
+                        state.sourceModal.commitAvailable = commits.length > 0;
+                        state.sourceModal.commitPath = result.path;
+
+                        if (!state.sourceModal.commitAvailable) {
+                            state.sourceModal.mode = 'file';
+                            renderSourceModal();
+                            setSourceModalStatus('No Git commit history for this file. Loading file comparison...', 'info');
+                            tryApplyFileSelection('old', result.path);
+                            return;
+                        }
+                    } else {
+                        state.sourceModal.commitAvailable = false;
+                        renderSourceModal();
+                        setSourceModalStatus('File selected. Loading comparison...', 'info');
+                        tryApplyFileSelection('new', result.path);
+                        return;
+                    }
+
+                    renderSourceModal();
+                    setSourceModalStatus('File selected. Git history available.', 'info');
+                });
+            }
+
+            if (btnSourcePickCommitFile) {
+                btnSourcePickCommitFile.addEventListener('click', async () => {
+                    const result = await pickNativeFilePath();
+                    if (!result.path) {
+                        if (result.error && !String(result.error).toLowerCase().includes('cancel')) {
+                            setSourceModalStatus(result.error, 'error');
+                        }
+                        return;
+                    }
+                    state.sourceModal.commitPath = result.path;
+                    state.sourceModal.commits = [];
+                    state.sourceModal.selectedCommit = null;
+                    renderSourceModal();
+                    setSourceModalStatus('File selected. Load commits to continue.', 'info');
+                });
+            }
+
+            if (btnSourceLoadCommits) {
+                btnSourceLoadCommits.addEventListener('click', () => loadSourceModalCommits());
+            }
+
+            if (btnSourceApply) {
+                btnSourceApply.addEventListener('click', () => applySourceModalSelection());
+            }
+
+            if (btnSourceCancel) {
+                btnSourceCancel.addEventListener('click', closeSourceModal);
+            }
+
+            if (btnSourceModalClose) {
+                btnSourceModalClose.addEventListener('click', closeSourceModal);
+            }
+
+            if (sourceModal) {
+                sourceModal.addEventListener('click', (e) => {
+                    if (e.target === sourceModal) {
+                        closeSourceModal();
+                    }
+                });
             }
 
             // Wire Slider
@@ -2415,6 +3057,7 @@
             const viewTop = (-state.view.y / state.view.scale) - 200;
             const viewRight = ((canvas.width - state.view.x) / state.view.scale) + 200;
             const viewBottom = ((canvas.height - state.view.y) / state.view.scale) + 200;
+            const renderNodeLookup = buildNodeLookupMap(Array.from(renderNodes.values()));
 
             // Determine visibility/dimming
             const nodesToDraw = [];
@@ -2443,6 +3086,8 @@
                     if (e.target === state.selected) connectedIds.add(e.source);
                 });
             }
+
+            drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds);
 
             // Draw Edges
             state.edges.forEach(e => {
@@ -2621,6 +3266,97 @@
             ctx.restore();
 
             drawMinimap(nodesToDraw);
+        }
+
+        function computeGroupRenderRect(group, renderNodeLookup) {
+            if (!group) return null;
+
+            let minX = Infinity;
+            let maxX = -Infinity;
+            let minY = Infinity;
+            let maxY = -Infinity;
+            let memberCount = 0;
+
+            const members = Array.isArray(group.memberIds) ? group.memberIds : [];
+            members.forEach(memberId => {
+                const node = renderNodeLookup.get(memberId) || renderNodeLookup.get(canonicalizeId(memberId));
+                if (!node) return;
+
+                memberCount++;
+                if (node.x < minX) minX = node.x;
+                if (node.x + node.w > maxX) maxX = node.x + node.w;
+                if (node.y < minY) minY = node.y;
+                if (node.y + node.h > maxY) maxY = node.y + node.h;
+            });
+
+            const padding = 16;
+            if (memberCount > 0 && Number.isFinite(minX) && Number.isFinite(minY) && Number.isFinite(maxX) && Number.isFinite(maxY)) {
+                return {
+                    x: minX - padding,
+                    y: minY - padding,
+                    w: (maxX - minX) + padding * 2,
+                    h: (maxY - minY) + padding * 2,
+                    memberCount
+                };
+            }
+
+            if (group.fallbackRect) {
+                return {
+                    x: group.fallbackRect.x,
+                    y: group.fallbackRect.y,
+                    w: group.fallbackRect.w,
+                    h: group.fallbackRect.h,
+                    memberCount: 0
+                };
+            }
+
+            return null;
+        }
+
+        function drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds) {
+            if (!Array.isArray(state.groups) || state.groups.length === 0) return;
+            const connectedCanonical = new Set(Array.from(connectedIds || []).map(id => canonicalizeId(id)));
+
+            for (let i = 0; i < state.groups.length; i++) {
+                const group = state.groups[i];
+                const rect = computeGroupRenderRect(group, renderNodeLookup);
+                if (!rect || rect.w <= 0 || rect.h <= 0) continue;
+
+                const offscreen = rect.x + rect.w < viewLeft || rect.x > viewRight || rect.y + rect.h < viewTop || rect.y > viewBottom;
+                if (state.largeModelMode && !state.selected && offscreen) continue;
+
+                let groupAlpha = 1.0;
+                if (group.status === 'added') groupAlpha = 1.0 - mix;
+                else if (group.status === 'removed') groupAlpha = mix;
+                if (groupAlpha <= 0.02) continue;
+
+                const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
+                const isSelectedGroup = !!state.selected && memberIds.some(id => canonicalizeId(id) === canonicalizeId(state.selected));
+                const isConnectedGroup = !isSelectedGroup && !!state.selected && memberIds.some(id =>
+                    connectedIds.has(id) || connectedCanonical.has(canonicalizeId(id)));
+                const dimUnrelated = !!state.selected && !isSelectedGroup && !isConnectedGroup;
+                const alphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
+                const color = group.color || { r: 255, g: 255, b: 255, a: 0.18 };
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0.05, groupAlpha * alphaFactor);
+                ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${Math.min(0.35, Math.max(0.08, color.a * 0.9))})`;
+                ctx.strokeStyle = CONFIG.colors[group.status] || CONFIG.colors.same;
+                ctx.lineWidth = (isSelectedGroup ? 2.0 : 1.2) / state.view.scale;
+                ctx.setLineDash([8 / state.view.scale, 6 / state.view.scale]);
+                roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 12);
+                ctx.fill();
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const groupLabel = String(group.name || '').trim();
+                if (groupLabel && groupLabel.toLowerCase() !== 'group' && state.view.scale > 0.35) {
+                    ctx.fillStyle = CONFIG.colors.textMuted;
+                    ctx.font = `${Math.max(10, 11 / state.view.scale)}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                    ctx.fillText(groupLabel, rect.x + 8 / state.view.scale, rect.y + 14 / state.view.scale);
+                }
+                ctx.restore();
+            }
         }
 
         function drawMinimap(nodesWithDim) {
@@ -2813,6 +3549,16 @@
             draw();
         }
 
+        function applyPortDetailsVisibility() {
+            const togglePorts = document.getElementById('toggle-ports');
+            const showPorts = togglePorts ? !!togglePorts.checked : !!state.showPortDetails;
+            state.showPortDetails = showPorts;
+
+            detailsPaneInspector.querySelectorAll('.connections-card').forEach(card => {
+                card.style.display = showPorts ? '' : 'none';
+            });
+        }
+
         function updateDetailsPanel(node) {
             if (!node) {
                 detailsPaneInspector.innerHTML = '<div class="empty-state">Select a node in the graph<br>to view details</div>';
@@ -2822,7 +3568,25 @@
                 return;
             }
 
-            const showPorts = !!state.showPortDetails;
+            const togglePorts = document.getElementById('toggle-ports');
+            const showPorts = togglePorts ? !!togglePorts.checked : !!state.showPortDetails;
+            state.showPortDetails = showPorts;
+
+            const connectionsBlock = `
+                <div class="detail-card connections-card" style="${showPorts ? '' : 'display:none;'}">
+                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Connections</div>
+                    <div class="prop-row">
+                        <span class="prop-label">Inputs</span>
+                        <span class="prop-value">${node.inAdded || 0} add / ${node.inRemoved || 0} rem</span>
+                    </div>
+                    <div class="prop-row">
+                        <span class="prop-label">Outputs</span>
+                        <span class="prop-value">${node.outAdded || 0} add / ${node.outRemoved || 0} rem</span>
+                    </div>
+                    ${renderPorts(node.inputs, 'Inputs')}
+                    ${renderPorts(node.outputs, 'Outputs')}
+                </div>
+            `;
 
             const html = `
                 <div class="detail-card">
@@ -2857,24 +3621,12 @@
                 </div>
 
                 ${renderProperties(node)}
-                
-                <div class="detail-card">
-                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Connections</div>
-                    <div class="prop-row">
-                        <span class="prop-label">Inputs</span>
-                        <span class="prop-value">${node.inAdded || 0} add / ${node.inRemoved || 0} rem</span>
-                    </div>
-                    <div class="prop-row">
-                        <span class="prop-label">Outputs</span>
-                        <span class="prop-value">${node.outAdded || 0} add / ${node.outRemoved || 0} rem</span>
-                    </div>
-                    ${showPorts ? renderPorts(node.inputs, 'Inputs') : ''}
-                    ${showPorts ? renderPorts(node.outputs, 'Outputs') : ''}
-                </div>
+                ${connectionsBlock}
             `;
 
             detailsPaneInspector.innerHTML = html;
             bindInspectorActions();
+            applyPortDetailsVisibility();
 
             const scriptEntries = getScriptPropertyEntries(node);
             const scriptComponent = isScriptComponent(node);
@@ -2911,14 +3663,22 @@
 
         function isLikelyScriptPropertyKey(key) {
             if (!key) return false;
-            return SCRIPT_PROPERTY_KEYS.has(key) || SCRIPT_KEY_PATTERN.test(String(key));
+            if (isScriptNoiseKey(key)) return false;
+            return isExplicitScriptKey(key) || SCRIPT_KEY_PATTERN.test(String(key));
         }
 
         function looksLikeScriptContent(value) {
             const text = String(value ?? '');
             if (!text || text.length < 20) return false;
-            if (text.includes('\n')) return true;
-            return /(def\s+\w+\s*\(|using\s+[A-Za-z0-9_.]+;|public\s+class|return\s+.+;|for\s*\(|while\s*\(|if\s*\(|\/\/|#\!|import\s+\w+)/.test(text);
+            const hasCodeIndicators = /(def\s+\w+\s*\(|using\s+[A-Za-z0-9_.]+;|public\s+class|return\s+.+;|for\s*\(|while\s*\(|if\s*\(|\/\/|#\!|import\s+\w+|class\s+\w+|function\s+\w+|=>|\{|\}|\bvar\b|\blet\b|\bconst\b)/.test(text);
+            if (hasCodeIndicators) return true;
+
+            // Multiline alone is too noisy (e.g. editor metadata). Require assignment/call-like syntax too.
+            if (text.includes('\n')) {
+                return /[A-Za-z_][A-Za-z0-9_]*\s*(=|\(|\[)/.test(text);
+            }
+
+            return false;
         }
 
         function isTrueish(value) {
@@ -2956,9 +3716,10 @@
                 const newValue = hasNew ? String(props[key] ?? '') : '';
                 const oldValue = hasOld ? String(oldProps[key] ?? '') : '';
 
-                const includeKey = isLikelyScriptPropertyKey(key) ||
-                    looksLikeScriptContent(newValue) ||
-                    looksLikeScriptContent(oldValue);
+                const includeKey = !isScriptNoiseKey(key) &&
+                    (isExplicitScriptKey(key) ||
+                        looksLikeScriptContent(newValue) ||
+                        looksLikeScriptContent(oldValue));
                 if (!includeKey) return;
 
                 entries.push({
@@ -2970,8 +3731,8 @@
             });
 
             entries.sort((a, b) => {
-                const ai = SCRIPT_PROPERTY_KEYS.has(a.key) ? 0 : 1;
-                const bi = SCRIPT_PROPERTY_KEYS.has(b.key) ? 0 : 1;
+                const ai = isExplicitScriptKey(a.key) ? 0 : 1;
+                const bi = isExplicitScriptKey(b.key) ? 0 : 1;
                 if (ai !== bi) return ai - bi;
                 return a.key.localeCompare(b.key);
             });
@@ -2979,49 +3740,60 @@
             return entries;
         }
 
+        function normalizeScriptKey(key) {
+            return String(key || '').trim().toLowerCase();
+        }
+
+        function isExplicitScriptKey(key) {
+            return SCRIPT_PROPERTY_KEYS.has(normalizeScriptKey(key));
+        }
+
+        function isScriptNoiseKey(key) {
+            return SCRIPT_NOISE_KEYS.has(normalizeScriptKey(key));
+        }
+
         function renderScriptPane(node, entries, requestedKey) {
-            const activeEntry = entries.find(e => e.key === requestedKey) || entries[0];
-            if (!activeEntry) {
+            if (!entries || entries.length === 0) {
                 renderEmptyScriptPane('No script source found for this component');
                 return;
             }
 
+            const orderedEntries = requestedKey
+                ? [
+                    ...entries.filter(e => e.key === requestedKey),
+                    ...entries.filter(e => e.key !== requestedKey)
+                ]
+                : [...entries];
+
             state.scriptContext = {
                 nodeId: node.id,
-                key: activeEntry.key
+                key: requestedKey || '*'
             };
 
-            const diffHtml = computeDiff(activeEntry.oldValue, activeEntry.newValue);
-            const diffState = activeEntry.isChanged ? 'Modified in diff' : 'No script changes between versions';
             const safeNodeName = escapeHtml(node.nickname || node.name || node.id);
-            const safeKey = escapeHtml(activeEntry.key);
-
-            const selectorHtml = entries.length > 1
-                ? `
-                    <select class="script-key-select" onchange="switchScriptProperty(this.value)">
-                        ${entries.map(entry => `
-                            <option value="${escapeHtml(entry.key)}" ${entry.key === activeEntry.key ? 'selected' : ''}>
-                                ${escapeHtml(entry.key)}${entry.isChanged ? ' (modified)' : ''}
-                            </option>
-                        `).join('')}
-                    </select>
-                `
-                : '';
+            const changedCount = orderedEntries.filter(e => e.isChanged).length;
+            const summary = `${orderedEntries.length} code block(s) · ${changedCount} modified`;
+            const sectionsHtml = orderedEntries.map(entry => {
+                const safeKey = escapeHtml(entry.key);
+                const diffState = entry.isChanged ? 'Modified in diff' : 'No script changes between versions';
+                return `
+                    <div class="script-panel-header" style="margin-top: 10px; margin-bottom: 8px;">
+                        <div class="script-panel-title">${safeKey}</div>
+                        <div class="script-panel-meta">${diffState}</div>
+                    </div>
+                    <div class="diff-container">
+                        ${computeDiff(entry.oldValue, entry.newValue)}
+                    </div>
+                `;
+            }).join('');
 
             detailsPaneScript.innerHTML = `
                 <div class="script-panel-header">
-                    <div class="script-panel-title">${safeNodeName} · ${safeKey}</div>
-                    <div class="script-panel-meta">${diffState}</div>
-                    ${selectorHtml}
+                    <div class="script-panel-title">${safeNodeName} · Script Diff</div>
+                    <div class="script-panel-meta">${summary}</div>
                 </div>
-                <div class="diff-container">
-                    ${diffHtml}
-                </div>
+                ${sectionsHtml}
             `;
-        }
-
-        function switchScriptProperty(key) {
-            openScriptDiff(key, false);
         }
 
         function getClusterPreviewData(node) {
@@ -3236,6 +4008,7 @@
                     parentTabId,
                     breadcrumbSegments,
                     nodes,
+                    groups: [],
                     edges
                 });
                 state.graphTabs.push(targetTab);
@@ -3244,6 +4017,7 @@
                 targetTab.parentTabId = parentTabId;
                 targetTab.breadcrumbSegments = breadcrumbSegments;
                 targetTab.nodes = nodes;
+                targetTab.groups = [];
                 targetTab.edges = edges;
                 targetTab.bounds = calculateBoundsForNodes(nodes);
                 targetTab.view = null;

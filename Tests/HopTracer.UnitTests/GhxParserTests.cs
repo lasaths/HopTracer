@@ -1,5 +1,6 @@
 using HopTracer.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 using Xunit;
 
 namespace HopTracer.UnitTests;
@@ -54,6 +55,34 @@ public class GhxParserTests
             Assert.False(string.IsNullOrWhiteSpace(e.Source));
             Assert.False(string.IsNullOrWhiteSpace(e.Target));
         });
+    }
+
+    [Fact]
+    public void Parse_ExtractsGroupMembers_ForGrasshopperGroups()
+    {
+        var parser = new GhxParser(NullLogger<GhxParser>.Instance);
+        var root = FindRepoRoot();
+        var path = Path.Combine(root, "Tests", "data", "260218_LCRL_Roof_FacadeInterface [Feb-18 '26, 1637].ghx");
+        var graph = parser.Parse(path);
+
+        var groups = graph.Nodes.Values
+            .Where(n => n.Properties.TryGetValue("IsGroup", out var isGroup) &&
+                        string.Equals(isGroup, "true", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        Assert.NotEmpty(groups);
+
+        var groupWithMembers = groups.FirstOrDefault(n =>
+            n.Properties.TryGetValue("GroupMemberIds", out var raw) &&
+            !string.IsNullOrWhiteSpace(raw));
+
+        Assert.NotNull(groupWithMembers);
+
+        var memberJson = groupWithMembers!.Properties["GroupMemberIds"];
+        var memberIds = JsonSerializer.Deserialize<List<string>>(memberJson);
+
+        Assert.NotNull(memberIds);
+        Assert.NotEmpty(memberIds!);
     }
 
     private static string FindRepoRoot()
