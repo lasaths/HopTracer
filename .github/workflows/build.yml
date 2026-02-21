@@ -1,4 +1,4 @@
-name: Build and Release
+name: CI and Release
 
 on:
   push:
@@ -10,15 +10,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   DOTNET_VERSION: '10.0.x'
 
 jobs:
   build:
-    name: Build Windows
+    name: Build and Test (Windows)
     runs-on: windows-latest
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
@@ -27,22 +29,19 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+        cache: true
 
     - name: Install MAUI workload
-      run: dotnet workload install maui-windows
-
-    - name: Setup Dependencies
-      run: .\scripts\setup_dependencies.ps1
-      shell: pwsh
+      run: dotnet workload install maui-windows --skip-sign-check
 
     - name: Restore dependencies
       run: dotnet restore Source/HopTracer.sln
 
-    - name: Run Tests
-      run: dotnet test Source/HopTracer.sln --configuration Release --no-restore
-
     - name: Build
       run: dotnet build Source/HopTracer.sln --configuration Release --no-restore
+
+    - name: Run Tests
+      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj --configuration Release --no-build
 
     - name: Publish Portable Package
       run: |
@@ -73,6 +72,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     
     steps:
     - name: Download Artifact

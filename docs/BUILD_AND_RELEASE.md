@@ -1,150 +1,87 @@
 # Build and Release Guide
 
-This document provides instructions for building and releasing HopTracer.
+This document covers local builds, GitHub release artifacts, and handoff to Microsoft Store packaging.
 
-## Building
+## Prerequisites
 
-### Quick Build
+- .NET 10 SDK
+- Visual Studio 2022 (or Build Tools with MAUI workload)
+- Windows 10/11
+- Optional: Rhino 7/8 for enhanced cluster archive decoding (`GH_IO.dll`)
+
+## Portable Build (GitHub Release)
+
+### Quick build
 
 ```powershell
 .\scripts\build.ps1
 ```
 
-**Options:**
+Options:
 
-- `-SkipClean` - Keep previous builds
-- `-SkipTests` - Skip running tests
+- `-SkipClean` keeps previous build outputs.
+- `-SkipTests` skips unit tests.
 
-### What the Build Script Does
+### What `build.ps1` does
 
-1. Cleans previous builds (bin/obj folders, Release directory)
-2. Restores NuGet dependencies for all projects
-3. Runs tests (unless `-SkipTests` is used)
-4. Builds Release configuration
-5. Publishes a portable multi-file package
-6. Creates `Release\HopTracer-Windows-x64.zip` for GitHub releases
+1. Cleans `bin/obj` and `Release/` (unless skipped)
+2. Restores solution dependencies
+3. Runs unit tests
+4. Builds release configuration
+5. Publishes a self-contained Windows package
+6. Creates `Release\HopTracer-Windows-x64.zip`
 
-The build process takes approximately 3-5 minutes depending on system performance.
+Output:
 
-**Important**: The application is published as a multi-file package, not a single-file executable, because MAUI with WindowsAppSDK requires external WinUI3 runtime files that cannot be bundled into a single executable.
+- `Release\HopTracer_Portable\`
+- `Release\HopTracer-Windows-x64.zip`
 
-### Build Configuration
+The app is intentionally multi-file (`PublishSingleFile=false`) because MAUI/WindowsAppSDK needs companion runtime files.
 
-The build uses the following .NET publish settings:
+## CI and Tag Release
 
-- **Target Framework**: `net10.0-windows10.0.19041.0`
-- **Configuration**: Release
-- **Self-Contained**: Yes (includes .NET runtime)
-- **Single File**: No (WindowsAppSDK requires external files)
-- **Trimming**: Disabled for reliability with ASP.NET controller discovery
-- **WindowsAppSDK**: Self-contained mode
+Workflow: `.github/workflows/build.yml`
 
-### Output
+- Pull requests/main pushes run build + tests and upload artifact.
+- Tag pushes matching `v*` also create a GitHub Release with the ZIP artifact.
 
-The build creates:
-
-- `Release\HopTracer_Portable\` (self-contained app folder)
-- `Release\HopTracer-Windows-x64.zip` (ready to upload to GitHub Releases)
-
-The entire `HopTracer_Portable` folder must be distributed together. Run `HopTracer.exe` to start the application.
-
-### Troubleshooting
-
-**"ClassFactory cannot supply requested class" error**
-- This means single-file publishing was used incorrectly
-- Solution: Rebuild without `-p:PublishSingleFile=true`
-- The app requires WindowsAppSDK files that must remain external
-
-**Build Fails with "Assets file doesn't have a target"**
-- Ensure you're using .NET 10 SDK: `dotnet --version`
-- Clean and restore: `dotnet clean && dotnet restore`
-
-**Build Script Syntax Error**
-- Verify PowerShell execution policy: `Get-ExecutionPolicy`
-- If restricted, run: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-
-**Application doesn't start or crashes immediately**
-- Ensure all files in `HopTracer_Portable` folder are present
-- Don't try to move just the .exe file - the entire folder is needed
-- Check Windows Event Viewer for detailed error messages
-
-## Testing
-
-After building, test the executable:
+Suggested release flow:
 
 ```powershell
-.\Release\HopTracer_Portable\HopTracer.exe
-```
-
-### Test Checklist
-
-- [ ] Application launches successfully
-- [ ] Can select and compare .ghx files
-- [ ] Can select and compare .gh files
-- [ ] Can mix .gh and .ghx files
-- [ ] Git history button appears
-- [ ] Git history modal works (enter path, load commits)
-- [ ] Pan/zoom controls work
-- [ ] Filter buttons work (Added/Removed/Modified)
-- [ ] Search functionality works
-- [ ] Property inspector shows changes
-- [ ] Wire visibility slider works
-
-## Release Process
-
-### 1. Commit & Tag
-
-```powershell
+.\scripts\build.ps1
 git add .
-git commit -m "Release v1.0.0 - Description"
+git commit -m "Release v1.0.0"
 git tag v1.0.0
 git push origin main
 git push origin v1.0.0
 ```
 
-### 2. Create GitHub Release
+## Microsoft Store Packaging
 
-1. Go to: <https://github.com/lasaths/HopTracer/releases/new>
-2. **Tag**: `v1.0.0` (or appropriate version)
-3. **Title**: `HopTracer v1.0.0 - Release Title`
-4. **Description**: Copy from CHANGELOG.md
-5. **Assets**: Upload `HopTracer-Windows-x64.zip` from `Release\`
-6. Check: **Set as latest release**
-7. Click: **Publish release**
+Build MSIX artifacts:
 
-### 3. Post-Release
-
-- [ ] Test download link
-- [ ] Verify executable downloads correctly
-- [ ] Update README if needed
-- [ ] Monitor issues/feedback
-
-## Project Structure
-
-```text
-HopTracer/
-├── README.md
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── AGENTS.md
-├── LICENSE
-├── .gitignore
-│
-├── scripts/
-│   ├── setup_dependencies.ps1
-│   └── build.ps1
-│
-├── Source/
-│   ├── HopTracer/          # Main MAUI app
-│   ├── HopTracer.Web/      # Web backend
-│   ├── HopTracer.Core/     # Core logic
-│   ├── GhConverter/        # GH→GHX converter
-│   └── TestDiff/           # Unit tests
-│
-├── Tests/data/             # Test fixtures
-├── Assets/                 # Logo & images
-│
-└── Release/
-    ├── HopTracer_Portable/      # Build output folder
-    └── HopTracer-Windows-x64.zip # GitHub release artifact
+```powershell
+.\scripts\build_msix.ps1
 ```
+
+Signed package example:
+
+```powershell
+.\scripts\build_msix.ps1 `
+  -CertificatePath "C:\path\store-signing-cert.pfx" `
+  -CertificatePassword "..."
+```
+
+Output directory:
+
+- `Release\MSIX\` (contains `.msix` and, when generated, `.msixupload`)
+
+Use `.msixupload` for Microsoft Store submissions when available.
+
+For full submission checklist and CI-based signed build setup, see `docs/MICROSOFT_STORE.md`.
+
+## Troubleshooting
+
+- Build fails with target errors: confirm `.NET 10` (`dotnet --version`), then clean + restore.
+- App fails to launch: ensure the entire `HopTracer_Portable` directory is intact.
+- Missing cluster archive decode: run `.\scripts\setup_dependencies.ps1` to copy `GH_IO.dll` (optional enhancement).

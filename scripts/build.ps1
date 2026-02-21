@@ -46,10 +46,9 @@ if (-not $SkipTests) {
     Write-Host "`n[3/5] Running tests..." -ForegroundColor Yellow
     dotnet test (Join-Path $sourceDir "HopTracer.sln") --configuration Release --verbosity quiet --no-restore
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  ⚠ Some tests failed" -ForegroundColor Yellow
-    } else {
-        Write-Host "  ✓ Tests passed" -ForegroundColor Green
+        throw "Tests failed"
     }
+    Write-Host "  ✓ Tests passed" -ForegroundColor Green
 } else {
     Write-Host "`n[3/5] Tests skipped" -ForegroundColor Gray
 }

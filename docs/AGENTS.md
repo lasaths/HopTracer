@@ -11,7 +11,7 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses
 - **HopTracer**: Main Application Entry Point.
     - **Type**: .NET MAUI (Windows/macOS).
     - **Role**: Native Shell, Window Management, Embedded Server Host.
-    - **Key Logic**: `MainPage.xaml.cs` starts a Kestrel server on `localhost:5000` and points a `WebView` to it. It uses `ManifestEmbeddedFileProvider` to serve static assets from the single-file bundle.
+    - **Key Logic**: `MainPage.xaml.cs` starts a Kestrel server on `localhost:5000` and points a `WebView` to it. It uses embedded file providers to serve bundled static assets.
 - **HopTracer.Web**: Web Backend & UI.
     - **Type**: ASP.NET Core Web API.
     - **Role**: Serves the HTML/JS frontend and handles API requests (`/compare`, `/git`).
@@ -37,11 +37,13 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses
 ### Prerequisites
 - .NET 10 SDK
 - Visual Studio 2022 (17.12+) or VS Code
-- Rhino 7 or 8 installed (for `GH_IO.dll`)
+- Windows 10/11
+- Optional: Rhino 7/8 for enhanced cluster archive decoding (`GH_IO.dll`)
 
 ### Setup
-The project automatically copies `GH_IO.dll` from your local Rhino installation during build.
-If this fails, run: `scripts/setup_dependencies.ps1`
+`GH_IO.dll` is optional for build/test. If you need full `.gh` conversion and enhanced cluster archive decoding, run:
+
+`scripts/setup_dependencies.ps1`
 
 ### Building and Running
 1.  Open `Source/HopTracer.sln`.
@@ -65,7 +67,7 @@ This will clean, build, test, and create a portable executable in `Release/HopTr
 2. Restores NuGet packages
 3. Runs unit tests (unless skipped)
 4. Builds in Release configuration
-5. Publishes self-contained multi-file package (~106MB, 575 files)
+5. Publishes self-contained multi-file package
 
 **Common Issues:**
 - **ClassFactory Error**: Don't use single-file publishing with MAUI - WindowsAppSDK requires external files
@@ -125,15 +127,15 @@ This will clean, build, test, and create a portable executable in `Release/HopTr
 ```
 HopTracer/
 ├── Release/             # Build output
-├── Scripts/             # Setup scripts
+├── scripts/             # Setup/build scripts
 ├── Source/
 │   ├── HopTracer/           # Main App (Shell)
 │   ├── HopTracer.Web/       # UI & API (Logic)
 │   ├── HopTracer.Core/      # Parsing & Diffing (Core)
 │   ├── GhConverter/         # GH->GHX Tool
-│   └── TestDiff/            # Unit Tests
+│   └── Tools/TestDiff/      # Diagnostic CLI
 ├── Tests/
+│   ├── HopTracer.UnitTests/ # Unit tests
 │   └── data/                # Sample files
-├── AGENTS.md                # Developer Guide
 └── README.md                # User Guide
 ```

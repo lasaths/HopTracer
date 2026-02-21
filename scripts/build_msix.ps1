@@ -1,70 +1,159 @@
 # HopTracer MSIX Build Script
-# Builds production-ready MSIX package for Microsoft Store
+# Produces Microsoft Store-ready MSIX artifacts (.msix / .msixupload).
 
 param(
     [switch]$SkipClean = $false,
-    [switch]$SkipTests = $false
+    [switch]$SkipTests = $false,
+    [string]$Configuration = "Release",
+    [string]$RuntimeIdentifier = "win-x64",
+    [string]$Version = "",
+    [string]$PackageVersion = "",
+    [string]$Publisher = "",
+    [string]$CertificatePath = "",
+    [string]$CertificatePassword = ""
 )
 
 $ErrorActionPreference = "Stop"
 $rootDir = $PSScriptRoot | Split-Path -Parent
 $sourceDir = Join-Path $rootDir "Source"
 $releaseDir = Join-Path $rootDir "Release"
+$projectFile = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
+$msixOutputDir = Join-Path $releaseDir "MSIX"
 
-Write-Host "=== HopTracer MSIX Build ==="
+Write-Host "=== HopTracer MSIX Build ===" -ForegroundColor Cyan
+Write-Host ""
 
-# Step 1: Clean
 if (-not $SkipClean) {
-    Write-Host "[1/5] Cleaning..."
-    Get-ChildItem -Path $sourceDir -Include bin,obj -Recurse -Directory -ErrorAction SilentlyContinue | 
+    Write-Host "[1/5] Cleaning..." -ForegroundColor Yellow
+    Get-ChildItem -Path $sourceDir -Include bin,obj -Recurse -Directory -ErrorAction SilentlyContinue |
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    if (Test-Path $releaseDir) {
-        Remove-Item "$releaseDir\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+    if (Test-Path $msixOutputDir) {
+        Remove-Item (Join-Path $msixOutputDir "*") -Recurse -Force -ErrorAction SilentlyContinue
     }
+
+    Write-Host "  ✓ Clean complete" -ForegroundColor Green
+}
+else {
+    Write-Host "[1/5] Clean skipped" -ForegroundColor Gray
 }
 
-# Step 2: Restore
-Write-Host "[2/5] Restoring dependencies..."
+Write-Host "`n[2/5] Restoring dependencies..." -ForegroundColor Yellow
 Push-Location $sourceDir
 try {
     dotnet restore HopTracer.sln --verbosity quiet
     if ($LASTEXITCODE -ne 0) { throw "Restore failed" }
-} finally {
+    Write-Host "  ✓ Dependencies restored" -ForegroundColor Green
+}
+finally {
     Pop-Location
 }
 
-# Step 3: Test
 if (-not $SkipTests) {
-    Write-Host "[3/5] Running tests..."
-    dotnet test (Join-Path $sourceDir "HopTracer.sln") --configuration Release --verbosity quiet --no-restore
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Warning: Some tests failed"
+    Write-Host "`n[3/5] Running tests..." -ForegroundColor Yellow
+    dotnet test (Join-Path $rootDir "Tests\HopTracer.UnitTests\HopTracer.UnitTests.csproj") --configuration $Configuration --verbosity quiet --no-restore
+    if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
+    Write-Host "  ✓ Tests passed" -ForegroundColor Green
+}
+else {
+    Write-Host "`n[3/5] Tests skipped" -ForegroundColor Gray
+}
+
+Write-Host "`n[4/5] Publishing MSIX package..." -ForegroundColor Yellow
+if (-not (Test-Path $msixOutputDir)) {
+    New-Item -ItemType Directory -Path $msixOutputDir -Force | Out-Null
+}
+
+$appxSigningEnabled = $false
+$resolvedCertPath = ""
+if (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
+    $resolvedCertPath = Resolve-Path $CertificatePath -ErrorAction Stop | Select-Object -ExpandProperty Path
+    $appxSigningEnabled = $true
+}
+
+$publishArgs = @(
+    "publish", $projectFile,
+    "-f", "net10.0-windows10.0.19041.0",
+    "-c", $Configuration,
+    "-r", $RuntimeIdentifier,
+    "-p:GenerateAppxPackageOnBuild=true",
+    "-p:WindowsPackageType=MSIX",
+    "-p:WindowsAppSDKSelfContained=true",
+    "-p:AppxBundle=Never",
+    "-p:UapAppxPackageBuildMode=StoreUpload",
+    "-p:AppxPackageDir=$msixOutputDir\",
+    "-p:AppxPackageSigningEnabled=$appxSigningEnabled"
+)
+
+if (-not [string]::IsNullOrWhiteSpace($Version)) {
+    $publishArgs += "-p:ApplicationDisplayVersion=$Version"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($PackageVersion)) {
+    $publishArgs += "-p:PackageVersion=$PackageVersion"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($Publisher)) {
+    $publishArgs += "-p:Publisher=$Publisher"
+    $publishArgs += "-p:PackageCertificateSubjectName=$Publisher"
+}
+
+if ($appxSigningEnabled) {
+    $publishArgs += "-p:PackageCertificateKeyFile=$resolvedCertPath"
+    if (-not [string]::IsNullOrWhiteSpace($CertificatePassword)) {
+        $publishArgs += "-p:PackageCertificatePassword=$CertificatePassword"
     }
 }
 
-# Step 4: Publish MSIX
-Write-Host "[4/5] Publishing MSIX package..."
-$projectFile = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
-$outputDir = Join-Path $releaseDir "HopTracer_MSIX"
-
 Push-Location $sourceDir
 try {
-    # Using GenerateAppxPackageOnBuild=true
-    dotnet publish $projectFile -f net10.0-windows10.0.19041.0 -c Release -r win-x64 -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false -p:WindowsAppSDKSelfContained=true -o $outputDir --verbosity quiet
-    if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
-} finally {
+    dotnet @publishArgs --verbosity quiet
+    if ($LASTEXITCODE -ne 0) { throw "MSIX publish failed" }
+}
+finally {
     Pop-Location
 }
 
-# Step 5: Locate Package
-Write-Host "[5/5] Locating package..."
-$packagePath = Get-ChildItem -Path $sourceDir -Filter "*.msix" -Recurse | Select-Object -First 1
-if ($packagePath) {
-    $destPath = Join-Path $releaseDir $packagePath.Name
-    Copy-Item $packagePath.FullName $destPath -Force
-    Write-Host "Package copied to: $destPath"
-} else {
-    Write-Host "Warning: Could not find .msix package. Check bin folder."
+Write-Host "`n[5/5] Collecting artifacts..." -ForegroundColor Yellow
+$msixFiles = Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msix -ErrorAction SilentlyContinue
+$msixUploadFiles = Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msixupload -ErrorAction SilentlyContinue
+
+if (-not $msixFiles -and -not $msixUploadFiles) {
+    throw "No MSIX artifacts were generated in $msixOutputDir."
 }
 
-Write-Host "=== Build Complete ==="
+if ($msixFiles) {
+    foreach ($f in $msixFiles) {
+        Write-Host ("  ✓ MSIX: {0}" -f $f.FullName) -ForegroundColor Green
+    }
+}
+
+if ($msixUploadFiles) {
+    foreach ($f in $msixUploadFiles) {
+        Write-Host ("  ✓ MSIXUPLOAD: {0}" -f $f.FullName) -ForegroundColor Green
+    }
+}
+else {
+    if ($msixFiles) {
+        Write-Host "  ! No .msixupload generated by SDK. Creating fallback .msixupload from .msix package..." -ForegroundColor Yellow
+        foreach ($msix in $msixFiles) {
+            $fallbackZip = "$($msix.FullName).zip"
+            $fallbackUpload = [System.IO.Path]::ChangeExtension($msix.FullName, ".msixupload")
+            if (Test-Path $fallbackZip) {
+                Remove-Item $fallbackZip -Force
+            }
+            if (Test-Path $fallbackUpload) {
+                Remove-Item $fallbackUpload -Force
+            }
+            Compress-Archive -Path $msix.FullName -DestinationPath $fallbackZip -Force
+            Move-Item $fallbackZip $fallbackUpload -Force
+            Write-Host ("  ✓ Fallback MSIXUPLOAD: {0}" -f $fallbackUpload) -ForegroundColor Green
+        }
+    }
+    else {
+        Write-Host "  ! No .msixupload file found. Microsoft Store submissions typically use .msixupload." -ForegroundColor Yellow
+    }
+}
+
+Write-Host "`n=== MSIX Build Complete ===" -ForegroundColor Green
+Write-Host "Output directory: $msixOutputDir" -ForegroundColor Cyan

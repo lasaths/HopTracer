@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![CI](https://github.com/lasaths/HopTracer/actions/workflows/build.yml/badge.svg)](https://github.com/lasaths/HopTracer/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/lasaths/HopTracer)](https://github.com/lasaths/HopTracer/releases)
 
 HopTracer is a powerful desktop tool designed to help architects and computational designers visualize changes in their Grasshopper definitions. It provides a clear, interactive comparison between two versions of a file, highlighting what has been added, removed, or modified.
@@ -66,12 +67,13 @@ The project is built using **.NET 10** and **.NET MAUI** for cross-platform desk
 
 * .NET 10 SDK
 * Visual Studio 2022 or VS Code
-* Rhino 7 or 8 (for GH_IO.dll dependency)
+* Windows 10/11 (for MAUI Windows target)
+* Optional: Rhino 7/8 if you want enhanced cluster archive decoding
 
 #### Steps
 
 1. Clone the repository: `git clone https://github.com/lasaths/HopTracer.git`
-2. Run the setup script: `.\scripts\setup_dependencies.ps1`
+2. Optional (for enhanced cluster decoding): `.\scripts\setup_dependencies.ps1`
 3. Open `Source/HopTracer.sln`.
 4. Build the `HopTracer` project.
 5. Run the application.
@@ -98,6 +100,16 @@ The build creates:
 ### Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Microsoft Store Packaging
+
+Use the MSIX build script to create Store-ready artifacts:
+
+```powershell
+.\scripts\build_msix.ps1
+```
+
+Detailed Store submission steps are documented in [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md).
 
 ## Changelog
 
