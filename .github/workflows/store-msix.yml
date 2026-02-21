@@ -42,6 +42,7 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+        cache: false
 
     - name: Install MAUI workload
       run: dotnet workload install maui-windows --skip-sign-check
