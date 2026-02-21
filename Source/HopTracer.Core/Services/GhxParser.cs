@@ -4,9 +4,9 @@ using System.Security.Cryptography;
 using HopTracer.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
-using GH_IO.Serialization;
 using System.Text.Json;
 using System.Text;
+using System.Reflection;
 
 namespace HopTracer.Core.Services;
 
@@ -565,6 +565,34 @@ public class GhxParser : IGhxParser
         var pattern = GetValue(chunk, "Pattern");
         if (!string.IsNullOrEmpty(pattern)) result["Pattern"] = pattern;
 
+        var container = GetContainerChunk(chunk);
+        if (container != null && IsGroupContainer(chunk, container))
+        {
+            result["IsGroup"] = "true";
+
+            var memberIds = GetDirectValues(container, "ID")
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (memberIds.Count > 0)
+            {
+                result["GroupMemberIds"] = JsonSerializer.Serialize(memberIds);
+                result["GroupMemberCount"] = memberIds.Count.ToString(CultureInfo.InvariantCulture);
+            }
+
+            var declaredMemberCount = GetDirectValue(container, "ID_Count");
+            if (!string.IsNullOrWhiteSpace(declaredMemberCount))
+            {
+                result["GroupMemberCount"] = declaredMemberCount;
+            }
+
+            var rawGroupColor = GetDirectValue(container, "Colour") ?? GetDirectValue(container, "Color");
+            if (!string.IsNullOrWhiteSpace(rawGroupColor))
+            {
+                result["GroupColor"] = NormalizeGhColor(rawGroupColor);
+            }
+        }
+
         // 6. Cluster (embedded sub-definition) detection
         var clusterDoc = chunk.Descendants("item")
             .FirstOrDefault(i => i.Attribute("name")?.Value == "ClusterDocument");
@@ -651,9 +679,7 @@ public class GhxParser : IGhxParser
                 return;
             }
 
-            var archive = new GH_Archive();
-            var deserialized = archive.Deserialize_Binary(bytes);
-            var clusterXml = deserialized ? archive.Serialize_Xml() : string.Empty;
+            var clusterXml = TryDeserializeClusterXmlWithGhIo(bytes);
             if (string.IsNullOrWhiteSpace(clusterXml))
             {
                 clusterXml = TryDecodeClusterXmlText(bytes) ?? string.Empty;
@@ -723,6 +749,81 @@ public class GhxParser : IGhxParser
             result["ClusterPreviewStatus"] = "unavailable";
             result["ClusterPreviewMessage"] = "Cluster internals could not be decoded in this environment.";
         }
+    }
+
+    private static string TryDeserializeClusterXmlWithGhIo(byte[] bytes)
+    {
+        try
+        {
+            // Optional dependency: GH_IO may not be present in CI or dev environments.
+            var ghArchiveType = ResolveGhArchiveType();
+            if (ghArchiveType == null)
+            {
+                return string.Empty;
+            }
+
+            var archive = Activator.CreateInstance(ghArchiveType);
+            if (archive == null)
+            {
+                return string.Empty;
+            }
+
+            var deserializeBinary = ghArchiveType.GetMethod("Deserialize_Binary", new[] { typeof(byte[]) });
+            var serializeXml = ghArchiveType.GetMethod("Serialize_Xml", Type.EmptyTypes);
+            if (deserializeBinary == null || serializeXml == null)
+            {
+                return string.Empty;
+            }
+
+            var deserialized = deserializeBinary.Invoke(archive, new object[] { bytes }) is bool ok && ok;
+            if (!deserialized)
+            {
+                return string.Empty;
+            }
+
+            return serializeXml.Invoke(archive, null) as string ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static Type? ResolveGhArchiveType()
+    {
+        var resolved = Type.GetType("GH_IO.Serialization.GH_Archive, GH_IO", throwOnError: false);
+        if (resolved != null)
+        {
+            return resolved;
+        }
+
+        var candidatePaths = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "GH_IO.dll"),
+            Path.Combine(AppContext.BaseDirectory, "tools", "GH_IO.dll"),
+            Path.Combine(AppContext.BaseDirectory, "HopTracer.Web", "tools", "GH_IO.dll"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Source", "HopTracer.Web", "tools", "GH_IO.dll"))
+        };
+
+        foreach (var path in candidatePaths)
+        {
+            try
+            {
+                if (!File.Exists(path)) continue;
+                var assembly = Assembly.LoadFrom(path);
+                resolved = assembly.GetType("GH_IO.Serialization.GH_Archive", throwOnError: false, ignoreCase: false);
+                if (resolved != null)
+                {
+                    return resolved;
+                }
+            }
+            catch
+            {
+                // Optional dependency probing should never fail graph parsing.
+            }
+        }
+
+        return null;
     }
 
     private static bool IsClusterNode(Dictionary<string, string> props)
@@ -823,6 +924,52 @@ public class GhxParser : IGhxParser
     {
         var hash = GetPropertyValue(props, "ClusterHash");
         return string.IsNullOrWhiteSpace(hash) ? 0 : 1;
+    }
+
+    private bool IsGroupContainer(XElement objectChunk, XElement container)
+    {
+        var containerName = GetDirectValue(container, "Name");
+        if (string.Equals(containerName, "Group", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var objectName = GetValue(objectChunk, "Name");
+        if (string.Equals(objectName, "Group", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var description = GetDirectValue(container, "Description") ?? GetValue(container, "Description");
+        if (!string.IsNullOrWhiteSpace(description) &&
+            description.Contains("group of grasshopper objects", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string NormalizeGhColor(string rawColor)
+    {
+        if (string.IsNullOrWhiteSpace(rawColor))
+        {
+            return string.Empty;
+        }
+
+        var numbers = rawColor
+            .Split(new[] { ';', ',', ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? (int?)value : null)
+            .Where(value => value.HasValue)
+            .Select(value => Math.Clamp(value!.Value, 0, 255))
+            .ToList();
+
+        if (numbers.Count >= 4)
+        {
+            return $"{numbers[0]};{numbers[1]};{numbers[2]};{numbers[3]}";
+        }
+
+        return rawColor.Trim();
     }
 
     private sealed class ParsedOutputPort

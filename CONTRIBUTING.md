@@ -5,25 +5,27 @@ Thank you for your interest in contributing to HopTracer! This document provides
 ## Development Setup
 
 1. **Prerequisites**
-   - .NET 9 SDK
+   - .NET 10 SDK
    - Visual Studio 2022 (17.12+) or VS Code
-   - Rhino 7 or 8 installed (for GH_IO.dll)
+   - Windows 10/11 (for MAUI Windows target)
+   - Optional: Rhino 7/8 for enhanced cluster archive decoding
 
 2. **Clone and Setup**
 
    ```bash
    git clone https://github.com/lasaths/HopTracer.git
    cd HopTracer
-   .\Scripts\setup_dependencies.ps1
+   # Optional: only needed for enhanced cluster archive decoding
+   .\scripts\setup_dependencies.ps1
    ```
 
 3. **Build and Run**
 
-   ```bash
-   cd Source
-   dotnet restore
-   dotnet build
-   dotnet run --project HopTracer
+```bash
+cd Source
+dotnet restore
+dotnet build
+dotnet run --project HopTracer
    ```
 
 ## Project Structure
@@ -35,9 +37,10 @@ HopTracer/
 │   ├── HopTracer.Web/      # Web backend & UI
 │   ├── HopTracer.Core/     # Parsing & diffing logic
 │   ├── GhConverter/        # GH to GHX converter
-│   └── TestDiff/           # Core logic tests
+│   └── Tools/TestDiff/     # CLI diagnostics tool
+├── Tests/HopTracer.UnitTests/ # Unit tests
 ├── Tests/data/             # Test fixtures
-├── Scripts/                # Build and setup scripts
+├── scripts/                # Build and setup scripts
 └── Assets/                 # Images and resources
 ```
 
@@ -57,9 +60,9 @@ HopTracer/
 
 3. **Test Your Changes**
 
-   ```bash
-   dotnet test Source/HopTracer.sln
-   ```
+```bash
+dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj
+```
 
 4. **Commit**
 
@@ -107,7 +110,7 @@ HopTracer/
 
 ## Testing
 
-- Add unit tests in `TestDiff/` for core logic changes
+- Add unit tests in `Tests/HopTracer.UnitTests/` for core logic changes
 - Test with both .gh and .ghx files
 - Test with files from different Rhino/Grasshopper versions
 - Test git integration with real repositories
