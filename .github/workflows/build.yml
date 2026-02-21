@@ -38,10 +38,10 @@ jobs:
       run: dotnet restore Source/HopTracer.sln
 
     - name: Build
-      run: dotnet build Source/HopTracer.sln --configuration Release --no-restore
+      run: dotnet build Source/HopTracer/HopTracer.csproj --configuration Release --no-restore
 
     - name: Run Tests
-      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj --configuration Release --no-build
+      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj --configuration Release --no-restore
 
     - name: Publish Portable Package
       run: |
