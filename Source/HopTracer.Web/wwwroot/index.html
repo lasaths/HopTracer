@@ -5,10 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HopTracer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
     <style>
         :root {
             /* Shadcn Dark Theme (Zinc/Slate) */
@@ -123,6 +120,7 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            width: 100%;
         }
 
         @keyframes spin {
@@ -132,7 +130,7 @@
         }
 
         .container {
-            width: 800px;
+            width: min(800px, calc(100vw - 32px));
             text-align: center;
         }
 
@@ -246,7 +244,7 @@
 
         .commit-row {
             display: grid;
-            grid-template-columns: 80px 1fr 150px 150px;
+            grid-template-columns: 80px 1fr 160px 110px 100px;
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
             cursor: pointer;
@@ -270,7 +268,7 @@
 
         .commit-header {
             display: grid;
-            grid-template-columns: 80px 1fr 150px 150px;
+            grid-template-columns: 80px 1fr 160px 110px 100px;
             padding: 12px 16px;
             background: var(--bg-panel);
             border-bottom: 1px solid var(--border-color);
@@ -296,7 +294,8 @@
         }
 
         .commit-author,
-        .commit-date {
+        .commit-date,
+        .commit-size {
             color: var(--text-secondary);
             white-space: nowrap;
             overflow: hidden;
@@ -340,6 +339,18 @@
             border-left: 4px solid var(--success);
         }
 
+        .git-modal-card {
+            background: var(--bg-panel);
+            padding: 0;
+            border-radius: 12px;
+            width: min(800px, calc(100vw - 24px));
+            height: min(600px, calc(100vh - 24px));
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -356,6 +367,52 @@
             to {
                 opacity: 0;
                 transform: translateX(100%);
+            }
+        }
+
+        @media (max-width: 900px) {
+            body {
+                justify-content: flex-start;
+                padding: 20px 0;
+            }
+
+            .drop-zone-container {
+                flex-direction: column;
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+
+            .drop-zone {
+                height: 150px;
+            }
+
+            h1 {
+                margin-bottom: 24px;
+            }
+
+            .commit-header {
+                grid-template-columns: 80px 1fr;
+            }
+
+            .commit-header > :nth-child(3),
+            .commit-header > :nth-child(4),
+            .commit-header > :nth-child(5) {
+                display: none;
+            }
+
+            .commit-row {
+                grid-template-columns: 80px 1fr;
+            }
+
+            .commit-row .commit-author,
+            .commit-row .commit-date,
+            .commit-row .commit-size {
+                display: none;
+            }
+
+            .toast {
+                min-width: 0;
+                max-width: calc(100vw - 20px);
             }
         }
     </style>
@@ -402,14 +459,13 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn" id="compareBtn">Compare Files</button>
+            <button type="submit" class="btn" id="compareBtn" disabled title="Select both files to continue">Compare Files</button>
         </form>
 
         <!-- Git History Modal -->
         <div id="gitModal"
             style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center;">
-            <div
-                style="background:var(--bg-panel); padding:0; border-radius:12px; width:800px; height:600px; display:flex; flex-direction:column; overflow:hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div class="git-modal-card">
 
                 <div
                     style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
@@ -423,6 +479,7 @@
                     <div id="selectedGitFile"
                         style="font-family:monospace; color:var(--accent-color); margin-right:10px;">
                     </div>
+                    <div id="selectedGitFileMeta" style="font-size:12px; color:var(--text-secondary);"></div>
                 </div>
                 <div id="gitStatus"
                     style="padding: 10px 20px; color: var(--text-secondary); font-size: 13px; min-height: 18px;"></div>
@@ -430,8 +487,9 @@
                 <div class="commit-header">
                     <div>Hash</div>
                     <div>Message</div>
-                    <div>Author</div>
-                    <div>Date</div>
+                    <div>Blame</div>
+                    <div>Age</div>
+                    <div>Size</div>
                 </div>
 
                 <div id="commitList" class="commit-list" style="border:none; border-radius:0; margin:0;">
@@ -455,6 +513,16 @@
         <div
             style="width: 40px; height: 40px; border: 4px solid var(--border-color); border-top: 4px solid var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite;">
         </div>
+        <div id="loadingPercent"
+            style="margin-top:12px; font-size:28px; font-weight:700; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;">
+            0%
+        </div>
+        <div
+            style="width:min(360px, calc(100vw - 48px)); height:10px; background:rgba(255,255,255,0.08); border:1px solid var(--border-color); border-radius:999px; margin-top:10px; overflow:hidden;">
+            <div id="loadingProgressBar"
+                style="height:100%; width:0%; background:linear-gradient(90deg, var(--accent-color), var(--ring)); transition:width 220ms ease;">
+            </div>
+        </div>
         <div id="loadingSubtitle" style="margin-top:16px; color:var(--text-secondary); font-size:14px;">This may take a few moments for large
             files.</div>
     </div>
@@ -465,6 +533,10 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingTitle = document.getElementById('loadingTitle');
         const loadingSubtitle = document.getElementById('loadingSubtitle');
+        const loadingPercent = document.getElementById('loadingPercent');
+        const loadingProgressBar = document.getElementById('loadingProgressBar');
+        let loadingProgressTimer = null;
+        let loadingProgressValue = 0;
 
         const dropZones = {
             old: {
@@ -509,6 +581,80 @@
         let selectedCommit = null;
         const gitStatus = document.getElementById('gitStatus');
         const selectedGitFileLabel = document.getElementById('selectedGitFile');
+        const selectedGitFileMeta = document.getElementById('selectedGitFileMeta');
+        const compareBtn = document.getElementById('compareBtn');
+
+        function formatBytes(bytes) {
+            const value = Number(bytes);
+            if (!Number.isFinite(value) || value < 0) return 'unknown';
+            if (value < 1024) return `${Math.round(value)} B`;
+            const units = ['KB', 'MB', 'GB', 'TB'];
+            let size = value / 1024;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            return `${size.toFixed(size >= 100 ? 0 : (size >= 10 ? 1 : 2))} ${units[unitIndex]}`;
+        }
+
+        async function fetchFileInfo(path) {
+            if (!path) return null;
+            try {
+                const res = await fetch('/git/file_info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+                if (!res.ok) return null;
+                const data = await res.json().catch(() => ({}));
+                return {
+                    sizeBytes: data.size_bytes ?? data.sizeBytes ?? null,
+                    modifiedUtc: data.modified_utc ?? data.modifiedUtc ?? null
+                };
+            } catch {
+                return null;
+            }
+        }
+
+        async function updateZoneFileSize(type, path) {
+            const zone = dropZones[type];
+            if (!zone) return;
+            const filename = path.split(/[\\/]/).pop();
+            zone.name.textContent = filename;
+
+            const info = await fetchFileInfo(path);
+            if (zone.pathInput.value !== path) return;
+            if (info && info.sizeBytes !== null) {
+                zone.name.textContent = `${filename} (${formatBytes(info.sizeBytes)})`;
+            }
+        }
+
+        async function updateSelectedGitFileMeta(path) {
+            if (!selectedGitFileMeta) return;
+            selectedGitFileMeta.textContent = '';
+            if (!path) return;
+
+            selectedGitFileMeta.textContent = 'Loading size...';
+            const info = await fetchFileInfo(path);
+            if (currentGitPath !== path) return;
+
+            if (info && info.sizeBytes !== null) {
+                selectedGitFileMeta.textContent = `File size: ${formatBytes(info.sizeBytes)}`;
+            } else {
+                selectedGitFileMeta.textContent = 'File size: unknown';
+            }
+        }
+
+        function hasPathSelection(type) {
+            return Boolean(dropZones[type].pathInput.value && dropZones[type].pathInput.value.trim());
+        }
+
+        function updateCompareButtonState() {
+            const ready = hasPathSelection('old') && hasPathSelection('new');
+            compareBtn.disabled = !ready;
+            compareBtn.title = ready ? 'Compare selected files' : 'Select both files to continue';
+        }
 
         async function checkDependencyHealth() {
             try {
@@ -523,13 +669,68 @@
             }
         }
 
-        function showLoadingOverlay(title, subtitle) {
+        function setLoadingProgress(value, subtitle) {
+            const clamped = Math.max(0, Math.min(100, Math.round(value)));
+            loadingProgressValue = clamped;
+            if (loadingPercent) loadingPercent.textContent = `${clamped}%`;
+            if (loadingProgressBar) loadingProgressBar.style.width = `${clamped}%`;
+            if (subtitle) loadingSubtitle.textContent = subtitle;
+        }
+
+        function startLoadingProgressSimulation(mode = 'compare') {
+            if (loadingProgressTimer) {
+                clearInterval(loadingProgressTimer);
+                loadingProgressTimer = null;
+            }
+
+            const stagePlan = mode === 'git'
+                ? [
+                    { upTo: 25, text: 'Contacting Git and preparing file…' },
+                    { upTo: 55, text: 'Converting selected revision…' },
+                    { upTo: 80, text: 'Parsing graph data…' },
+                    { upTo: 94, text: 'Computing differences…' }
+                ]
+                : [
+                    { upTo: 20, text: 'Preparing selected files…' },
+                    { upTo: 52, text: 'Converting .gh files to .ghx…' },
+                    { upTo: 78, text: 'Parsing graph data…' },
+                    { upTo: 94, text: 'Computing differences…' }
+                ];
+
+            let stageIndex = 0;
+            let stage = stagePlan[stageIndex];
+            setLoadingProgress(2, stage.text);
+
+            loadingProgressTimer = setInterval(() => {
+                if (stageIndex < stagePlan.length - 1 && loadingProgressValue >= stage.upTo) {
+                    stageIndex++;
+                    stage = stagePlan[stageIndex];
+                }
+
+                const target = stage.upTo;
+                if (loadingProgressValue < target) {
+                    const remaining = target - loadingProgressValue;
+                    const step = Math.max(1, Math.min(remaining, Math.ceil(remaining * 0.14)));
+                    setLoadingProgress(loadingProgressValue + step, stage.text);
+                } else {
+                    setLoadingProgress(loadingProgressValue, stage.text);
+                }
+            }, 260);
+        }
+
+        function showLoadingOverlay(title, subtitle, mode = 'compare') {
             if (title) loadingTitle.textContent = title;
             if (subtitle) loadingSubtitle.textContent = subtitle;
             loadingOverlay.style.display = 'flex';
+            startLoadingProgressSimulation(mode);
         }
 
         function hideLoadingOverlay() {
+            if (loadingProgressTimer) {
+                clearInterval(loadingProgressTimer);
+                loadingProgressTimer = null;
+            }
+            setLoadingProgress(0);
             loadingOverlay.style.display = 'none';
         }
 
@@ -571,10 +772,9 @@
 
         function handleFileSelection(type, path) {
             const zone = dropZones[type];
-            const filename = path.split(/[\\/]/).pop();
 
             zone.pathInput.value = path;
-            zone.name.textContent = filename;
+            updateZoneFileSize(type, path);
             zone.label.textContent = "Selected";
             zone.zone.style.borderColor = 'var(--accent-color)';
             zone.zone.classList.add('selected');
@@ -584,6 +784,8 @@
                 currentGitPath = path;
                 checkGitStatus(path);
             }
+
+            updateCompareButtonState();
         }
 
         async function checkGitStatus(path) {
@@ -641,6 +843,7 @@
             const filename = currentGitPath.split(/[\\/]/).pop();
             selectedGitFileLabel.textContent = filename;
             selectedGitFileLabel.title = currentGitPath;
+            updateSelectedGitFileMeta(currentGitPath);
 
             // Load commits
             attemptLoadCommits(currentGitPath);
@@ -714,6 +917,7 @@
                     <div class="commit-msg" title="${c.message}">${c.message}</div>
                     <div class="commit-author" title="${c.author}">${c.author}</div>
                     <div class="commit-date">${c.date}</div>
+                    <div class="commit-size">${formatBytes(c.fileSizeBytes ?? c.FileSizeBytes ?? 0)}</div>
                 `;
 
                 item.onclick = () => {
@@ -734,7 +938,7 @@
             loadBtn.disabled = true;
             loadBtn.textContent = 'Downloading...';
             setStatus('Downloading file from commit…', 'info');
-            showLoadingOverlay('Downloading file from Git…', 'Fetching version and preparing diff.');
+            showLoadingOverlay('Downloading file from Git…', 'Fetching version and preparing diff.', 'git');
             closeGitModal();
 
             try {
@@ -771,8 +975,13 @@
             document.getElementById('gitModal').style.display = 'none';
         }
 
-        document.getElementById('compareForm').addEventListener('submit', () => {
-            showLoadingOverlay('Converting & Comparing...', 'This may take a few moments for large files.');
+        document.getElementById('compareForm').addEventListener('submit', (e) => {
+            if (!(hasPathSelection('old') && hasPathSelection('new'))) {
+                e.preventDefault();
+                showToast('Select both OLD and NEW files before comparing.', 'error');
+                return;
+            }
+            showLoadingOverlay('Converting & Comparing...', 'This may take a few moments for large files.', 'compare');
         });
 
         // Set up click handlers for drop zones
@@ -789,6 +998,7 @@
         });
 
         checkDependencyHealth();
+        updateCompareButtonState();
     </script>
 </body>
 

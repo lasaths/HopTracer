@@ -11,6 +11,18 @@ public static class DependencyHelper
     /// </summary>
     public static void EnsureGhIoDll()
     {
+        if (!TryEnsureGhIoDll(out var errorMessage))
+        {
+            throw new FileNotFoundException(errorMessage);
+        }
+    }
+
+    /// <summary>
+    /// Ensures GH_IO.dll is present (and up to date) in all runtime locations.
+    /// Returns false with a detailed error message instead of throwing.
+    /// </summary>
+    public static bool TryEnsureGhIoDll(out string? errorMessage)
+    {
         var appDir = AppDomain.CurrentDomain.BaseDirectory;
 
         // Prioritize newer Rhino installs first
@@ -24,7 +36,15 @@ public static class DependencyHelper
         var sourcePath = FindNewestGhIo(candidatePaths);
         if (sourcePath is null)
         {
-            throw new FileNotFoundException("Could not find GH_IO.dll in standard Rhino installation paths. Please install Rhino 6, 7, or 8, or manually copy GH_IO.dll to the application directory.");
+            errorMessage =
+                "GH_IO.dll was not found. HopTracer requires Grasshopper's GH_IO.dll at startup.\n" +
+                "Install Rhino 8/7/6, then retry.\n" +
+                "Expected source paths:\n" +
+                "- C:\\Program Files\\Rhino 8\\Plug-ins\\Grasshopper\\GH_IO.dll\n" +
+                "- C:\\Program Files\\Rhino 7\\Plug-ins\\Grasshopper\\GH_IO.dll\n" +
+                "- C:\\Program Files\\Rhino 6\\Plug-ins\\Grasshopper\\GH_IO.dll\n" +
+                "For source builds, run .\\scripts\\setup_dependencies.ps1.";
+            return false;
         }
 
         var targets = new[]
@@ -39,6 +59,9 @@ public static class DependencyHelper
         {
             CopyIfNewer(sourcePath, targetDir);
         }
+
+        errorMessage = null;
+        return true;
     }
 
     private static string? FindNewestGhIo(IEnumerable<string> candidatePaths)

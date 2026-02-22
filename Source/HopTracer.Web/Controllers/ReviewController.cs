@@ -13,27 +13,27 @@ namespace HopTracer.Web.Controllers;
 [Route("review")]
 public class ReviewController : ControllerBase
 {
-    private readonly IWebHostEnvironment _env;
     private readonly ILogger<ReviewController> _logger;
     private readonly IGhxParser _parser;
     private readonly IDiffer _differ;
     private readonly IConverterService _converter;
     private readonly IFileValidationService _fileValidator;
+    private readonly IAppDataStorageService _storage;
 
     public ReviewController(
-        IWebHostEnvironment env,
         ILogger<ReviewController> logger,
         IGhxParser parser,
         IDiffer differ,
         IConverterService converter,
-        IFileValidationService fileValidator)
+        IFileValidationService fileValidator,
+        IAppDataStorageService storage)
     {
-        _env = env;
         _logger = logger;
         _parser = parser;
         _differ = differ;
         _converter = converter;
         _fileValidator = fileValidator;
+        _storage = storage;
     }
 
     [HttpPost("baseline/save")]
@@ -51,8 +51,7 @@ public class ReviewController : ControllerBase
 
         try
         {
-            var baselineDir = Path.Combine(_env.ContentRootPath, "baselines");
-            Directory.CreateDirectory(baselineDir);
+            var baselineDir = _storage.BaselinesPath;
 
             var safeName = SanitizeName(request.Name);
             var snapshotPath = Path.Combine(baselineDir, $"{safeName}.ghx");
@@ -262,9 +261,14 @@ public class ReviewController : ControllerBase
 
     private string EnsureGhx(string normalizedPath)
     {
-        if (normalizedPath.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase))
+        var uploadsPath = _storage.UploadsPath;
+        var extension = Path.GetExtension(normalizedPath);
+        var tempSourcePath = Path.Combine(uploadsPath, $"review_{Guid.NewGuid():N}{extension}");
+        System.IO.File.Copy(normalizedPath, tempSourcePath, overwrite: true);
+
+        if (tempSourcePath.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase))
         {
-            return normalizedPath;
+            return tempSourcePath;
         }
 
         if (!_converter.TryCheckDependencies(out var dependencyMessage))
@@ -272,17 +276,13 @@ public class ReviewController : ControllerBase
             throw new InvalidOperationException(dependencyMessage);
         }
 
-        var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
-        Directory.CreateDirectory(uploadsPath);
-        var tempGhPath = Path.Combine(uploadsPath, $"review_{Guid.NewGuid():N}.gh");
-        System.IO.File.Copy(normalizedPath, tempGhPath, overwrite: true);
-        return _converter.ConvertGhToGhx(tempGhPath);
+        return _converter.ConvertGhToGhx(tempSourcePath);
     }
 
     private BaselineArtifact? LoadBaseline(string name)
     {
         var safeName = SanitizeName(name);
-        var metadataPath = Path.Combine(_env.ContentRootPath, "baselines", $"{safeName}.json");
+        var metadataPath = Path.Combine(_storage.BaselinesPath, $"{safeName}.json");
         if (!System.IO.File.Exists(metadataPath))
         {
             return null;

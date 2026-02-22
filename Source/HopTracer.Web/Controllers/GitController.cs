@@ -21,6 +21,7 @@ public partial class GitController : ControllerBase
     private readonly IDiffer _differ;
     private readonly IConverterService _converter;
     private readonly IFileValidationService _fileValidator;
+    private readonly IAppDataStorageService _storage;
 
     // Regex to validate git commit hashes (7-40 hex characters)
     [GeneratedRegex(@"^[a-fA-F0-9]{7,40}$")]
@@ -33,7 +34,8 @@ public partial class GitController : ControllerBase
         IGhxParser parser,
         IDiffer differ,
         IConverterService converter,
-        IFileValidationService fileValidator)
+        IFileValidationService fileValidator,
+        IAppDataStorageService storage)
     {
         _env = env;
         _logger = logger;
@@ -42,6 +44,7 @@ public partial class GitController : ControllerBase
         _differ = differ;
         _converter = converter;
         _fileValidator = fileValidator;
+        _storage = storage;
     }
 
     [HttpPost("check")]
@@ -57,9 +60,17 @@ public partial class GitController : ControllerBase
             return Ok(new { is_repo = false });
         }
 
-        var dirPath = Path.GetDirectoryName(normalizedPath) ?? normalizedPath;
-        var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
-        return Ok(new { is_repo = wrapper.IsGitRepo() });
+        try
+        {
+            var dirPath = Path.GetDirectoryName(normalizedPath) ?? normalizedPath;
+            var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
+            return Ok(new { is_repo = wrapper.IsGitRepo() });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Git repo check failed for non-repo path: {Path}", normalizedPath);
+            return Ok(new { is_repo = false });
+        }
     }
 
     [HttpPost("commits")]
@@ -108,41 +119,26 @@ public partial class GitController : ControllerBase
             return BadRequest(new { error = "Invalid commit hash format" });
         }
 
-        var dirPath = Path.GetDirectoryName(normalizedPath) ?? "";
-        var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
+        if (!string.IsNullOrEmpty(request.HashNew) && !ValidateGitHash(request.HashNew))
+        {
+            return BadRequest(new { error = "Invalid commit hash format" });
+        }
 
+        var tempFiles = new List<string>();
         try
         {
             var stageTimings = new List<DiffStageTiming>();
-            // Get old content
-            var contentOld = wrapper.GetFileContentAtCommit(request.HashOld, normalizedPath);
-            var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
-            Directory.CreateDirectory(uploadsPath);
-            
-            var pathOld = Path.Combine(uploadsPath, $"git_{request.HashOld}.ghx");
-            await System.IO.File.WriteAllBytesAsync(pathOld, contentOld);
-
-            // Get new content
-            string pathNew;
-            if (!string.IsNullOrEmpty(request.HashNew))
-            {
-                var contentNew = wrapper.GetFileContentAtCommit(request.HashNew, normalizedPath);
-                pathNew = Path.Combine(uploadsPath, $"git_{request.HashNew}.ghx");
-                await System.IO.File.WriteAllBytesAsync(pathNew, contentNew);
-            }
-            else
-            {
-                pathNew = normalizedPath;
-            }
+            var oldSource = await PrepareDiffSourceAsync(normalizedPath, request.HashOld, "old", tempFiles);
+            var newSource = await PrepareDiffSourceAsync(normalizedPath, request.HashNew, "new", tempFiles);
 
             // Parse and diff
             var sw = Stopwatch.StartNew();
-            var graphOld = _parser.Parse(pathOld);
+            var graphOld = _parser.Parse(oldSource.PreparedPath);
             sw.Stop();
             stageTimings.Add(new DiffStageTiming { Name = "parse_old", DurationMs = sw.ElapsedMilliseconds });
 
             sw.Restart();
-            var graphNew = _parser.Parse(pathNew);
+            var graphNew = _parser.Parse(newSource.PreparedPath);
             sw.Stop();
             stageTimings.Add(new DiffStageTiming { Name = "parse_new", DurationMs = sw.ElapsedMilliseconds });
 
@@ -180,133 +176,106 @@ public partial class GitController : ControllerBase
             _logger.LogError(ex, "Error during Git comparison");
             return StatusCode(500, new { error = ex.Message });
         }
+        finally
+        {
+            CleanupTempFiles(tempFiles);
+        }
     }
 
-    [HttpPost("view_diff")]
-    public async Task<IActionResult> ViewDiff([FromForm] string path, [FromForm] string hash_old)
+    [HttpPost("file_info")]
+    public IActionResult GetFileInfo([FromBody] PathRequest request)
     {
-        if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(hash_old))
+        if (string.IsNullOrWhiteSpace(request.Path))
         {
-            return BadRequest("Missing parameters for Git diff");
+            return BadRequest(new { error = "File path is required" });
         }
 
-        if (!_fileValidator.TryValidateExistingPath(path, out var validationError, out var normalizedPath))
+        if (!_fileValidator.TryValidateExistingPath(request.Path, out var validationError, out var normalizedPath))
         {
-            _logger.LogWarning("Invalid file path for view_diff: {Path}", path);
-            return BadRequest(validationError);
-        }
-
-        if (!ValidateGitHash(hash_old))
-        {
-            _logger.LogWarning("Invalid git hash for view_diff: {Hash}", hash_old);
-            return BadRequest("Invalid commit hash format");
-        }
-
-        var dirPath = Path.GetDirectoryName(normalizedPath) ?? "";
-        var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
-
-        // Check if it's a git repo
-        if (!wrapper.IsGitRepo())
-        {
-            _logger.LogError("Path is not in a Git repository: {Path}", normalizedPath);
-            return BadRequest($"Path is not in a Git repository: {normalizedPath}");
+            return BadRequest(new { error = validationError });
         }
 
         try
         {
-            _logger.LogInformation("Fetching file content at commit {Commit} for {Path}", hash_old, normalizedPath);
-            
-            // Get commit details
-            var commits = wrapper.GetCommits(normalizedPath, 100); // Get enough to find our commit
-            var commitInfo = commits.FirstOrDefault(c => c.Hash == hash_old || c.Hash.StartsWith(hash_old));
-            
-            // Get old content from git
-            var contentOld = wrapper.GetFileContentAtCommit(hash_old, normalizedPath);
-            
-            var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
-            Directory.CreateDirectory(uploadsPath);
-            
-            // Determine file extension from original path
-            var originalExtension = Path.GetExtension(normalizedPath).ToLower();
-            var isBinaryGh = originalExtension == ".gh";
-            
-            // Save the file with appropriate extension
-            var tempFileName = $"git_{hash_old}{originalExtension}";
-            var pathOld = Path.Combine(uploadsPath, tempFileName);
-            await System.IO.File.WriteAllBytesAsync(pathOld, contentOld);
-            
-            _logger.LogInformation("Saved old version to: {PathOld} ({Size} bytes)", pathOld, contentOld.Length);
-            
-            // Convert .gh to .ghx if necessary
-            if (isBinaryGh)
+            var info = new FileInfo(normalizedPath);
+            return Ok(new
             {
-                _logger.LogInformation("Converting binary .gh to .ghx...");
-                try
-                {
-                    if (!_converter.TryCheckDependencies(out var dependencyMessage))
-                    {
-                        return StatusCode(500, dependencyMessage);
-                    }
-                    pathOld = _converter.ConvertGhToGhx(pathOld);
-                    _logger.LogInformation("Converted to: {PathOld}", pathOld);
-                }
-                catch (Exception convEx)
-                {
-                    _logger.LogError(convEx, "Failed to convert .gh to .ghx");
-                    return StatusCode(500, $"Failed to convert .gh file from Git history: {convEx.Message}");
-                }
-            }
+                path = normalizedPath,
+                size_bytes = info.Exists ? info.Length : 0,
+                modified_utc = info.Exists ? info.LastWriteTimeUtc.ToString("o") : null
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get file info for {Path}", normalizedPath);
+            return StatusCode(500, new { error = "Failed to read file info" });
+        }
+    }
 
-            // Use current file for new content
-            var pathNew = normalizedPath;
-            
-            // Convert current file if it's also .gh - copy to temp first!
-            if (pathNew.ToLower().EndsWith(".gh"))
-            {
-                _logger.LogInformation("Converting current .gh file to .ghx...");
-                try
-                {
-                    if (!_converter.TryCheckDependencies(out var dependencyMessage))
-                    {
-                        return StatusCode(500, dependencyMessage);
-                    }
-                    // Copy to temp directory to avoid modifying the repo
-                    var tempCurrentFileName = $"git_current_{hash_old}.gh";
-                    var tempCurrentPath = Path.Combine(uploadsPath, tempCurrentFileName);
-                    System.IO.File.Copy(pathNew, tempCurrentPath, overwrite: true);
-                    _logger.LogDebug("Copied current file to temp: {TempPath}", tempCurrentPath);
-                    
-                    pathNew = _converter.ConvertGhToGhx(tempCurrentPath);
-                    _logger.LogInformation("Converted current file to: {PathNew}", pathNew);
-                }
-                catch (Exception convEx)
-                {
-                    _logger.LogError(convEx, "Failed to convert current .gh file");
-                    return StatusCode(500, $"Failed to convert current .gh file: {convEx.Message}");
-                }
-            }
-            
-            _logger.LogInformation("Using current file as new version: {PathNew}", pathNew);
+    [HttpPost("view_diff")]
+    public async Task<IActionResult> ViewDiff(
+        [FromForm] string? path,
+        [FromForm] string? hash_old,
+        [FromForm] string? path_old,
+        [FromForm] string? path_new,
+        [FromForm] string? hash_new)
+    {
+        var requestedPathOld = string.IsNullOrWhiteSpace(path_old) ? path : path_old;
+        var requestedPathNew = string.IsNullOrWhiteSpace(path_new) ? path : path_new;
 
-            // Parse and diff
-            _logger.LogInformation("Parsing old file: {PathOld}", pathOld);
+        if (string.IsNullOrWhiteSpace(requestedPathOld) || string.IsNullOrWhiteSpace(requestedPathNew))
+        {
+            return BadRequest("Both old and new paths are required.");
+        }
+
+        if (!_fileValidator.TryValidateExistingPath(requestedPathOld, out var oldValidationError, out var normalizedPathOld))
+        {
+            _logger.LogWarning("Invalid old path for view_diff: {Path}", requestedPathOld);
+            return BadRequest(oldValidationError);
+        }
+
+        if (!_fileValidator.TryValidateExistingPath(requestedPathNew, out var newValidationError, out var normalizedPathNew))
+        {
+            _logger.LogWarning("Invalid new path for view_diff: {Path}", requestedPathNew);
+            return BadRequest(newValidationError);
+        }
+
+        if (!string.IsNullOrWhiteSpace(hash_old) && !ValidateGitHash(hash_old))
+        {
+            _logger.LogWarning("Invalid old git hash for view_diff: {Hash}", hash_old);
+            return BadRequest("Invalid old commit hash format");
+        }
+
+        if (!string.IsNullOrWhiteSpace(hash_new) && !ValidateGitHash(hash_new))
+        {
+            _logger.LogWarning("Invalid new git hash for view_diff: {Hash}", hash_new);
+            return BadRequest("Invalid new commit hash format");
+        }
+
+        var tempFiles = new List<string>();
+        try
+        {
+            var oldSource = await PrepareDiffSourceAsync(normalizedPathOld, hash_old, "old", tempFiles);
+            var newSource = await PrepareDiffSourceAsync(normalizedPathNew, hash_new, "new", tempFiles);
+
             var stageTimings = new List<DiffStageTiming>();
             var sw = Stopwatch.StartNew();
-            var graphOld = _parser.Parse(pathOld);
+            var graphOld = _parser.Parse(oldSource.PreparedPath);
             sw.Stop();
             stageTimings.Add(new DiffStageTiming { Name = "parse_old", DurationMs = sw.ElapsedMilliseconds });
-            
-            _logger.LogInformation("Parsing new file: {PathNew}", pathNew);
+
             sw.Restart();
-            var graphNew = _parser.Parse(pathNew);
+            var graphNew = _parser.Parse(newSource.PreparedPath);
             sw.Stop();
             stageTimings.Add(new DiffStageTiming { Name = "parse_new", DurationMs = sw.ElapsedMilliseconds });
 
-            _logger.LogInformation("Computing diff...");
             sw.Restart();
             var diff = _differ.DiffDetailed(graphOld, graphNew);
             sw.Stop();
             stageTimings.Add(new DiffStageTiming { Name = "diff_compute", DurationMs = sw.ElapsedMilliseconds });
+
+            var primaryCommitHash = !string.IsNullOrWhiteSpace(hash_old) ? hash_old : hash_new;
+            var primaryCommitInfo = !string.IsNullOrWhiteSpace(hash_old) ? oldSource.CommitInfo : newSource.CommitInfo;
 
             var diffData = new DiffResponse
             {
@@ -317,35 +286,34 @@ public partial class GitController : ControllerBase
                     GeneratedAt = DateTime.Now.ToString("o"),
                     NodeCount = diff.Nodes.Count,
                     EdgeCount = diff.Edges.Count,
-                    FileOld = $"{Path.GetFileName(path)} @ {hash_old.Substring(0, 7)}",
-                    FileNew = $"{Path.GetFileName(path)} (current)",
-                    CommitHash = hash_old,
-                    CommitAuthor = commitInfo?.Author,
-                    CommitDate = commitInfo?.Date,
-                    CommitMessage = commitInfo?.Message,
-                    SourcePathOld = normalizedPath,
-                    SourcePathNew = normalizedPath,
-                    SourceTypeOld = "commit",
-                    SourceTypeNew = "file",
-                    SourceHashOld = hash_old,
-                    SourceHashNew = null,
+                    FileOld = BuildSourceLabel(normalizedPathOld, hash_old),
+                    FileNew = BuildSourceLabel(normalizedPathNew, hash_new),
+                    CommitHash = primaryCommitHash,
+                    CommitAuthor = primaryCommitInfo?.Author,
+                    CommitDate = primaryCommitInfo?.Date,
+                    CommitMessage = primaryCommitInfo?.Message,
+                    SourcePathOld = normalizedPathOld,
+                    SourcePathNew = normalizedPathNew,
+                    SourceTypeOld = string.IsNullOrWhiteSpace(hash_old) ? "file" : "commit",
+                    SourceTypeNew = string.IsNullOrWhiteSpace(hash_new) ? "file" : "commit",
+                    SourceHashOld = string.IsNullOrWhiteSpace(hash_old) ? null : hash_old,
+                    SourceHashNew = string.IsNullOrWhiteSpace(hash_new) ? null : hash_new,
                     Diagnostics = diff.Diagnostics,
                     TopRisks = diff.TopRisks,
                     RiskSummary = diff.RiskSummary,
                     StageTimings = stageTimings
-                }
+                },
+                OldMeta = graphOld.Metadata,
+                NewMeta = graphNew.Metadata
             };
-            
-            _logger.LogInformation("Diff completed: {NodeCount} nodes, {EdgeCount} edges", diff.Nodes.Count, diff.Edges.Count);
 
-            // Load the diff viewer template
             var fileInfo = _env.WebRootFileProvider.GetFileInfo("diff_viewer.html");
             if (!fileInfo.Exists)
             {
                 _logger.LogError("diff_viewer.html template not found");
                 throw new FileNotFoundException("Template not found");
             }
-            
+
             string html;
             using (var stream = fileInfo.CreateReadStream())
             using (var reader = new StreamReader(stream))
@@ -353,33 +321,8 @@ public partial class GitController : ControllerBase
                 html = await reader.ReadToEndAsync();
             }
 
-            // Inject JSON data
             var jsonText = JsonSerializer.Serialize(diffData, AppJsonContext.Default.DiffResponse);
             html = html.Replace("{json_data}", jsonText);
-
-            // Cleanup temporary files
-            try
-            {
-                // Clean up the git-retrieved file (both .gh and .ghx versions)
-                var tempGhPath = Path.Combine(uploadsPath, $"git_{hash_old}.gh");
-                var tempGhxPath = Path.Combine(uploadsPath, $"git_{hash_old}.ghx");
-                var tempCurrentGhPath = Path.Combine(uploadsPath, $"git_current_{hash_old}.gh");
-                var tempCurrentGhxPath = Path.Combine(uploadsPath, $"git_current_{hash_old}.ghx");
-                
-                foreach (var tempPath in new[] { tempGhPath, tempGhxPath, tempCurrentGhPath, tempCurrentGhxPath })
-                {
-                    if (System.IO.File.Exists(tempPath))
-                    {
-                        System.IO.File.Delete(tempPath);
-                        _logger.LogDebug("Deleted temporary file: {TempPath}", tempPath);
-                    }
-                }
-            }
-            catch (Exception cleanupEx)
-            {
-                _logger.LogWarning(cleanupEx, "Could not cleanup temporary files");
-                // Ignore cleanup errors
-            }
 
             return Content(html, "text/html");
         }
@@ -388,26 +331,98 @@ public partial class GitController : ControllerBase
             _logger.LogError(ex, "Error generating diff from Git: {Message}", ex.Message);
             return StatusCode(500, $"Error generating diff: {ex.Message}");
         }
+        finally
+        {
+            CleanupTempFiles(tempFiles);
+        }
     }
 
-    private bool ValidateFilePath(string path)
+    private async Task<PreparedDiffSource> PrepareDiffSourceAsync(
+        string normalizedPath,
+        string? commitHash,
+        string sourceTag,
+        List<string> tempFiles)
     {
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
+        var extension = Path.GetExtension(normalizedPath).ToLowerInvariant();
+        var preparedPath = normalizedPath;
+        CommitInfo? commitInfo = null;
 
-        // Check for path traversal
-        if (path.Contains(".."))
+        if (!string.IsNullOrWhiteSpace(commitHash))
         {
-            _logger.LogWarning("Path traversal attempt detected: {Path}", path);
-            return false;
+            var dirPath = Path.GetDirectoryName(normalizedPath) ?? normalizedPath;
+            var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
+            if (!wrapper.IsGitRepo())
+            {
+                throw new InvalidOperationException($"Path is not in a Git repository: {normalizedPath}");
+            }
+
+            var commits = wrapper.GetCommits(normalizedPath, 200);
+            commitInfo = commits.FirstOrDefault(c => c.Hash == commitHash || c.Hash.StartsWith(commitHash, StringComparison.OrdinalIgnoreCase));
+
+            var content = wrapper.GetFileContentAtCommit(commitHash, normalizedPath);
+            var tempPath = Path.Combine(_storage.UploadsPath, $"git_{sourceTag}_{Guid.NewGuid():N}{extension}");
+            await System.IO.File.WriteAllBytesAsync(tempPath, content);
+            tempFiles.Add(tempPath);
+            preparedPath = tempPath;
+        }
+        else
+        {
+            // Copy current file to temp before parsing/conversion to avoid touching repo files.
+            var tempPath = Path.Combine(_storage.UploadsPath, $"git_{sourceTag}_current_{Guid.NewGuid():N}{extension}");
+            System.IO.File.Copy(normalizedPath, tempPath, overwrite: true);
+            tempFiles.Add(tempPath);
+            preparedPath = tempPath;
         }
 
-        if (!System.IO.File.Exists(path))
-            return false;
+        if (preparedPath.EndsWith(".gh", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!_converter.TryCheckDependencies(out var dependencyMessage))
+            {
+                throw new InvalidOperationException(dependencyMessage);
+            }
 
-        var extension = Path.GetExtension(path).ToLowerInvariant();
-        return _fileValidator.AllowedExtensions.Contains(extension);
+            var convertedPath = _converter.ConvertGhToGhx(preparedPath);
+            if (!string.Equals(convertedPath, preparedPath, StringComparison.OrdinalIgnoreCase))
+            {
+                tempFiles.Add(convertedPath);
+            }
+            preparedPath = convertedPath;
+        }
+
+        return new PreparedDiffSource(preparedPath, commitInfo);
     }
+
+    private void CleanupTempFiles(List<string> tempFiles)
+    {
+        foreach (var tempPath in tempFiles.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                if (System.IO.File.Exists(tempPath))
+                {
+                    System.IO.File.Delete(tempPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not delete temporary file: {TempPath}", tempPath);
+            }
+        }
+    }
+
+    private static string BuildSourceLabel(string normalizedPath, string? commitHash)
+    {
+        var fileName = Path.GetFileName(normalizedPath);
+        if (string.IsNullOrWhiteSpace(commitHash))
+        {
+            return $"{fileName} (current)";
+        }
+
+        var shortHash = commitHash.Length > 7 ? commitHash[..7] : commitHash;
+        return $"{fileName} @ {shortHash}";
+    }
+
+    private sealed record PreparedDiffSource(string PreparedPath, CommitInfo? CommitInfo);
 
     private bool ValidateGitHash(string hash)
     {

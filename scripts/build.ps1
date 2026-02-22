@@ -10,6 +10,8 @@ $ErrorActionPreference = "Stop"
 $rootDir = $PSScriptRoot | Split-Path -Parent
 $sourceDir = Join-Path $rootDir "Source"
 $releaseDir = Join-Path $rootDir "Release"
+$appProject = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
+$testProject = Join-Path $rootDir "Tests\HopTracer.UnitTests\HopTracer.UnitTests.csproj"
 
 Write-Host "=== HopTracer Production Build ===" -ForegroundColor Cyan
 Write-Host ""
@@ -34,8 +36,10 @@ if (-not $SkipClean) {
 Write-Host "`n[2/5] Restoring dependencies..." -ForegroundColor Yellow
 Push-Location $sourceDir
 try {
-    dotnet restore HopTracer.sln --verbosity quiet
-    if ($LASTEXITCODE -ne 0) { throw "Restore failed" }
+    dotnet restore $appProject --verbosity quiet
+    if ($LASTEXITCODE -ne 0) { throw "App restore failed" }
+    dotnet restore $testProject --verbosity quiet
+    if ($LASTEXITCODE -ne 0) { throw "Test restore failed" }
     Write-Host "  ✓ Dependencies restored" -ForegroundColor Green
 } finally {
     Pop-Location
@@ -44,7 +48,7 @@ try {
 # Step 3: Test
 if (-not $SkipTests) {
     Write-Host "`n[3/5] Running tests..." -ForegroundColor Yellow
-    dotnet test (Join-Path $sourceDir "HopTracer.sln") --configuration Release --verbosity quiet --no-restore
+    dotnet test $testProject --configuration Release --verbosity quiet --no-restore
     if ($LASTEXITCODE -ne 0) {
         throw "Tests failed"
     }
@@ -57,7 +61,7 @@ if (-not $SkipTests) {
 Write-Host "`n[4/5] Building Release..." -ForegroundColor Yellow
 Push-Location $sourceDir
 try {
-    dotnet build HopTracer.sln -c Release --no-restore --verbosity quiet
+    dotnet build $appProject -c Release --no-restore --verbosity quiet
     if ($LASTEXITCODE -ne 0) { throw "Build failed" }
     Write-Host "  ✓ Build successful" -ForegroundColor Green
 } finally {
@@ -68,7 +72,6 @@ try {
 Write-Host "`n[5/5] Publishing portable package..." -ForegroundColor Yellow
 $outputDir = Join-Path $releaseDir "HopTracer_Portable"
 $zipPath = Join-Path $releaseDir "HopTracer-Windows-x64.zip"
-$projectFile = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
 
 Push-Location $sourceDir
 try {
@@ -76,7 +79,7 @@ try {
         Remove-Item $outputDir -Recurse -Force
     }
 
-    dotnet publish $projectFile `
+    dotnet publish $appProject `
         -f net10.0-windows10.0.19041.0 `
         -c Release `
         -r win-x64 `

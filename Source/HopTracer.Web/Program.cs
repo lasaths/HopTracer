@@ -12,6 +12,7 @@ builder.Services.AddSingleton<IGitWrapper, GitWrapper>();
 builder.Services.AddSingleton<INativeIntegration, HopTracer.Web.Services.WindowsNativeIntegration>();
 builder.Services.AddSingleton<IFileValidationService, FileValidationService>();
 builder.Services.AddSingleton<IFileSelectionCache, FileSelectionCache>();
+builder.Services.AddSingleton<IAppDataStorageService, AppDataStorageService>();
 
 // Health checks for production monitoring
 builder.Services.AddHealthChecks();

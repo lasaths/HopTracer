@@ -5,10 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HopTracer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
     <style>
         :root {
             /* Shadcn Dark Theme (Zinc/Slate) */
@@ -65,6 +62,10 @@
             --removed: #c62828;
             --modified: #f57f17;
             --same: #424242;
+            --scrollbar-track: rgba(26, 28, 33, 0.9);
+            --scrollbar-thumb: rgba(87, 91, 100, 0.82);
+            --scrollbar-thumb-dark: rgba(66, 70, 78, 0.94);
+            --scrollbar-thumb-hover: rgba(115, 120, 131, 0.94);
         }
 
         .dark {
@@ -109,10 +110,40 @@
             --text-secondary: var(--muted-foreground);
             --accent-color: var(--primary);
             --accent-hover: var(--ring);
+            --scrollbar-track: rgba(22, 24, 29, 0.95);
+            --scrollbar-thumb: rgba(93, 98, 109, 0.86);
+            --scrollbar-thumb-dark: rgba(70, 75, 85, 0.96);
+            --scrollbar-thumb-hover: rgba(124, 130, 143, 0.96);
         }
 
         * {
             box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        }
+
+        *::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+            border-radius: 999px;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--scrollbar-thumb), var(--scrollbar-thumb-dark));
+            border-radius: 999px;
+            border: 2px solid var(--scrollbar-track);
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-thumb-hover);
+        }
+
+        *::-webkit-scrollbar-corner {
+            background: transparent;
         }
 
         body {
@@ -124,6 +155,12 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* File Metadata Header */
@@ -150,6 +187,8 @@
             align-items: center;
             gap: 8px;
             font-size: 14px;
+            flex-wrap: wrap;
+            max-width: 100%;
         }
 
         #file-metadata-header .metadata-label {
@@ -163,6 +202,7 @@
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: 500;
+            overflow-wrap: anywhere;
         }
 
         #file-metadata-header .metadata-value.source-link {
@@ -198,6 +238,7 @@
         /* Sidebar */
         #sidebar {
             width: 320px;
+            min-width: 220px;
             background-color: var(--bg-panel);
             border-right: 1px solid var(--border-color);
             display: flex;
@@ -220,6 +261,33 @@
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .sidebar-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .sidebar-brand-logo {
+            height: 40px;
+            width: auto;
+            flex: 0 0 auto;
+        }
+
+        .sidebar-brand-title {
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.1;
+            white-space: nowrap;
         }
 
         .stats-row {
@@ -306,10 +374,110 @@
             color: white;
         }
 
+        .component-results {
+            margin-top: 4px;
+            min-height: 0;
+        }
+
+        .component-results-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .component-results-count {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            color: var(--text-primary);
+        }
+
+        .component-results-list {
+            margin-top: 8px;
+            max-height: clamp(160px, 36vh, 420px);
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .component-results-empty {
+            padding: 10px 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .component-result-item {
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid var(--border-color);
+            background: transparent;
+            color: inherit;
+            padding: 9px 10px;
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            cursor: pointer;
+            transition: background-color 0.16s ease;
+        }
+
+        .component-result-item:last-child {
+            border-bottom: 0;
+        }
+
+        .component-result-item:hover {
+            background: rgba(92, 128, 247, 0.12);
+        }
+
+        .component-result-item.active {
+            background: rgba(92, 128, 247, 0.2);
+            outline: 1px solid rgba(92, 128, 247, 0.45);
+            outline-offset: -1px;
+        }
+
+        .component-result-main {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .component-result-title {
+            font-size: 12px;
+            color: var(--text-primary);
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .component-result-subtitle {
+            margin-top: 2px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .component-result-status {
+            font-size: 9px;
+            line-height: 1;
+            text-transform: uppercase;
+            padding: 4px 6px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            flex: 0 0 auto;
+            margin-top: 1px;
+            letter-spacing: 0.25px;
+        }
+
         /* Node List / Details */
         #details-panel {
             width: 420px;
-            min-width: 360px;
+            min-width: 300px;
             max-width: 520px;
             background-color: var(--bg-panel);
             border-left: 1px solid var(--border-color);
@@ -514,9 +682,10 @@
 
         .panel-expand-btn {
             position: absolute;
-            top: 16px;
+            top: 50%;
+            transform: translateY(-50%);
             width: 28px;
-            height: 40px;
+            height: 48px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
             background: rgba(20, 22, 28, 0.9);
@@ -530,11 +699,11 @@
         }
 
         .panel-expand-btn.left {
-            left: 8px;
+            left: 10px;
         }
 
         .panel-expand-btn.right {
-            right: 8px;
+            right: 10px;
         }
 
         #main-container.sidebar-hidden .panel-expand-btn.left,
@@ -648,6 +817,13 @@
             min-height: 34px;
         }
 
+        .source-path-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: -2px;
+            margin-bottom: 2px;
+        }
+
         .source-actions {
             display: flex;
             gap: 8px;
@@ -671,7 +847,7 @@
             display: grid;
             grid-template-columns: 74px 1fr;
             gap: 8px;
-            align-items: center;
+            align-items: start;
         }
 
         .source-commit-row:last-child {
@@ -688,6 +864,10 @@
             color: #fff;
         }
 
+        .source-commit-row.selected .source-commit-meta {
+            color: rgba(255, 255, 255, 0.92);
+        }
+
         .source-commit-hash {
             font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
             color: var(--accent-color);
@@ -696,6 +876,22 @@
         .source-commit-msg {
             overflow: hidden;
             white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .source-commit-main {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .source-commit-meta {
+            font-size: 10px;
+            line-height: 1.2;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
             text-overflow: ellipsis;
         }
 
@@ -836,6 +1032,46 @@
             display: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);
+        }
+
+        @media (max-width: 900px) {
+            #sidebar {
+                width: min(78vw, 300px);
+                min-width: min(78vw, 300px);
+            }
+
+            #details-panel {
+                width: min(82vw, 320px);
+                min-width: min(82vw, 320px);
+                max-width: min(82vw, 320px);
+            }
+
+            .legend {
+                top: 10px;
+                right: 10px;
+                gap: 10px;
+                flex-wrap: wrap;
+                max-width: calc(100vw - 20px);
+            }
+
+            #minimap-container {
+                width: 140px;
+                height: 100px;
+                left: 10px;
+                bottom: 10px;
+            }
+
+            .bottom-controls {
+                left: 50%;
+                width: calc(100% - 20px);
+                max-width: none;
+                padding: 10px 12px;
+                gap: 12px;
+            }
+
+            .slider-group {
+                width: calc(50% - 6px);
+            }
         }
 
         .details-tabs {
@@ -1080,13 +1316,13 @@
         <div id="main-container">
         <div id="sidebar">
             <div class="sidebar-header">
-                <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+                <div class="sidebar-header-top">
+                    <h1 class="sidebar-brand">
+                        <img src="/images/HopTrace_Logo_White.png" alt="HopTracer" class="sidebar-brand-logo">
+                        <span class="sidebar-brand-title">HopTracer</span>
+                    </h1>
                     <button type="button" id="btn-sidebar-collapse" class="panel-icon-btn" title="Hide left panel">◀</button>
                 </div>
-                <h1 style="display: flex; align-items: center; gap: 12px;">
-                    <img src="/images/HopTrace_Logo_White.png" alt="HopTracer" style="height: 40px;">
-                    <span style="font-size: 20px; font-weight: 600;">HopTracer</span>
-                </h1>
                 <div class="stats-row">
                     <div class="stat-item" title="Added Nodes">
                         <div class="stat-dot" style="background: var(--added)"></div>
@@ -1118,7 +1354,7 @@
                     <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">File Analytics</div>
 
                     <div style="margin-bottom: 8px;">
-                        <div style="color: var(--accent-color);">New Version (Left)</div>
+                        <div style="color: var(--accent-color);">Left Source</div>
                         <div id="meta-new-name"
                             style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 11px;">
                             -</div>
@@ -1135,7 +1371,7 @@
                     </div>
 
                     <div>
-                        <div style="color: var(--warning);">Old Version (Right)</div>
+                        <div style="color: var(--warning);">Right Source</div>
                         <div id="meta-old-name"
                             style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 11px;">
                             -</div>
@@ -1157,9 +1393,25 @@
                 <div
                     style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
                     <label for="toggle-ports" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" checked />
-                        <span>Show port details (connections & values)</span>
+                        <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" />
+                        <span>Show inputs/output details</span>
                     </label>
+                </div>
+                <div
+                    style="margin-top: 2px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+                    <label for="toggle-groups" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="toggle-groups" style="accent-color: var(--accent-color);" checked />
+                        <span>Show groups</span>
+                    </label>
+                </div>
+                <div class="component-results">
+                    <div class="component-results-header">
+                        <span>Components</span>
+                        <span id="component-results-count" class="component-results-count">0</span>
+                    </div>
+                    <div id="component-results-list" class="component-results-list">
+                        <div class="component-results-empty">No components available.</div>
+                    </div>
                 </div>
             </div>
 
@@ -1262,6 +1514,27 @@
 
     </div> <!-- End of main-container -->
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15, 17, 21, 0.9); z-index:260; flex-direction:column; align-items:center; justify-content:center;">
+        <div id="loadingTitle" style="font-size:24px; font-weight:600; margin-bottom:16px;">Converting & Comparing...</div>
+        <div
+            style="width: 40px; height: 40px; border: 4px solid var(--border-color); border-top: 4px solid var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite;">
+        </div>
+        <div id="loadingPercent"
+            style="margin-top:12px; font-size:28px; font-weight:700; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;">
+            0%
+        </div>
+        <div
+            style="width:min(360px, calc(100vw - 48px)); height:10px; background:rgba(255,255,255,0.08); border:1px solid var(--border-color); border-radius:999px; margin-top:10px; overflow:hidden;">
+            <div id="loadingProgressBar"
+                style="height:100%; width:0%; background:linear-gradient(90deg, var(--accent-color), var(--ring)); transition:width 220ms ease;">
+            </div>
+        </div>
+        <div id="loadingSubtitle" style="margin-top:16px; color:var(--text-secondary); font-size:14px;">This may take a few moments for large
+            files.</div>
+    </div>
+
     <div id="source-modal" class="source-modal-backdrop">
         <div class="source-modal">
             <div class="source-modal-header">
@@ -1277,6 +1550,7 @@
                 <div id="source-pane-file" class="source-pane">
                     <div class="source-field-label">Selected File</div>
                     <div id="source-file-path" class="source-path">No file selected</div>
+                    <div id="source-file-meta" class="source-path-meta"></div>
                     <div class="source-actions">
                         <button type="button" id="btn-source-pick-file" class="filter-btn">Choose File</button>
                     </div>
@@ -1285,6 +1559,7 @@
                 <div id="source-pane-commit" class="source-pane" style="display:none;">
                     <div class="source-field-label">Repository File</div>
                     <div id="source-commit-path" class="source-path">No file selected</div>
+                    <div id="source-commit-meta" class="source-path-meta"></div>
                     <div class="source-actions">
                         <button type="button" id="btn-source-pick-commit-file" class="filter-btn">Choose File</button>
                         <button type="button" id="btn-source-load-commits" class="filter-btn">Load Commits</button>
@@ -1326,6 +1601,8 @@
             }
         };
 
+        const CHANGED_STATUS_FILTERS = ['added', 'removed', 'modified'];
+
         // State
         let state = {
             nodes: [],
@@ -1338,10 +1615,12 @@
             lastPos: { x: 0, y: 0 },
             selected: null,
             hovered: null,
-            filter: 'all',
+            filterMode: 'all',
+            filterStatuses: new Set(CHANGED_STATUS_FILTERS),
             search: '',
             bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
             showPortDetails: true,
+            showGroups: true,
             wireThreshold: Infinity, // Show all wires by default
             versionMix: 0.5, // 0 = Old, 1 = New
             activeDetailsTab: 'inspector',
@@ -1402,7 +1681,9 @@
         const sourcePaneFile = document.getElementById('source-pane-file');
         const sourcePaneCommit = document.getElementById('source-pane-commit');
         const sourceFilePath = document.getElementById('source-file-path');
+        const sourceFileMeta = document.getElementById('source-file-meta');
         const sourceCommitPath = document.getElementById('source-commit-path');
+        const sourceCommitMeta = document.getElementById('source-commit-meta');
         const sourceCommitList = document.getElementById('source-commit-list');
         const btnSourcePickFile = document.getElementById('btn-source-pick-file');
         const btnSourcePickCommitFile = document.getElementById('btn-source-pick-commit-file');
@@ -1410,12 +1691,25 @@
         const btnSourceApply = document.getElementById('btn-source-apply');
         const btnSourceCancel = document.getElementById('btn-source-cancel');
         const btnSourceModalClose = document.getElementById('btn-source-modal-close');
+        const componentResultsList = document.getElementById('component-results-list');
+        const componentResultsCount = document.getElementById('component-results-count');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingTitle = document.getElementById('loadingTitle');
+        const loadingSubtitle = document.getElementById('loadingSubtitle');
+        const loadingPercent = document.getElementById('loadingPercent');
+        const loadingProgressBar = document.getElementById('loadingProgressBar');
+        let loadingProgressTimer = null;
+        let loadingProgressValue = 0;
 
         // Initialization
         async function init() {
             try {
                 await processData();
                 initSourceContext();
+                if (isNarrowViewport()) {
+                    state.detailsHidden = true;
+                }
+                enforceResponsivePanelState();
                 setupDetailsTabs();
                 setupEventListeners();
                 setupResizer();
@@ -1423,6 +1717,7 @@
                 fitView();
                 updateStats();
                 updateMetadata();
+                renderComponentResultsList();
                 requestAnimationFrame(loop);
             } catch (err) {
                 console.error('HopTracer viewer initialization failed:', err);
@@ -1465,6 +1760,141 @@
             detailsPaneScript.classList.toggle('active', isScript);
         }
 
+        function isAllStatusFilterActive() {
+            return state.filterMode === 'all';
+        }
+
+        function doesNodeMatchStatusFilter(status) {
+            if (isAllStatusFilterActive()) return true;
+            return state.filterStatuses.has(status);
+        }
+
+        function getFilteredNodes() {
+            const search = state.search || '';
+            const filtered = [];
+
+            for (let i = 0; i < state.nodes.length; i++) {
+                const n = state.nodes[i];
+                const name = String(n.name || '').toLowerCase();
+                const nickname = String(n.nickname || '').toLowerCase();
+                const matchesSearch = !search || name.includes(search) || nickname.includes(search);
+                if (doesNodeMatchStatusFilter(n.status) && matchesSearch) {
+                    filtered.push(n);
+                }
+            }
+
+            filtered.sort((a, b) => {
+                const an = String(a.nickname || a.name || '').toLowerCase();
+                const bn = String(b.nickname || b.name || '').toLowerCase();
+                if (an < bn) return -1;
+                if (an > bn) return 1;
+                return String(a.id || '').localeCompare(String(b.id || ''));
+            });
+
+            return filtered;
+        }
+
+        function getRenderedNodeRect(node, mix = state.versionMix) {
+            return {
+                x: node.x - (node.dx || 0) * (1 - mix),
+                y: node.y - (node.dy || 0) * (1 - mix),
+                w: node.w,
+                h: node.h
+            };
+        }
+
+        function renderComponentResultsList() {
+            if (!componentResultsList || !componentResultsCount) return;
+
+            const filtered = getFilteredNodes();
+            const total = filtered.length;
+            const limit = 400;
+            const visible = filtered.slice(0, limit);
+
+            componentResultsCount.textContent = total.toLocaleString();
+            componentResultsList.innerHTML = '';
+
+            if (total === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'component-results-empty';
+                empty.textContent = 'No components match the current search/filter.';
+                componentResultsList.appendChild(empty);
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+
+            visible.forEach(node => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'component-result-item';
+                if (state.selected === node.id) item.classList.add('active');
+                item.dataset.nodeId = String(node.id);
+
+                const main = document.createElement('div');
+                main.className = 'component-result-main';
+
+                const title = document.createElement('div');
+                title.className = 'component-result-title';
+                title.textContent = String(node.nickname || node.name || 'Unnamed Component');
+
+                const subtitle = document.createElement('div');
+                subtitle.className = 'component-result-subtitle';
+                subtitle.textContent = String(node.name || '');
+
+                const status = document.createElement('span');
+                status.className = 'component-result-status';
+                status.style.background = CONFIG.colors[node.status] || CONFIG.colors.same;
+                status.textContent = String(node.status || 'same');
+
+                main.appendChild(title);
+                main.appendChild(subtitle);
+                item.appendChild(main);
+                item.appendChild(status);
+                fragment.appendChild(item);
+            });
+
+            componentResultsList.appendChild(fragment);
+
+            if (total > limit) {
+                const note = document.createElement('div');
+                note.className = 'component-results-empty';
+                note.style.borderTop = '1px solid var(--border-color)';
+                note.textContent = `Showing first ${limit.toLocaleString()} of ${total.toLocaleString()} matching components. Refine search to narrow.`;
+                componentResultsList.appendChild(note);
+            }
+        }
+
+        function zoomToNode(nodeId) {
+            if (!nodeId) return;
+
+            const needle = String(nodeId);
+            const node = state.nodes.find(n => String(n.id) === needle);
+            if (!node) return;
+
+            const rect = getRenderedNodeRect(node);
+            const targetScale = Math.max(state.view.scale, 1.15);
+            state.view.scale = targetScale;
+            state.view.x = (canvas.width / 2) - (rect.x + rect.w / 2) * targetScale;
+            state.view.y = (canvas.height / 2) - (rect.y + rect.h / 2) * targetScale;
+            state.selected = node.id;
+
+            updateDetailsPanel(node);
+            renderComponentResultsList();
+            draw();
+        }
+
+        function syncStatusFilterButtons() {
+            document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+                const key = btn.dataset.filter;
+                if (key === 'all') {
+                    btn.classList.toggle('active', isAllStatusFilterActive());
+                } else {
+                    btn.classList.toggle('active', !isAllStatusFilterActive() && state.filterStatuses.has(key));
+                }
+            });
+        }
+
         function setScriptTabVisibility(visible, count = 0) {
             detailsTabScript.style.display = visible ? '' : 'none';
             detailsTabScript.textContent = count > 1 ? `Script Diff (${count})` : 'Script Diff';
@@ -1487,17 +1917,168 @@
             resize();
         }
 
+        function isNarrowViewport() {
+            return window.innerWidth <= 900;
+        }
+
+        function enforceResponsivePanelState() {
+            if (!isNarrowViewport()) return false;
+            if (!state.sidebarHidden && !state.detailsHidden) {
+                state.detailsHidden = true;
+                return true;
+            }
+            return false;
+        }
+
+        function getFileNameFromPath(path) {
+            const value = String(path || '').trim();
+            if (!value) return '';
+            return value.split(/[\\/]/).pop() || value;
+        }
+
+        function shortHash(hash) {
+            const value = String(hash || '').trim();
+            if (!value) return '';
+            return value.length > 7 ? value.substring(0, 7) : value;
+        }
+
+        function formatBytes(bytes) {
+            const value = Number(bytes);
+            if (!Number.isFinite(value) || value < 0) return 'unknown';
+            if (value < 1024) return `${Math.round(value)} B`;
+            const units = ['KB', 'MB', 'GB', 'TB'];
+            let size = value / 1024;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            return `${size.toFixed(size >= 100 ? 0 : (size >= 10 ? 1 : 2))} ${units[unitIndex]}`;
+        }
+
+        async function fetchFileInfo(path) {
+            if (!path) return null;
+            try {
+                const res = await fetch('/git/file_info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+                if (!res.ok) return null;
+                const data = await res.json().catch(() => ({}));
+                return {
+                    sizeBytes: data.size_bytes ?? data.sizeBytes ?? null,
+                    modifiedUtc: data.modified_utc ?? data.modifiedUtc ?? null
+                };
+            } catch {
+                return null;
+            }
+        }
+
+        async function updateSourcePathMeta(targetElem, path) {
+            if (!targetElem) return;
+            const value = String(path || '').trim();
+            targetElem.dataset.path = value;
+            if (!value) {
+                targetElem.textContent = '';
+                return;
+            }
+
+            targetElem.textContent = 'File size: loading...';
+            const info = await fetchFileInfo(value);
+            if (targetElem.dataset.path !== value) return;
+
+            if (info && info.sizeBytes !== null) {
+                targetElem.textContent = `File size: ${formatBytes(info.sizeBytes)}`;
+            } else {
+                targetElem.textContent = 'File size: unknown';
+            }
+        }
+
         function toggleSidebar() {
+            const willShowSidebar = state.sidebarHidden;
             state.sidebarHidden = !state.sidebarHidden;
+            if (isNarrowViewport() && willShowSidebar) {
+                state.detailsHidden = true;
+            }
             applyPanelVisibility();
         }
 
         function toggleDetailsPanel() {
+            const willShowDetails = state.detailsHidden;
             state.detailsHidden = !state.detailsHidden;
+            if (isNarrowViewport() && willShowDetails) {
+                state.sidebarHidden = true;
+            }
             applyPanelVisibility();
         }
 
-        function postForm(url, data) {
+        function setLoadingProgress(value, subtitle) {
+            const clamped = Math.max(0, Math.min(100, Math.round(value)));
+            loadingProgressValue = clamped;
+            if (loadingPercent) loadingPercent.textContent = `${clamped}%`;
+            if (loadingProgressBar) loadingProgressBar.style.width = `${clamped}%`;
+            if (subtitle && loadingSubtitle) loadingSubtitle.textContent = subtitle;
+        }
+
+        function startLoadingProgressSimulation(mode = 'compare') {
+            if (loadingProgressTimer) {
+                clearInterval(loadingProgressTimer);
+                loadingProgressTimer = null;
+            }
+
+            const stagePlan = mode === 'git'
+                ? [
+                    { upTo: 25, text: 'Contacting Git and preparing file...' },
+                    { upTo: 55, text: 'Converting selected revision...' },
+                    { upTo: 80, text: 'Parsing graph data...' },
+                    { upTo: 94, text: 'Computing differences...' }
+                ]
+                : [
+                    { upTo: 20, text: 'Preparing selected files...' },
+                    { upTo: 52, text: 'Converting .gh files to .ghx...' },
+                    { upTo: 78, text: 'Parsing graph data...' },
+                    { upTo: 94, text: 'Computing differences...' }
+                ];
+
+            let stageIndex = 0;
+            let stage = stagePlan[stageIndex];
+            setLoadingProgress(2, stage.text);
+
+            loadingProgressTimer = setInterval(() => {
+                if (stageIndex < stagePlan.length - 1 && loadingProgressValue >= stage.upTo) {
+                    stageIndex++;
+                    stage = stagePlan[stageIndex];
+                }
+
+                const target = stage.upTo;
+                if (loadingProgressValue < target) {
+                    const remaining = target - loadingProgressValue;
+                    const step = Math.max(1, Math.min(remaining, Math.ceil(remaining * 0.14)));
+                    setLoadingProgress(loadingProgressValue + step, stage.text);
+                } else {
+                    setLoadingProgress(loadingProgressValue, stage.text);
+                }
+            }, 260);
+        }
+
+        function showLoadingOverlay(title, subtitle, mode = 'compare') {
+            if (!loadingOverlay) return;
+            if (title && loadingTitle) loadingTitle.textContent = title;
+            if (subtitle && loadingSubtitle) loadingSubtitle.textContent = subtitle;
+            loadingOverlay.style.display = 'flex';
+            startLoadingProgressSimulation(mode);
+        }
+
+        function postForm(url, data, options = {}) {
+            const mode = options.mode || (url.includes('/git/') ? 'git' : 'compare');
+            const title = options.title || 'Converting & Comparing...';
+            const subtitle = options.subtitle || (mode === 'git'
+                ? 'Fetching version and preparing diff.'
+                : 'This may take a few moments for large files.');
+
+            showLoadingOverlay(title, subtitle, mode);
+
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = url;
@@ -1512,7 +2093,11 @@
             });
 
             document.body.appendChild(form);
-            form.submit();
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    form.submit();
+                });
+            });
         }
 
         async function pickNativeFilePath() {
@@ -1598,6 +2183,10 @@
 
             commits.forEach(c => {
                 const hash = String(c.hash || '');
+                const author = String(c.author || c.Author || 'Unknown');
+                const age = String(c.date || c.Date || 'Unknown age');
+                const sizeBytes = c.fileSizeBytes ?? c.FileSizeBytes ?? 0;
+                const sizeLabel = formatBytes(sizeBytes);
                 const row = document.createElement('div');
                 row.className = 'source-commit-row';
                 if (state.sourceModal.selectedCommit === hash) {
@@ -1605,7 +2194,12 @@
                 }
                 row.innerHTML = `
                     <div class="source-commit-hash">${escapeHtml(hash.substring(0, 7))}</div>
-                    <div class="source-commit-msg" title="${escapeHtml(c.message || '')}">${escapeHtml(c.message || '(no message)')}</div>
+                    <div class="source-commit-main">
+                        <div class="source-commit-msg" title="${escapeHtml(c.message || '')}">${escapeHtml(c.message || '(no message)')}</div>
+                        <div class="source-commit-meta" title="${escapeHtml(`Blame: ${author} | Age: ${age} | Size: ${sizeLabel}`)}">
+                            Blame: ${escapeHtml(author)} · Age: ${escapeHtml(age)} · Size: ${escapeHtml(sizeLabel)}
+                        </div>
+                    </div>
                 `;
                 row.addEventListener('click', () => {
                     state.sourceModal.selectedCommit = hash;
@@ -1618,7 +2212,7 @@
 
         function renderSourceModal() {
             const m = state.sourceModal;
-            const canUseCommit = m.side === 'old' && m.commitAvailable !== false;
+            const canUseCommit = m.commitAvailable !== false;
             if (!canUseCommit && m.mode === 'commit') {
                 m.mode = 'file';
             }
@@ -1641,34 +2235,36 @@
 
             if (sourceFilePath) sourceFilePath.textContent = m.filePath || 'No file selected';
             if (sourceCommitPath) sourceCommitPath.textContent = m.commitPath || 'No file selected';
+            updateSourcePathMeta(sourceFileMeta, m.filePath);
+            updateSourcePathMeta(sourceCommitMeta, m.commitPath);
 
             renderSourceCommitList();
-
-            if (!isOld && isCommit) {
-                setSourceModalStatus('Git commit source currently supports left-side baseline only.', 'warn');
-            }
         }
 
         function openSourceModal(side) {
             state.sourceModal.side = side;
-            state.sourceModal.mode = side === 'old' && state.source[side].type === 'commit' ? 'commit' : 'file';
+            state.sourceModal.mode = state.source[side].type === 'commit' ? 'commit' : 'file';
             state.sourceModal.filePath = state.source[side].path || '';
-            state.sourceModal.commitPath = state.source[side].path || state.source.old.path || '';
+            state.sourceModal.commitPath = state.source[side].path || state.source.old.path || state.source.new.path || '';
             state.sourceModal.commits = [];
             state.sourceModal.selectedCommit = state.source[side].hash || null;
-            state.sourceModal.commitAvailable = side === 'old' ? null : false;
+            state.sourceModal.commitAvailable = null;
 
             renderSourceModal();
             setSourceModalStatus('', 'muted');
             if (sourceModal) sourceModal.classList.add('open');
 
-            if (side === 'old' && state.sourceModal.commitPath) {
+            if (state.sourceModal.commitPath) {
                 (async () => {
                     const { commits } = await fetchCommitsForPath(state.sourceModal.commitPath, { silent: true });
-                    if (!sourceModal || !sourceModal.classList.contains('open') || state.sourceModal.side !== 'old') return;
+                    if (!sourceModal || !sourceModal.classList.contains('open') || state.sourceModal.side !== side) return;
                     state.sourceModal.commitAvailable = commits.length > 0;
                     if (!state.sourceModal.commitAvailable) {
                         state.sourceModal.mode = 'file';
+                        setSourceModalStatus('No commit history found for this file.', 'warn');
+                    } else if (state.sourceModal.mode === 'commit' && !state.sourceModal.selectedCommit && commits.length) {
+                        state.sourceModal.commits = commits;
+                        state.sourceModal.selectedCommit = commits[0].hash;
                     }
                     renderSourceModal();
                 })();
@@ -1718,47 +2314,42 @@
                     setSourceModalStatus(`Set the ${otherSide === 'old' ? 'left' : 'right'} file before comparing.`, 'warn');
                     return;
                 }
+            }
+            else {
+                if (!m.commitPath) {
+                    setSourceModalStatus('Choose a Git-tracked file first.', 'warn');
+                    return;
+                }
+                if (!m.selectedCommit) {
+                    setSourceModalStatus('Select a commit first.', 'warn');
+                    return;
+                }
+                state.source[side] = { type: 'commit', path: m.commitPath, hash: m.selectedCommit };
 
-                postForm('/compare', {
+                const otherSide = side === 'old' ? 'new' : 'old';
+                if (!state.source[otherSide].path) {
+                    setSourceModalStatus(`Set the ${otherSide === 'old' ? 'left' : 'right'} source before comparing.`, 'warn');
+                    return;
+                }
+            }
+
+            closeSourceModal();
+            const oldIsCommit = state.source.old.type === 'commit' && !!state.source.old.hash;
+            const newIsCommit = state.source.new.type === 'commit' && !!state.source.new.hash;
+            if (oldIsCommit || newIsCommit) {
+                postForm('/git/view_diff', {
                     path_old: state.source.old.path,
-                    path_new: state.source.new.path
+                    hash_old: oldIsCommit ? state.source.old.hash : null,
+                    path_new: state.source.new.path,
+                    hash_new: newIsCommit ? state.source.new.hash : null
                 });
                 return;
             }
 
-            if (side !== 'old') {
-                setSourceModalStatus('Git commit source currently applies to left side only.', 'warn');
-                return;
-            }
-            if (!m.commitPath) {
-                setSourceModalStatus('Choose a Git-tracked file first.', 'warn');
-                return;
-            }
-            if (!m.selectedCommit) {
-                setSourceModalStatus('Select a commit first.', 'warn');
-                return;
-            }
-
-            postForm('/git/view_diff', {
-                path: m.commitPath,
-                hash_old: m.selectedCommit
-            });
-        }
-
-        function tryApplyFileSelection(side, path) {
-            state.source[side] = { type: 'file', path, hash: null };
-            const otherSide = side === 'old' ? 'new' : 'old';
-            if (!state.source[otherSide].path) {
-                setSourceModalStatus(`Set the ${otherSide === 'old' ? 'left' : 'right'} file before comparing.`, 'warn');
-                return false;
-            }
-
-            closeSourceModal();
             postForm('/compare', {
                 path_old: state.source.old.path,
                 path_new: state.source.new.path
             });
-            return true;
         }
 
         function calculateBoundsForNodes(nodes) {
@@ -1906,6 +2497,7 @@
             }
 
             renderGraphTabs();
+            renderComponentResultsList();
         }
 
         function closeGraphTab(tabId) {
@@ -2015,8 +2607,6 @@
         }
 
         function updateMetadata() {
-            // Check if this is a Git comparison
-            // Handle both camelCase (JSON) and PascalCase (C# fallback)
             const meta = GRAPH_DATA.meta || {};
             const commitHash = meta.commitHash || meta.CommitHash;
             const commitMessage = meta.commitMessage || meta.CommitMessage;
@@ -2026,66 +2616,73 @@
             const fileNew = meta.fileNew || meta.FileNew;
             const sourcePathOld = meta.sourcePathOld || meta.SourcePathOld || '';
             const sourcePathNew = meta.sourcePathNew || meta.SourcePathNew || '';
+            const sourceTypeOld = String(meta.sourceTypeOld || meta.SourceTypeOld || 'file');
+            const sourceTypeNew = String(meta.sourceTypeNew || meta.SourceTypeNew || 'file');
+            const sourceHashOld = meta.sourceHashOld || meta.SourceHashOld || null;
+            const sourceHashNew = meta.sourceHashNew || meta.SourceHashNew || null;
+            const isCommitContext = sourceTypeOld === 'commit' || sourceTypeNew === 'commit';
 
-            const isGitComparison = !!commitHash;
+            const analyticsTitle = document.querySelector('.controls > div:first-child > div:first-child');
+            if (analyticsTitle) {
+                analyticsTitle.textContent = isCommitContext ? 'Source Details' : 'File Analytics';
+            }
 
-            console.log('updateMetadata:', { isGitComparison, meta });
+            const leftNameElem = document.getElementById('meta-new-name');
+            const leftDateElem = document.getElementById('meta-new-date');
+            const rightNameElem = document.getElementById('meta-old-name');
+            const rightDateElem = document.getElementById('meta-old-date');
+            const timeDiffContainer = document.getElementById('time-diff-container');
 
-            if (isGitComparison) {
-                // Git comparison mode - show commit details
-                const analyticsTitle = document.querySelector('.controls > div:first-child > div:first-child');
-                if (analyticsTitle) {
-                    analyticsTitle.textContent = 'Git Commit Details';
+            if (isCommitContext) {
+                const applySourceInfo = (nameElem, dateElem, sourceType, sourcePath, sourceHash) => {
+                    if (!nameElem || !dateElem) return;
+
+                    if (sourceType === 'commit') {
+                        const resolvedHash = sourceHash || commitHash || '';
+                        const hashLabel = shortHash(resolvedHash) || 'unknown';
+                        const isPrimaryCommit = Boolean(commitHash) && resolvedHash && String(resolvedHash).startsWith(String(commitHash).substring(0, hashLabel.length));
+
+                        nameElem.textContent = isPrimaryCommit && commitMessage
+                            ? commitMessage
+                            : `Commit ${hashLabel}`;
+                        nameElem.title = resolvedHash ? `Commit ${resolvedHash}` : 'Commit';
+
+                        if (isPrimaryCommit && (commitAuthor || commitDate)) {
+                            const details = [];
+                            if (commitAuthor) details.push(`by ${commitAuthor}`);
+                            if (commitDate) details.push(commitDate);
+                            dateElem.textContent = details.join(' • ');
+                        } else {
+                            dateElem.textContent = 'From Git history';
+                        }
+                        dateElem.title = resolvedHash ? `Full hash: ${resolvedHash}` : 'Git commit source';
+                        return;
+                    }
+
+                    const fileName = getFileNameFromPath(sourcePath) || 'Current file';
+                    nameElem.textContent = fileName;
+                    nameElem.title = sourcePath || fileName;
+                    dateElem.textContent = 'Working tree file';
+                    dateElem.title = sourcePath || fileName;
+                };
+
+                applySourceInfo(leftNameElem, leftDateElem, sourceTypeNew, sourcePathNew, sourceHashNew);
+                applySourceInfo(rightNameElem, rightDateElem, sourceTypeOld, sourcePathOld, sourceHashOld);
+                if (timeDiffContainer) {
+                    timeDiffContainer.style.display = 'none';
                 }
-
-                // Update "New Version" to show current state
-                document.getElementById('meta-new-name').textContent = 'Current Version (Working Tree)';
-                const newDateElem = document.getElementById('meta-new-date');
-                newDateElem.textContent = new Date().toLocaleString();
-                newDateElem.title = 'Current state of the file';
-
-                // Update "Old Version" to show commit details
-                const oldNameElem = document.getElementById('meta-old-name');
-                const oldDateElem = document.getElementById('meta-old-date');
-
-                // Change label
-                const oldLabel = oldNameElem.previousElementSibling;
-                if (oldLabel) {
-                    oldLabel.textContent = `Commit ${commitHash.substring(0, 7)}`;
-                }
-
-                // Show commit message as name
-                if (commitMessage) {
-                    oldNameElem.textContent = commitMessage;
-                    oldNameElem.title = commitMessage;
-                } else {
-                    oldNameElem.textContent = `Commit ${commitHash.substring(0, 7)}`;
-                }
-
-                // Show author and date
-                let commitDetails = [];
-                if (commitAuthor) {
-                    commitDetails.push(`by ${commitAuthor}`);
-                }
-                if (commitDate) {
-                    commitDetails.push(commitDate);
-                }
-                oldDateElem.textContent = commitDetails.join(' • ');
-                oldDateElem.title = `Full hash: ${commitHash}`;
             } else {
-                // Regular file comparison - show Grasshopper metadata
                 if (GRAPH_DATA.newMeta) {
-                    document.getElementById('meta-new-name').textContent = GRAPH_DATA.newMeta.name || 'Unknown';
-                    document.getElementById('meta-new-date').textContent = GRAPH_DATA.newMeta.date ? new Date(GRAPH_DATA.newMeta.date).toLocaleString() : 'Unknown Date';
-                    document.getElementById('meta-new-date').title = GRAPH_DATA.newMeta.description || '';
+                    leftNameElem.textContent = GRAPH_DATA.newMeta.name || 'Unknown';
+                    leftDateElem.textContent = GRAPH_DATA.newMeta.date ? new Date(GRAPH_DATA.newMeta.date).toLocaleString() : 'Unknown Date';
+                    leftDateElem.title = GRAPH_DATA.newMeta.description || '';
                 }
                 if (GRAPH_DATA.oldMeta) {
-                    document.getElementById('meta-old-name').textContent = GRAPH_DATA.oldMeta.name || 'Unknown';
-                    document.getElementById('meta-old-date').textContent = GRAPH_DATA.oldMeta.date ? new Date(GRAPH_DATA.oldMeta.date).toLocaleString() : 'Unknown Date';
-                    document.getElementById('meta-old-date').title = GRAPH_DATA.oldMeta.description || '';
+                    rightNameElem.textContent = GRAPH_DATA.oldMeta.name || 'Unknown';
+                    rightDateElem.textContent = GRAPH_DATA.oldMeta.date ? new Date(GRAPH_DATA.oldMeta.date).toLocaleString() : 'Unknown Date';
+                    rightDateElem.title = GRAPH_DATA.oldMeta.description || '';
                 }
 
-                // Calculate and display time difference
                 if (GRAPH_DATA.newMeta && GRAPH_DATA.oldMeta && GRAPH_DATA.newMeta.date && GRAPH_DATA.oldMeta.date) {
                     const newDate = new Date(GRAPH_DATA.newMeta.date);
                     const oldDate = new Date(GRAPH_DATA.oldMeta.date);
@@ -2093,9 +2690,11 @@
                     const timeDiff = formatTimeDifference(diffMs);
 
                     document.getElementById('time-diff-value').textContent = timeDiff;
-                    document.getElementById('time-diff-container').style.display = 'block';
-                } else {
-                    document.getElementById('time-diff-container').style.display = 'none';
+                    if (timeDiffContainer) {
+                        timeDiffContainer.style.display = 'block';
+                    }
+                } else if (timeDiffContainer) {
+                    timeDiffContainer.style.display = 'none';
                 }
             }
 
@@ -2105,27 +2704,14 @@
                 const metaFileOld = document.getElementById('meta-file-old');
                 const metaFileNew = document.getElementById('meta-file-new');
 
-                if (fileOld && fileNew) {
-                    metaFileOld.textContent = fileOld;
-                    metaFileNew.textContent = fileNew;
-                    metaFileOld.title = sourcePathOld || fileOld;
-                    metaFileNew.title = sourcePathNew || fileNew;
-                    metaHeader.style.display = 'block'; // Show the header
-                    console.log('✅ File metadata header displayed', { fileOld, fileNew });
-                } else {
-                    // Fallback to generic display if no specific metadata
-                    // Only show fallback if we are in git mode but missing specific filenames
-                    if (isGitComparison) {
-                        metaFileOld.textContent = 'Old Version';
-                        metaFileNew.textContent = 'New Version';
-                        metaFileOld.title = sourcePathOld || 'Select source';
-                        metaFileNew.title = sourcePathNew || 'Select source';
-                        metaHeader.style.display = 'block';
-                        console.warn('⚠️ Using fallback metadata display');
-                    }
-                }
-            } else {
-                console.warn('❌ GRAPH_DATA.meta is missing or undefined');
+                const displayOld = fileOld || getFileNameFromPath(sourcePathOld) || 'Old Source';
+                const displayNew = fileNew || getFileNameFromPath(sourcePathNew) || 'New Source';
+
+                metaFileOld.textContent = displayOld;
+                metaFileNew.textContent = displayNew;
+                metaFileOld.title = sourcePathOld || displayOld;
+                metaFileNew.title = sourcePathNew || displayNew;
+                metaHeader.style.display = 'block';
             }
         }
 
@@ -2204,30 +2790,43 @@
         }
 
         async function saveBaselinePrompt() {
-            const path = prompt('Enter full file path to save as baseline (.gh/.ghx):');
-            if (!path) return;
-            const name = prompt('Baseline name:');
+            const result = await pickNativeFilePath();
+            if (!result.path) {
+                if (result.error && !String(result.error).toLowerCase().includes('cancel')) {
+                    alert(`Baseline save failed: ${result.error}`);
+                }
+                return;
+            }
+            const defaultName = (result.path.split(/[\\/]/).pop() || 'baseline')
+                .replace(/\.(gh|ghx)$/i, '')
+                .replace(/[^a-zA-Z0-9_-]/g, '_');
+            const name = prompt('Baseline name:', defaultName || 'baseline');
             if (!name) return;
 
             const res = await fetch('/review/baseline/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path, name })
+                body: JSON.stringify({ path: result.path, name })
             });
             const data = await res.json().catch(() => ({}));
             alert(res.ok ? `Baseline saved: ${name}` : `Baseline save failed: ${data.error || res.statusText}`);
         }
 
         async function checkBaselinePrompt() {
-            const path = prompt('Enter full file path to validate against baseline (.gh/.ghx):');
-            if (!path) return;
+            const result = await pickNativeFilePath();
+            if (!result.path) {
+                if (result.error && !String(result.error).toLowerCase().includes('cancel')) {
+                    alert(`Baseline compare failed: ${result.error}`);
+                }
+                return;
+            }
             const name = prompt('Baseline name to compare:');
             if (!name) return;
 
             const res = await fetch('/review/baseline/compare', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path, name })
+                body: JSON.stringify({ path: result.path, name })
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
@@ -2253,7 +2852,6 @@
         async function processData() {
             const rawNodes = GRAPH_DATA.nodes || GRAPH_DATA.Nodes || [];
             const rawEdges = GRAPH_DATA.edges || GRAPH_DATA.Edges || [];
-            console.log('Processing Data:', { nodes: rawNodes.length, edges: rawEdges.length });
 
             state.processingData = true;
             state.largeModelMode = rawNodes.length >= 4000 || rawEdges.length >= 12000;
@@ -2338,6 +2936,11 @@
             const yNum = Number(rawY);
             const wNum = Number(rawW);
             const hNum = Number(rawH);
+            const hasExplicitBounds =
+                (n.w !== undefined || n.W !== undefined) &&
+                (n.h !== undefined || n.H !== undefined) &&
+                Number.isFinite(wNum) && Number.isFinite(hNum) &&
+                wNum > 0 && hNum > 0;
             const x = Number.isFinite(xNum) ? xNum : 0;
             const y = Number.isFinite(yNum) ? yNum : 0;
             const w = Number.isFinite(wNum) && wNum > 0 ? wNum : CONFIG.node.width;
@@ -2353,6 +2956,7 @@
                 y,
                 w,
                 h,
+                hasExplicitBounds,
                 properties,
                 propertiesOld,
                 inputs: normalizePorts(n.inputs || n.Inputs || [], 'input', id),
@@ -2519,6 +3123,7 @@
                 const memberIds = resolveMembers(group);
                 const hasFallbackRect = Number.isFinite(group.x) && Number.isFinite(group.y) &&
                     Number.isFinite(group.w) && Number.isFinite(group.h) && group.w > 0 && group.h > 0;
+                const hasAuthoredRect = !!(group.hasExplicitBounds || group.HasExplicitBounds);
 
                 return {
                     id: group.id,
@@ -2526,7 +3131,15 @@
                     status: group.status || 'same',
                     color: parseGroupColorRaw(colorRaw),
                     memberIds,
-                    fallbackRect: hasFallbackRect ? { x: group.x, y: group.y, w: group.w, h: group.h } : null
+                    fallbackRect: hasFallbackRect ? { x: group.x, y: group.y, w: group.w, h: group.h } : null,
+                    explicitRect: (hasFallbackRect && hasAuthoredRect) ? {
+                        x: group.x,
+                        y: group.y,
+                        w: group.w,
+                        h: group.h,
+                        dx: Number.isFinite(group.dx) ? group.dx : 0,
+                        dy: Number.isFinite(group.dy) ? group.dy : 0
+                    } : null
                 };
             }).filter(group => group.memberIds.length > 0 || !!group.fallbackRect);
         }
@@ -2558,6 +3171,7 @@
             const text = String(raw).trim().toLowerCase();
             if (!text) return 0;
 
+            if (text === '0' || text.includes('default') || text.includes('full')) return 0;
             if (text === '1' || text.includes('faint')) return 1;
             if (text === '2' || text.includes('hidden')) return 2;
 
@@ -2647,13 +3261,86 @@
             return parseWireDisplayMode(port.wireDisplay ?? port.WireDisplay ?? port.wireDisplayMode ?? port.WireDisplayMode);
         }
 
-        function getWireStyle(mode) {
+        function getPortStatusColor(status) {
+            const key = String(status || 'same').trim().toLowerCase();
+            if (key === 'added') return CONFIG.colors.added;
+            if (key === 'removed') return CONFIG.colors.removed;
+            if (key === 'modified') return CONFIG.colors.modified;
+            return CONFIG.colors.textMuted;
+        }
+
+        function getPortDisplayLabel(port, index, kind, nodeId) {
+            const explicit = String(port?.nickname || port?.Nickname || port?.name || port?.Name || '').trim();
+            if (explicit) return explicit;
+
+            const rawId = String(port?.id || port?.Id || '').trim();
+            const generatedPrefix = `${nodeId}:${kind}:`;
+            if (rawId && !rawId.startsWith(generatedPrefix)) return rawId;
+
+            return `${kind === 'input' ? 'In' : 'Out'} ${index + 1}`;
+        }
+
+        function drawNodePortSockets(node) {
+            if (!state.showPortDetails || !node) return;
+
+            const inputs = Array.isArray(node.inputs) ? node.inputs : (Array.isArray(node.Inputs) ? node.Inputs : []);
+            const outputs = Array.isArray(node.outputs) ? node.outputs : (Array.isArray(node.Outputs) ? node.Outputs : []);
+            if (inputs.length === 0 && outputs.length === 0) return;
+
+            const radius = Math.max(2.4 / state.view.scale, 1.4);
+            const borderWidth = Math.max(1 / state.view.scale, 0.55);
+            const showLabels = state.view.scale >= 1.25 || state.selected === node.id;
+            const labelOffset = radius + (6 / state.view.scale);
+            const labelFontSize = Math.max(9, 11 / state.view.scale);
+            const labelMax = 22;
+
+            const drawSide = (ports, isOutput) => {
+                if (!Array.isArray(ports) || ports.length === 0) return;
+                const x = isOutput ? node.x + node.w : node.x;
+                const step = node.h / (ports.length + 1);
+
+                ports.forEach((port, index) => {
+                    const y = node.y + (index + 1) * step;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = getPortStatusColor(port?.status || port?.Status);
+                    ctx.fill();
+                    ctx.lineWidth = borderWidth;
+                    ctx.strokeStyle = '#0f1115';
+                    ctx.stroke();
+
+                    if (showLabels) {
+                        const rawLabel = getPortDisplayLabel(port, index, isOutput ? 'output' : 'input', node.id);
+                        const safeLabel = rawLabel.length > labelMax ? `${rawLabel.slice(0, labelMax - 1)}…` : rawLabel;
+                        ctx.font = `${labelFontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                        ctx.fillStyle = CONFIG.colors.textMuted;
+                        ctx.textBaseline = 'middle';
+                        ctx.textAlign = isOutput ? 'left' : 'right';
+                        ctx.fillText(safeLabel, isOutput ? x + labelOffset : x - labelOffset, y);
+                    }
+                });
+            };
+
+            ctx.save();
+            drawSide(inputs, false);
+            drawSide(outputs, true);
+            ctx.restore();
+        }
+
+        function getWireStyle(mode, isConnected = false) {
             if (mode === 2) {
-                return { hidden: true, widthFactor: 0, alphaFactor: 0 };
+                if (!isConnected) {
+                    return { hidden: true, widthFactor: 0, alphaFactor: 0 };
+                }
+                return { hidden: false, widthFactor: 0.9, alphaFactor: 0.95 };
             }
 
             if (mode === 1) {
-                return { hidden: false, widthFactor: 0.72, alphaFactor: 0.45 };
+                return {
+                    hidden: false,
+                    widthFactor: isConnected ? 0.58 : 0.46,
+                    alphaFactor: isConnected ? 0.62 : 0.2
+                };
             }
 
             return { hidden: false, widthFactor: 1.0, alphaFactor: 1.0 };
@@ -2663,7 +3350,7 @@
             const mode = parseWireDisplayMode(raw);
             if (mode === 1) return 'faint';
             if (mode === 2) return 'hidden';
-            return 'default';
+            return 'full';
         }
 
         function waitFrame() {
@@ -2713,7 +3400,13 @@
         }
 
         function setupEventListeners() {
-            window.addEventListener('resize', resize);
+            window.addEventListener('resize', () => {
+                if (enforceResponsivePanelState()) {
+                    applyPanelVisibility();
+                    return;
+                }
+                resize();
+            });
 
             // Canvas interactions
             canvas.addEventListener('mousedown', onMouseDown);
@@ -2737,6 +3430,7 @@
                     case 'escape':
                         state.selected = null;
                         updateDetailsPanel(null);
+                        renderComponentResultsList();
                         draw();
                         break;
                     case '=':
@@ -2748,17 +3442,40 @@
             // Controls
             document.getElementById('search-input').addEventListener('input', (e) => {
                 state.search = e.target.value.toLowerCase();
+                renderComponentResultsList();
                 draw();
             });
 
             document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    state.filter = e.target.dataset.filter;
+                    const key = e.target.dataset.filter;
+                    if (!key) return;
+
+                    if (key === 'all') {
+                        state.filterMode = 'all';
+                        state.filterStatuses = new Set(CHANGED_STATUS_FILTERS);
+                    } else {
+                        if (state.filterMode === 'all') {
+                            state.filterMode = 'custom';
+                            state.filterStatuses = new Set([key]);
+                        } else if (state.filterStatuses.has(key)) {
+                            state.filterStatuses.delete(key);
+                            if (state.filterStatuses.size === 0) {
+                                state.filterMode = 'all';
+                                state.filterStatuses = new Set(CHANGED_STATUS_FILTERS);
+                            }
+                        } else {
+                            state.filterStatuses.add(key);
+                        }
+                    }
+
+                    syncStatusFilterButtons();
+                    renderComponentResultsList();
                     draw();
                 });
             });
+            syncStatusFilterButtons();
+            renderComponentResultsList();
 
             const togglePorts = document.getElementById('toggle-ports');
             if (togglePorts) {
@@ -2766,10 +3483,25 @@
                 togglePorts.addEventListener('change', () => {
                     state.showPortDetails = !!togglePorts.checked;
                     applyPortDetailsVisibility();
+                    draw();
                 });
                 togglePorts.addEventListener('input', () => {
                     state.showPortDetails = !!togglePorts.checked;
                     applyPortDetailsVisibility();
+                    draw();
+                });
+            }
+
+            const toggleGroups = document.getElementById('toggle-groups');
+            if (toggleGroups) {
+                state.showGroups = !!toggleGroups.checked;
+                toggleGroups.addEventListener('change', () => {
+                    state.showGroups = !!toggleGroups.checked;
+                    draw();
+                });
+                toggleGroups.addEventListener('input', () => {
+                    state.showGroups = !!toggleGroups.checked;
+                    draw();
                 });
             }
 
@@ -2816,8 +3548,8 @@
 
             if (sourceModeCommitBtn) {
                 sourceModeCommitBtn.addEventListener('click', () => {
-                    if (state.sourceModal.side !== 'old') {
-                        setSourceModalStatus('Git commit source is available for left side only.', 'warn');
+                    if (state.sourceModal.commitAvailable === false) {
+                        setSourceModalStatus('No commit history available for this file.', 'warn');
                         return;
                     }
                     state.sourceModal.mode = 'commit';
@@ -2836,29 +3568,19 @@
                         return;
                     }
                     state.sourceModal.filePath = result.path;
-
-                    if (state.sourceModal.side === 'old') {
-                        const { commits } = await fetchCommitsForPath(result.path, { silent: true });
-                        state.sourceModal.commitAvailable = commits.length > 0;
-                        state.sourceModal.commitPath = result.path;
-
-                        if (!state.sourceModal.commitAvailable) {
-                            state.sourceModal.mode = 'file';
-                            renderSourceModal();
-                            setSourceModalStatus('No Git commit history for this file. Loading file comparison...', 'info');
-                            tryApplyFileSelection('old', result.path);
-                            return;
-                        }
-                    } else {
-                        state.sourceModal.commitAvailable = false;
-                        renderSourceModal();
-                        setSourceModalStatus('File selected. Loading comparison...', 'info');
-                        tryApplyFileSelection('new', result.path);
-                        return;
+                    state.sourceModal.commitPath = result.path;
+                    const { commits } = await fetchCommitsForPath(result.path, { silent: true });
+                    state.sourceModal.commitAvailable = commits.length > 0;
+                    if (state.sourceModal.mode === 'commit' && !state.sourceModal.commitAvailable) {
+                        state.sourceModal.mode = 'file';
                     }
-
                     renderSourceModal();
-                    setSourceModalStatus('File selected. Git history available.', 'info');
+                    setSourceModalStatus(
+                        state.sourceModal.commitAvailable
+                            ? 'File selected. Git history available.'
+                            : 'File selected.',
+                        'info'
+                    );
                 });
             }
 
@@ -2872,10 +3594,20 @@
                         return;
                     }
                     state.sourceModal.commitPath = result.path;
-                    state.sourceModal.commits = [];
-                    state.sourceModal.selectedCommit = null;
+                    const { commits } = await fetchCommitsForPath(result.path, { silent: true });
+                    state.sourceModal.commitAvailable = commits.length > 0;
+                    state.sourceModal.commits = commits;
+                    state.sourceModal.selectedCommit = commits.length ? commits[0].hash : null;
+                    if (!state.sourceModal.commitAvailable) {
+                        state.sourceModal.mode = 'file';
+                    }
                     renderSourceModal();
-                    setSourceModalStatus('File selected. Load commits to continue.', 'info');
+                    setSourceModalStatus(
+                        state.sourceModal.commitAvailable
+                            ? 'File selected. Commit history loaded.'
+                            : 'No commit history found for this file.',
+                        state.sourceModal.commitAvailable ? 'info' : 'warn'
+                    );
                 });
             }
 
@@ -2900,6 +3632,14 @@
                     if (e.target === sourceModal) {
                         closeSourceModal();
                     }
+                });
+            }
+
+            if (componentResultsList) {
+                componentResultsList.addEventListener('click', (e) => {
+                    const trigger = e.target.closest('.component-result-item');
+                    if (!trigger) return;
+                    zoomToNode(trigger.dataset.nodeId);
                 });
             }
 
@@ -3069,12 +3809,13 @@
 
                 const name = (n.name || '').toLowerCase();
                 const nickname = (n.nickname || '').toLowerCase();
-                const matchesFilter = (state.filter === 'all' || n.status === state.filter) &&
+                const matchesFilter = doesNodeMatchStatusFilter(n.status) &&
                     (!state.search || name.includes(state.search) || nickname.includes(state.search));
 
                 nodesToDraw.push({ node: n, dimmed: !matchesFilter, alpha: n.alpha });
             });
 
+            const matchingNodeSet = new Set(nodesToDraw.filter(n => !n.dimmed).map(n => n.node.id));
             const visibleNodeSet = new Set(nodesToDraw.filter(n => !n.dimmed && n.alpha > 0.05).map(n => n.node.id));
 
             // Connection Highlighting Logic
@@ -3087,7 +3828,7 @@
                 });
             }
 
-            drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds);
+            drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds, matchingNodeSet);
 
             // Draw Edges
             state.edges.forEach(e => {
@@ -3099,12 +3840,8 @@
                 if (!sourceNode || !targetNode) return;
 
                 const wireMode = getEdgeWireDisplayMode(e, targetNode);
-                const isConnected = state.selected && (e.source === state.selected || e.target === state.selected);
-                let wireStyle = getWireStyle(wireMode);
-                if (isConnected) {
-                    // Grasshopper reveals faint/hidden wires when related components are selected.
-                    wireStyle = getWireStyle(0);
-                }
+                const isConnected = !!state.selected && (e.source === state.selected || e.target === state.selected);
+                const wireStyle = getWireStyle(wireMode, isConnected);
                 if (wireStyle.hidden) return;
 
                 if (state.largeModelMode && !state.selected) {
@@ -3154,11 +3891,12 @@
 
                 ctx.beginPath();
                 ctx.moveTo(start.x, start.y);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
 
                 // Bezier curve
                 const cp1 = { x: start.x + (end.x - start.x) / 2, y: start.y };
                 const cp2 = { x: end.x - (end.x - start.x) / 2, y: end.y };
-
                 ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y);
 
                 ctx.strokeStyle = CONFIG.colors.edgeSame;
@@ -3223,6 +3961,9 @@
                 ctx.quadraticCurveTo(n.x, n.y, n.x + CONFIG.node.radius, n.y);
                 ctx.fill();
 
+                // Port sockets (input/output circles)
+                drawNodePortSockets(n);
+
                 // Text
                 if (state.view.scale > 0.4 || state.selected === n.id) {
                     ctx.fillStyle = CONFIG.colors.text;
@@ -3268,8 +4009,21 @@
             drawMinimap(nodesToDraw);
         }
 
-        function computeGroupRenderRect(group, renderNodeLookup) {
+        function computeGroupRenderRect(group, renderNodeLookup, mix = state.versionMix) {
             if (!group) return null;
+
+            // Prefer authored group rectangles so group placement is not tied to moved components.
+            if (group.explicitRect) {
+                const dx = Number.isFinite(group.explicitRect.dx) ? group.explicitRect.dx : 0;
+                const dy = Number.isFinite(group.explicitRect.dy) ? group.explicitRect.dy : 0;
+                return {
+                    x: group.explicitRect.x - dx * (1 - mix),
+                    y: group.explicitRect.y - dy * (1 - mix),
+                    w: group.explicitRect.w,
+                    h: group.explicitRect.h,
+                    memberCount: Array.isArray(group.memberIds) ? group.memberIds.length : 0
+                };
+            }
 
             let minX = Infinity;
             let maxX = -Infinity;
@@ -3313,13 +4067,15 @@
             return null;
         }
 
-        function drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds) {
+        function drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds, matchingNodeSet) {
+            if (!state.showGroups) return;
             if (!Array.isArray(state.groups) || state.groups.length === 0) return;
             const connectedCanonical = new Set(Array.from(connectedIds || []).map(id => canonicalizeId(id)));
+            const matchingCanonical = new Set(Array.from(matchingNodeSet || []).map(id => canonicalizeId(id)));
 
             for (let i = 0; i < state.groups.length; i++) {
                 const group = state.groups[i];
-                const rect = computeGroupRenderRect(group, renderNodeLookup);
+                const rect = computeGroupRenderRect(group, renderNodeLookup, mix);
                 if (!rect || rect.w <= 0 || rect.h <= 0) continue;
 
                 const offscreen = rect.x + rect.w < viewLeft || rect.x > viewRight || rect.y + rect.h < viewTop || rect.y > viewBottom;
@@ -3335,7 +4091,13 @@
                 const isConnectedGroup = !isSelectedGroup && !!state.selected && memberIds.some(id =>
                     connectedIds.has(id) || connectedCanonical.has(canonicalizeId(id)));
                 const dimUnrelated = !!state.selected && !isSelectedGroup && !isConnectedGroup;
-                const alphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
+                const hasMatchingMember = memberIds.some(id =>
+                    (matchingNodeSet && matchingNodeSet.has(id)) || matchingCanonical.has(canonicalizeId(id)));
+                const dimForSearch = !!state.search && !hasMatchingMember;
+                const dimForStatusFilter = !isAllStatusFilterActive() && !hasMatchingMember;
+                const selectionAlphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
+                const criteriaAlphaFactor = (dimForSearch || dimForStatusFilter) ? 0.1 : 1.0;
+                const alphaFactor = selectionAlphaFactor * criteriaAlphaFactor;
                 const color = group.color || { r: 255, g: 255, b: 255, a: 0.18 };
 
                 ctx.save();
@@ -3530,6 +4292,7 @@
 
             state.selected = clicked ? clicked.id : null;
             updateDetailsPanel(clicked);
+            renderComponentResultsList();
             draw();
         }
 
@@ -3540,6 +4303,7 @@
 
             state.selected = clicked.id;
             updateDetailsPanel(clicked);
+            renderComponentResultsList();
 
             const clusterPreview = getClusterPreviewData(clicked);
             if (clusterPreview.isCluster) {
@@ -3704,29 +4468,58 @@
             return keys.some(k => isLikelyScriptPropertyKey(k));
         }
 
+        function normalizeScriptForCompare(value) {
+            return String(value ?? '')
+                .replace(/\r\n/g, '\n')
+                .replace(/[ \t]+\n/g, '\n')
+                .trimEnd();
+        }
+
         function getScriptPropertyEntries(node) {
             const props = node.properties || {};
             const oldProps = node.propertiesOld || {};
+            const nodeStatus = String(node?.status || 'same').toLowerCase();
             const keys = new Set([...Object.keys(props), ...Object.keys(oldProps)]);
             const entries = [];
 
             keys.forEach(key => {
                 const hasNew = Object.prototype.hasOwnProperty.call(props, key);
                 const hasOld = Object.prototype.hasOwnProperty.call(oldProps, key);
-                const newValue = hasNew ? String(props[key] ?? '') : '';
-                const oldValue = hasOld ? String(oldProps[key] ?? '') : '';
+                const rawNewValue = hasNew ? String(props[key] ?? '') : '';
+                const rawOldValue = hasOld ? String(oldProps[key] ?? '') : '';
 
                 const includeKey = !isScriptNoiseKey(key) &&
                     (isExplicitScriptKey(key) ||
-                        looksLikeScriptContent(newValue) ||
-                        looksLikeScriptContent(oldValue));
+                        looksLikeScriptContent(rawNewValue) ||
+                        looksLikeScriptContent(rawOldValue));
                 if (!includeKey) return;
+
+                let oldValue = rawOldValue;
+                let newValue = rawNewValue;
+                let isChanged = false;
+
+                if (hasOld && hasNew) {
+                    isChanged = normalizeScriptForCompare(rawOldValue) !== normalizeScriptForCompare(rawNewValue);
+                } else if (!hasOld && hasNew) {
+                    if (nodeStatus === 'added') {
+                        isChanged = true;
+                    } else if (nodeStatus === 'removed') {
+                        oldValue = rawNewValue;
+                        newValue = '';
+                        isChanged = true;
+                    } else {
+                        oldValue = rawNewValue;
+                        isChanged = false;
+                    }
+                } else if (hasOld && !hasNew) {
+                    isChanged = true;
+                }
 
                 entries.push({
                     key,
                     oldValue,
                     newValue,
-                    isChanged: oldValue !== newValue
+                    isChanged
                 });
             });
 
@@ -3782,7 +4575,7 @@
                         <div class="script-panel-meta">${diffState}</div>
                     </div>
                     <div class="diff-container">
-                        ${computeDiff(entry.oldValue, entry.newValue)}
+                        ${computeDiff(entry.oldValue, entry.newValue, !entry.isChanged)}
                     </div>
                 `;
             }).join('');
@@ -3865,6 +4658,37 @@
             }
         }
 
+        function normalizedClusterPreviewValue(value, fallback = '') {
+            if (value === null || value === undefined) return fallback;
+            return String(value).trim();
+        }
+
+        function clusterPreviewNodeSignature(node) {
+            if (!node) return '';
+
+            const x = Number(node.x ?? node.X ?? 0);
+            const y = Number(node.y ?? node.Y ?? 0);
+            const w = Number(node.w ?? node.W ?? 110);
+            const h = Number(node.h ?? node.H ?? 38);
+
+            return JSON.stringify({
+                name: normalizedClusterPreviewValue(node.name ?? node.Name),
+                nickname: normalizedClusterPreviewValue(node.nickname ?? node.Nickname),
+                x: Number.isFinite(x) ? Number(x.toFixed(3)) : 0,
+                y: Number.isFinite(y) ? Number(y.toFixed(3)) : 0,
+                w: Number.isFinite(w) ? Number(w.toFixed(3)) : 110,
+                h: Number.isFinite(h) ? Number(h.toFixed(3)) : 38,
+                isCluster: isTrueish(node.isCluster ?? node.IsCluster),
+                clusterHash: normalizedClusterPreviewValue(node.clusterHash ?? node.ClusterHash),
+                nestedClusterCount: Number(node.nestedClusterCount ?? node.NestedClusterCount ?? 0),
+                nestedClusterChanges: Number(node.nestedClusterChanges ?? node.NestedClusterChanges ?? 0)
+            });
+        }
+
+        function clusterPreviewNodeChanged(oldNode, newNode) {
+            return clusterPreviewNodeSignature(oldNode) !== clusterPreviewNodeSignature(newNode);
+        }
+
         function buildClusterDiffGraph(oldGraph, newGraph) {
             const oldNodes = new Map();
             const newNodes = new Map();
@@ -3886,6 +4710,9 @@
                 const o = oldNodes.get(id);
                 const n = newNodes.get(id);
                 const base = n || o || {};
+                const nodeStatus = o && n
+                    ? (clusterPreviewNodeChanged(o, n) ? 'modified' : 'same')
+                    : (n ? 'added' : 'removed');
                 nodes.push({
                     id: String(id),
                     name: base.nickname || base.Nickname || base.name || base.Name || id,
@@ -3893,9 +4720,10 @@
                     y: Number(base.y ?? base.Y ?? 0),
                     w: Number(base.w ?? base.W ?? 110),
                     h: Number(base.h ?? base.H ?? 38),
+                    properties: base.properties || base.Properties || {},
                     inputs: base.inputs || base.Inputs || [],
                     outputs: base.outputs || base.Outputs || [],
-                    status: o && n ? 'same' : (n ? 'added' : 'removed')
+                    status: nodeStatus
                 });
             });
 
@@ -3967,13 +4795,17 @@
             }
 
             const diffGraph = buildClusterDiffGraph(oldGraph, newGraph);
-            const nodes = diffGraph.nodes.map(n => normalizeNode({
+            const hasVisibleInternalDiff = diffGraph.nodes.some(n => n.status !== 'same') ||
+                diffGraph.edges.some(e => e.status !== 'same');
+            const normalizedNodes = diffGraph.nodes.map(n => normalizeNode({
                 ...n,
                 name: n.name || n.id || 'Cluster Component',
                 nickname: n.name || n.id || 'Cluster Component'
             }));
+            const { componentNodes, groupNodes } = splitComponentAndGroupNodes(normalizedNodes);
+            const renderableGroups = buildRenderableGroups(groupNodes, componentNodes);
 
-            const nodeMap = buildNodeLookupMap(nodes);
+            const nodeMap = buildNodeLookupMap(componentNodes);
             const edges = diffGraph.edges
                 .map(normalizeEdge)
                 .map(e => {
@@ -4007,8 +4839,8 @@
                     sourceNodeId: node.id,
                     parentTabId,
                     breadcrumbSegments,
-                    nodes,
-                    groups: [],
+                    nodes: componentNodes,
+                    groups: renderableGroups,
                     edges
                 });
                 state.graphTabs.push(targetTab);
@@ -4016,23 +4848,34 @@
                 targetTab.title = tabTitle;
                 targetTab.parentTabId = parentTabId;
                 targetTab.breadcrumbSegments = breadcrumbSegments;
-                targetTab.nodes = nodes;
-                targetTab.groups = [];
+                targetTab.nodes = componentNodes;
+                targetTab.groups = renderableGroups;
                 targetTab.edges = edges;
-                targetTab.bounds = calculateBoundsForNodes(nodes);
+                targetTab.bounds = calculateBoundsForNodes(componentNodes);
                 targetTab.view = null;
                 targetTab.selected = null;
             }
 
             switchGraphTab(targetTab.id, { fit: true });
 
-            if (nodes.length === 0) {
+            if (componentNodes.length === 0 && renderableGroups.length === 0) {
                 showPerf(clusterPreview.message || 'No internal cluster graph available for this component.');
                 window.setTimeout(() => {
                     if (!state.processingData && !state.largeModelMode) {
                         showPerf('');
                     }
                 }, 2200);
+            } else if (internalsChanged && !hasVisibleInternalDiff) {
+                const wasTruncated = !!oldGraph?.truncated || !!newGraph?.truncated;
+                const fallbackMessage = wasTruncated
+                    ? 'Cluster internals changed, but preview is truncated so exact changes are not fully visible.'
+                    : 'Cluster internals changed, but this preview has no explicit node/edge deltas.';
+                showPerf(clusterPreview.message || fallbackMessage);
+                window.setTimeout(() => {
+                    if (!state.processingData && !state.largeModelMode) {
+                        showPerf('');
+                    }
+                }, 2600);
             }
 
             return true;

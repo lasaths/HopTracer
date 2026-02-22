@@ -5,10 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grasshopper Diff Tool</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
     <style>
         :root {
             --bg: #0f1115;
@@ -244,7 +241,6 @@
                     // --- CHANGE: Auto open git modal ---
                     openGitModal();
                     
-                    console.log('Selected via native picker:', path);
                 } else {
                     alert('No file selected');
                 }
@@ -266,7 +262,6 @@
                     dropZones.new.name.textContent = filename;
                     dropZones.new.zone.style.borderColor = 'var(--accent)';
                     
-                    console.log('Selected via native picker:', path);
                 } else {
                     alert('No file selected');
                 }
@@ -306,11 +301,8 @@
             dropZones[type].name.textContent = file.name;
             dropZones[type].zone.style.borderColor = 'var(--accent)';
 
-            // Note: Browser file inputs don't provide full file paths for security reasons
-            // Git history is ONLY available when using the "Browse for OLD file" button
-            if (type === 'old') {
-                console.log('File dropped:', file.name, '(For Git history, use "Browse for OLD file" button instead)');
-            }
+            // Note: Browser file inputs don't provide full file paths for security reasons.
+            // Git history is only available when using the "Browse for OLD file" button.
         }
 
         function setGitPath(path) {
@@ -405,7 +397,6 @@
             const list = document.getElementById('commitList');
             list.innerHTML = '<div style="padding:30px; text-align:center; color:var(--text-dim);"><div style="margin-bottom:8px;">📜</div>Loading commit history...</div>';
             
-            console.log('Fetching commits for:', path);
             currentGitPath = path;
             setStatus('Loading commits…', 'info');
 
@@ -425,7 +416,6 @@
                 }
                 
                 const data = await res.json();
-                console.log('Commits data:', data);
 
                 if (data.error) {
                     list.innerHTML = `<div style="padding:40px; text-align:center; color:#ff6b6b;"><div style="font-size:32px; margin-bottom:12px;">❌</div><strong>Error</strong><br><br>${data.error}</div>`;

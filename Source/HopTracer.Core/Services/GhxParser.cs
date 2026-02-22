@@ -716,6 +716,7 @@ public class GhxParser : IGhxParser
                         Y = n.Y,
                         W = n.W,
                         H = n.H,
+                        Properties = BuildClusterPreviewProperties(n.Properties),
                         IsCluster = IsClusterNode(n.Properties),
                         ClusterHash = GetPropertyValue(n.Properties, "ClusterHash"),
                         NestedClusterCount = CountNestedClusters(n.Properties),
@@ -830,6 +831,33 @@ public class GhxParser : IGhxParser
     {
         var val = GetPropertyValue(props, "IsCluster");
         return string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, string> BuildClusterPreviewProperties(Dictionary<string, string> props)
+    {
+        if (props == null || props.Count == 0)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "IsGroup",
+            "GroupMemberIds",
+            "GroupColor",
+            "Description"
+        };
+
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var kv in props)
+        {
+            if (allowed.Contains(kv.Key))
+            {
+                result[kv.Key] = kv.Value;
+            }
+        }
+
+        return result;
     }
 
     private static string? GetPropertyValue(Dictionary<string, string> props, string key)
@@ -995,6 +1023,7 @@ public class GhxParser : IGhxParser
         public double Y { get; set; }
         public double W { get; set; }
         public double H { get; set; }
+        public Dictionary<string, string> Properties { get; set; } = new();
         public bool IsCluster { get; set; }
         public string? ClusterHash { get; set; }
         public int NestedClusterCount { get; set; }
