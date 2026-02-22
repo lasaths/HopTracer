@@ -7,8 +7,10 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
-        // Ensure dependencies are present before anything else
-        DependencyHelper.EnsureGhIoDll();
+        // Ensure dependencies are present before anything else.
+        // If unavailable, app still starts and shows in-app remediation instructions.
+        AppStartupState.IsGhIoAvailable = DependencyHelper.TryEnsureGhIoDll(out var ghIoErrorMessage);
+        AppStartupState.GhIoErrorMessage = ghIoErrorMessage;
 
 		var builder = MauiApp.CreateBuilder();
 		builder

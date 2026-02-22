@@ -8,13 +8,17 @@ using HopTracer.Core.Services;
 using HopTracer.Maui.Services;
 using HopTracer.Web.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.ApplicationModel;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace HopTracer.Maui;
 
 public partial class MainPage : ContentPage
 {
     private IHost? _webHost;
+    private readonly IUpdateCheckService _updateCheckService = new GitHubUpdateCheckService();
+    private bool _updateCheckStarted;
 
 	public MainPage()
 	{
@@ -25,6 +29,7 @@ public partial class MainPage : ContentPage
     private async void OnLoaded(object? sender, EventArgs e)
     {
         await StartWebServer();
+        _ = CheckForUpdatesAsync();
     }
 
     private async Task StartWebServer()
@@ -92,6 +97,7 @@ public partial class MainPage : ContentPage
                         services.AddSingleton<INativeIntegration, MauiNativeIntegration>();
                         services.AddSingleton<IFileValidationService, FileValidationService>();
                         services.AddSingleton<IFileSelectionCache, FileSelectionCache>();
+                        services.AddSingleton<IAppDataStorageService, AppDataStorageService>();
                     });
                 })
                 .Build();
@@ -118,5 +124,51 @@ public partial class MainPage : ContentPage
             port++;
         }
         return port;
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        if (_updateCheckStarted)
+        {
+            return;
+        }
+        _updateCheckStarted = true;
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+            var result = await _updateCheckService.CheckForUpdateAsync(cts.Token);
+            if (!result.IsUpdateAvailable || string.IsNullOrWhiteSpace(result.LatestVersion) || string.IsNullOrWhiteSpace(result.ReleaseUrl))
+            {
+                return;
+            }
+
+            var dismissedVersion = Preferences.Default.Get("hoptracer.last_notified_update", string.Empty);
+            if (string.Equals(dismissedVersion, result.LatestVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var openRelease = await MainThread.InvokeOnMainThreadAsync(() =>
+                DisplayAlertAsync(
+                    "Update Available",
+                    $"HopTracer {result.LatestVersion} is available.\nYou are on {result.CurrentVersion}.",
+                    "Open Release",
+                    "Later"));
+
+            Preferences.Default.Set("hoptracer.last_notified_update", result.LatestVersion);
+            if (openRelease)
+            {
+                await Launcher.Default.OpenAsync(result.ReleaseUrl);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Silent timeout keeps startup non-blocking.
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Update check failed: {ex.Message}");
+        }
     }
 }

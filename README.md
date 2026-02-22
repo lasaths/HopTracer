@@ -10,9 +10,7 @@
 [![CI](https://github.com/lasaths/HopTracer/actions/workflows/build.yml/badge.svg)](https://github.com/lasaths/HopTracer/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/lasaths/HopTracer)](https://github.com/lasaths/HopTracer/releases)
 
-HopTracer is a powerful desktop tool designed to help architects and computational designers visualize changes in their Grasshopper definitions. It provides a clear, interactive comparison between two versions of a file, highlighting what has been added, removed, or modified.
-
-> **AI Note**: This entire project was generated and refined by AI agents.
+HopTracer is a desktop tool designed to help architects and computational designers visualize changes in their Grasshopper definitions. It provides a clear, interactive comparison between two versions of a file, highlighting what has been added, removed, or modified.
 
 ## Features
 
@@ -28,9 +26,29 @@ HopTracer is a powerful desktop tool designed to help architects and computation
 
 1. Download the latest release from the [Releases](https://github.com/lasaths/HopTracer/releases) page.
 2. Extract `HopTracer-Windows-x64.zip`.
-3. Run `HopTracer.exe` from the extracted `HopTracer_Portable` folder.
+3. Ensure `GH_IO.dll` is available (see **Required Dependency: GH_IO.dll** below).
+4. Run `HopTracer.exe` from the extracted `HopTracer_Portable` folder.
 
-No installation or .NET runtime required.
+No .NET runtime installation is required.
+
+### Required Dependency: `GH_IO.dll`
+
+HopTracer requires Grasshopper's `GH_IO.dll` at runtime.
+
+How to satisfy this requirement:
+
+1. Install Rhino 7 or Rhino 8 (recommended), which provides `GH_IO.dll`.
+2. If you are building from source, run:
+   ```powershell
+   .\scripts\setup_dependencies.ps1
+   ```
+3. If auto-discovery fails, manually copy `GH_IO.dll` from one of:
+   - `C:\Program Files\Rhino 8\Plug-ins\Grasshopper\GH_IO.dll`
+   - `C:\Program Files\Rhino 7\Plug-ins\Grasshopper\GH_IO.dll`
+   - `C:\Program Files\Rhino 6\Plug-ins\Grasshopper\GH_IO.dll`
+   into:
+   - `Source\HopTracer.Web\tools\` (source builds), or
+   - the same directory as `HopTracer.exe` (portable/runtime scenario).
 
 ## Usage
 
@@ -55,7 +73,7 @@ This section contains technical details for those interested in the backend or c
 
 ### Architecture
 
-The project is built using **.NET 10** and **.NET MAUI** for cross-platform desktop support (Windows/macOS). It uses a hybrid approach where the UI is rendered via a local ASP.NET Core server hosting a web-based visualization.
+The project is built using **.NET 10** and **.NET MAUI** for Windows desktop support. It uses a hybrid approach where the UI is rendered via a local ASP.NET Core server hosting a web-based visualization.
 
 * **Core**: Handles parsing of `.gh`/`.ghx` files and the diffing logic.
 * **Web**: Serves the HTML/JS visualization and API endpoints.
@@ -68,12 +86,12 @@ The project is built using **.NET 10** and **.NET MAUI** for cross-platform desk
 * .NET 10 SDK
 * Visual Studio 2022 or VS Code
 * Windows 10/11 (for MAUI Windows target)
-* Optional: Rhino 7/8 if you want enhanced cluster archive decoding
+* Rhino 7/8 (or Rhino 6) so `GH_IO.dll` is available
 
 #### Steps
 
 1. Clone the repository: `git clone https://github.com/lasaths/HopTracer.git`
-2. Optional (for enhanced cluster decoding): `.\scripts\setup_dependencies.ps1`
+2. Run dependency setup: `.\scripts\setup_dependencies.ps1`
 3. Open `Source/HopTracer.sln`.
 4. Build the `HopTracer` project.
 5. Run the application.
@@ -101,6 +119,11 @@ The build creates:
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+### Community & Security
+
+- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Security Policy: [SECURITY.md](SECURITY.md)
+
 ### Microsoft Store Packaging
 
 Use the MSIX build script to create Store-ready artifacts:
@@ -123,4 +146,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 * Built with [.NET MAUI](https://dotnet.microsoft.com/apps/maui) and [ASP.NET Core](https://dotnet.microsoft.com/apps/aspnet)
 * GH/GHX conversion based on [GhToGhx](https://bitbucket.org/rilgh/ghtoghx/wiki/Home) by David Rutten
-* Entire project generated and refined with AI assistance

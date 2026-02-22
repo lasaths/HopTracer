@@ -141,20 +141,21 @@ public class GitWrapper : IGitWrapper
                 {
                     var hash = parts[0];
                     
-                    // Verify the file exists in this commit by attempting to get its content
+                    // Verify the file exists in this commit and capture byte size.
                     try
                     {
-                        // Use git cat-file to check if file exists without reading full content
-                        RunGitAt(_repoRoot, "cat-file", "-e", $"{hash}:{relPath}");
+                        var sizeRaw = RunGitAt(_repoRoot, "cat-file", "-s", $"{hash}:{relPath}");
+                        long.TryParse(sizeRaw, out var fileSizeBytes);
                         
-                        // File exists, add the commit
+                        // File exists, add the commit.
                         commits.Add(new CommitInfo
                         {
                             Hash = hash,
                             Author = parts[1],
                             Date = parts[2],
                             Message = parts[3],
-                            FilePath = relPath // Store the path we used for the query
+                            FilePath = relPath, // Store the path we used for the query
+                            FileSizeBytes = Math.Max(0, fileSizeBytes)
                         });
                     }
                     catch
@@ -492,4 +493,5 @@ public class CommitInfo
     public string Date { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty; // The relative path used for this commit
+    public long FileSizeBytes { get; set; } = 0;
 }

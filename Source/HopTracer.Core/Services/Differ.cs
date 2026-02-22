@@ -15,6 +15,14 @@ public class Differ : IDiffer
         "CodeInput", "CodeOutput", "PythonScript", "PythonCode",
         "CSharpCode", "VBCode", "SourceCode", "ScriptBody"
     };
+    private static readonly string[] ClusterPreviewPropertyKeys =
+    {
+        "ClusterHash", "clusterHash",
+        "ClusterSize", "clusterSize",
+        "ClusterPreviewStatus", "clusterPreviewStatus",
+        "ClusterPreviewMessage", "clusterPreviewMessage",
+        "ClusterPreviewGraph", "clusterPreviewGraph"
+    };
 
     public Differ(ILogger<Differ> logger)
     {
@@ -325,6 +333,13 @@ public class Differ : IDiffer
             modified = true;
         }
 
+        if (HasClusterHashChange(nOld.Properties, nNew.Properties))
+        {
+            modified = true;
+            propertiesChanged = true;
+            PreserveClusterPreviewOldValues(propertiesOld, nOld.Properties);
+        }
+
         return new Node
         {
             Id = nNew.Id,
@@ -342,6 +357,17 @@ public class Differ : IDiffer
             Properties = properties,
             PropertiesOld = propertiesChanged ? propertiesOld : null
         };
+    }
+
+    private static void PreserveClusterPreviewOldValues(Dictionary<string, string> destination, Dictionary<string, string> source)
+    {
+        foreach (var key in ClusterPreviewPropertyKeys)
+        {
+            if (source.TryGetValue(key, out var value))
+            {
+                destination[key] = value;
+            }
+        }
     }
 
     private List<Port> DiffPorts(List<Port> oldPorts, List<Port> newPorts)

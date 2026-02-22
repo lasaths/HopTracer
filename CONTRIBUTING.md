@@ -8,14 +8,14 @@ Thank you for your interest in contributing to HopTracer! This document provides
    - .NET 10 SDK
    - Visual Studio 2022 (17.12+) or VS Code
    - Windows 10/11 (for MAUI Windows target)
-   - Optional: Rhino 7/8 for enhanced cluster archive decoding
+   - Rhino 7/8 (or Rhino 6) for required `GH_IO.dll`
 
 2. **Clone and Setup**
 
    ```bash
    git clone https://github.com/lasaths/HopTracer.git
    cd HopTracer
-   # Optional: only needed for enhanced cluster archive decoding
+   # Required: copies GH_IO.dll from Rhino install
    .\scripts\setup_dependencies.ps1
    ```
 

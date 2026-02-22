@@ -5,6 +5,9 @@ build/
 dist/
 wheels/
 *.egg-info
+.env
+.env.*
+*.local
 
 # Virtual environments
 .venv
@@ -31,6 +34,14 @@ TestResults/
 Release/
 publish/
 tools/
+artifacts/
+*.log
+*.msix
+*.msixupload
+*.msixsym
+*.appx
+*.appxbundle
+*.appxsym
 
 # IDE
 .vscode/
@@ -46,3 +57,9 @@ desktop.ini
 
 # Shortcuts
 *.lnk
+
+# Signing certificates and keys
+*.pfx
+*.p12
+*.pem
+*.key

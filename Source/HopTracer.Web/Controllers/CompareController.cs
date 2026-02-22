@@ -20,6 +20,7 @@ public class CompareController : ControllerBase
     private readonly IConverterService _converter;
     private readonly IFileValidationService _fileValidator;
     private readonly IFileSelectionCache _fileSelectionCache;
+    private readonly IAppDataStorageService _storage;
     private const long MaxFileSize = 100 * 1024 * 1024; // 100MB - reasonable limit for GH files
 
     public CompareController(
@@ -29,7 +30,8 @@ public class CompareController : ControllerBase
         IDiffer differ,
         IConverterService converter,
         IFileValidationService fileValidator,
-        IFileSelectionCache fileSelectionCache)
+        IFileSelectionCache fileSelectionCache,
+        IAppDataStorageService storage)
     {
         _env = env;
         _logger = logger;
@@ -38,6 +40,7 @@ public class CompareController : ControllerBase
         _converter = converter;
         _fileValidator = fileValidator;
         _fileSelectionCache = fileSelectionCache;
+        _storage = storage;
     }
 
     [HttpPost]
@@ -49,6 +52,8 @@ public class CompareController : ControllerBase
         {
             string finalPathOld;
             string finalPathNew;
+            string sourcePathOld;
+            string sourcePathNew;
             string originalFileNameOld;
             string originalFileNameNew;
             var stageTimings = new List<DiffStageTiming>();
@@ -60,9 +65,10 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(pathError);
                 }
-                finalPathOld = normalizedPath;
+                finalPathOld = StageWorkingCopy(normalizedPath, "old");
+                sourcePathOld = normalizedPath;
                 originalFileNameOld = Path.GetFileName(normalizedPath);
-                _fileSelectionCache.Record(finalPathOld);
+                _fileSelectionCache.Record(normalizedPath);
                 _logger.LogInformation("Using local old file: {Path}", normalizedPath);
             }
             else if (file_old != null)
@@ -72,8 +78,7 @@ public class CompareController : ControllerBase
                     return await ReturnErrorPage(fileError);
                 }
                 
-                var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
-                Directory.CreateDirectory(uploadsPath);
+                var uploadsPath = _storage.UploadsPath;
                 var safeFileName = _fileValidator.SanitizeFileName(file_old.FileName);
                 finalPathOld = Path.Combine(uploadsPath, safeFileName);
                 
@@ -81,6 +86,7 @@ public class CompareController : ControllerBase
                 {
                     await file_old.CopyToAsync(stream);
                 }
+                sourcePathOld = finalPathOld;
                 originalFileNameOld = file_old.FileName;
                 _fileSelectionCache.Record(finalPathOld);
                 _logger.LogInformation("Uploaded old file: {FileName}", file_old.FileName);
@@ -97,9 +103,10 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(pathError);
                 }
-                finalPathNew = normalizedPath;
+                finalPathNew = StageWorkingCopy(normalizedPath, "new");
+                sourcePathNew = normalizedPath;
                 originalFileNameNew = Path.GetFileName(normalizedPath);
-                _fileSelectionCache.Record(finalPathNew);
+                _fileSelectionCache.Record(normalizedPath);
                 _logger.LogInformation("Using local new file: {Path}", normalizedPath);
             }
             else if (file_new != null)
@@ -109,8 +116,7 @@ public class CompareController : ControllerBase
                     return await ReturnErrorPage(fileError);
                 }
                 
-                var uploadsPath = Path.Combine(_env.ContentRootPath, "uploads");
-                Directory.CreateDirectory(uploadsPath);
+                var uploadsPath = _storage.UploadsPath;
                 var safeFileName = _fileValidator.SanitizeFileName(file_new.FileName);
                 finalPathNew = Path.Combine(uploadsPath, safeFileName);
 
@@ -118,6 +124,7 @@ public class CompareController : ControllerBase
                 {
                     await file_new.CopyToAsync(stream);
                 }
+                sourcePathNew = finalPathNew;
                 originalFileNameNew = file_new.FileName;
                 _logger.LogInformation("Uploaded new file: {FileName}", file_new.FileName);
             }
@@ -175,8 +182,8 @@ public class CompareController : ControllerBase
                     FileOld = originalFileNameOld,
                     FileNew = originalFileNameNew,
                     CommitHash = null, // Not a Git comparison
-                    SourcePathOld = finalPathOld,
-                    SourcePathNew = finalPathNew,
+                    SourcePathOld = sourcePathOld,
+                    SourcePathNew = sourcePathNew,
                     SourceTypeOld = "file",
                     SourceTypeNew = "file",
                     SourceHashOld = null,
@@ -232,5 +239,13 @@ public class CompareController : ControllerBase
 
         html = html.Replace("{error_message}", System.Net.WebUtility.HtmlEncode(message));
         return Content(html, "text/html");
+    }
+
+    private string StageWorkingCopy(string normalizedPath, string sideTag)
+    {
+        var extension = Path.GetExtension(normalizedPath);
+        var stagedPath = Path.Combine(_storage.UploadsPath, $"compare_{sideTag}_{Guid.NewGuid():N}{extension}");
+        System.IO.File.Copy(normalizedPath, stagedPath, overwrite: true);
+        return stagedPath;
     }
 }
