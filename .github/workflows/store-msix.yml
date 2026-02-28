@@ -88,7 +88,7 @@ jobs:
           -CertificatePassword "${{ secrets.MSIX_CERT_PASSWORD }}"
 
     - name: Upload MSIX artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HopTracer-MSIX
         path: |
