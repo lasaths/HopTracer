@@ -540,12 +540,14 @@
 
         const dropZones = {
             old: {
+                fileInput: document.getElementById('fileOld'),
                 pathInput: document.getElementById('pathOld'),
                 name: document.getElementById('nameOld'),
                 zone: document.getElementById('dropOld'),
                 label: document.getElementById('labelOld')
             },
             new: {
+                fileInput: document.getElementById('fileNew'),
                 pathInput: document.getElementById('pathNew'),
                 name: document.getElementById('nameNew'),
                 zone: document.getElementById('dropNew'),
@@ -650,8 +652,87 @@
             return Boolean(dropZones[type].pathInput.value && dropZones[type].pathInput.value.trim());
         }
 
+        function hasFileSelection(type) {
+            const input = dropZones[type].fileInput;
+            return Boolean(input && input.files && input.files.length > 0);
+        }
+
+        function hasSelection(type) {
+            return hasPathSelection(type) || hasFileSelection(type);
+        }
+
+        async function getSelectionModifiedTime(type) {
+            if (hasPathSelection(type)) {
+                const path = dropZones[type].pathInput.value;
+                const info = await fetchFileInfo(path);
+                if (!info || !info.modifiedUtc) return null;
+                const modified = Date.parse(info.modifiedUtc);
+                return Number.isFinite(modified) ? modified : null;
+            }
+
+            if (hasFileSelection(type)) {
+                const file = dropZones[type].fileInput.files[0];
+                if (!file) return null;
+                const modified = Number(file.lastModified);
+                return Number.isFinite(modified) ? modified : null;
+            }
+
+            return null;
+        }
+
+        function assignFiles(input, files) {
+            const transfer = new DataTransfer();
+            (files || []).forEach(file => transfer.items.add(file));
+            input.files = transfer.files;
+        }
+
+        function swapOldAndNewSelections() {
+            const oldZone = dropZones.old;
+            const newZone = dropZones.new;
+
+            const oldPath = oldZone.pathInput.value;
+            const newPath = newZone.pathInput.value;
+            const oldFiles = Array.from(oldZone.fileInput.files || []);
+            const newFiles = Array.from(newZone.fileInput.files || []);
+            const oldName = oldZone.name.textContent;
+            const newName = newZone.name.textContent;
+            const oldLabel = oldZone.label.textContent;
+            const newLabel = newZone.label.textContent;
+
+            oldZone.pathInput.value = newPath;
+            newZone.pathInput.value = oldPath;
+            assignFiles(oldZone.fileInput, newFiles);
+            assignFiles(newZone.fileInput, oldFiles);
+            oldZone.name.textContent = newName;
+            newZone.name.textContent = oldName;
+            oldZone.label.textContent = newLabel;
+            newZone.label.textContent = oldLabel;
+
+            if (hasPathSelection('old')) {
+                currentGitPath = oldZone.pathInput.value;
+                checkGitStatus(currentGitPath);
+            } else {
+                currentGitPath = null;
+                removeGitButton();
+            }
+
+            updateCompareButtonState();
+        }
+
+        async function enforceOldIsEarlierSelection() {
+            const oldModified = await getSelectionModifiedTime('old');
+            const newModified = await getSelectionModifiedTime('new');
+
+            if (oldModified === null || newModified === null || oldModified <= newModified) {
+                return;
+            }
+
+            alert('The selected OLD file is newer than the NEW file. Swapping them so OLD stays in the earlier position.');
+            swapOldAndNewSelections();
+        }
+
         function updateCompareButtonState() {
-            const ready = hasPathSelection('old') && hasPathSelection('new');
+            const ready = hasSelection('old') && hasSelection('new');
             compareBtn.disabled = !ready;
             compareBtn.title = ready ? 'Compare selected files' : 'Select both files to continue';
         }
@@ -774,6 +855,7 @@
             const zone = dropZones[type];
 
             zone.pathInput.value = path;
+            zone.fileInput.value = '';
             updateZoneFileSize(type, path);
             zone.label.textContent = "Selected";
             zone.zone.style.borderColor = 'var(--accent-color)';
@@ -786,6 +868,102 @@
             }
 
             updateCompareButtonState();
+        }
+
+        function removeGitButton() {
+            const existing = dropZones.old.zone.querySelector('.git-btn');
+            if (existing) existing.remove();
+        }
+
+        function isSupportedGrasshopperFile(name) {
+            return /\.(gh|ghx)$/i.test(String(name || '').trim());
+        }
+
+        function handleDroppedFile(type, file) {
+            if (!file) return;
+            if (!isSupportedGrasshopperFile(file.name)) {
+                showToast(`Unsupported file type: ${file.name}`, 'error');
+                return;
+            }
+
+            const zone = dropZones[type];
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            zone.fileInput.files = transfer.files;
+            zone.pathInput.value = '';
+            zone.label.textContent = "Dropped";
+            zone.zone.style.borderColor = 'var(--accent-color)';
+            zone.zone.classList.add('selected');
+            zone.name.textContent = `${file.name} (${formatBytes(file.size)})`;
+
+            if (type === 'old') {
+                // Dragged files do not expose native local paths; disable Git history for this mode.
+                currentGitPath = null;
+                removeGitButton();
+            }
+
+            updateCompareButtonState();
+        }
+
+        function setupDropZone(type) {
+            const zone = dropZones[type];
+
+            zone.zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.zone.classList.add('dragover');
+            });
+
+            zone.zone.addEventListener('dragleave', () => {
+                zone.zone.classList.remove('dragover');
+            });
+
+            zone.zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.zone.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer?.files || []).filter(f => isSupportedGrasshopperFile(f.name));
+                if (files.length === 0) {
+                    showToast('Drop a .gh or .ghx file.', 'error');
+                    return;
+                }
+
+                handleDroppedFile(type, files[0]);
+                const otherType = type === 'old' ? 'new' : 'old';
+                if (files.length > 1 && !hasSelection(otherType)) {
+                    handleDroppedFile(otherType, files[1]);
+                }
+            });
+        }
+
+        function setupGlobalDropTargets() {
+            document.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+
+            document.addEventListener('drop', (e) => {
+                if (e.target && e.target.closest && e.target.closest('.drop-zone')) {
+                    return;
+                }
+
+                e.preventDefault();
+                const files = Array.from(e.dataTransfer?.files || []).filter(f => isSupportedGrasshopperFile(f.name));
+                if (files.length === 0) {
+                    return;
+                }
+
+                const preferredOrder = [];
+                if (!hasSelection('old')) preferredOrder.push('old');
+                if (!hasSelection('new')) preferredOrder.push('new');
+                if (preferredOrder.length === 0) {
+                    preferredOrder.push('old', 'new');
+                } else if (preferredOrder.length === 1) {
+                    preferredOrder.push(preferredOrder[0] === 'old' ? 'new' : 'old');
+                }
+
+                handleDroppedFile(preferredOrder[0], files[0]);
+                if (files.length > 1) {
+                    handleDroppedFile(preferredOrder[1], files[1]);
+                }
+            });
         }
 
         async function checkGitStatus(path) {
@@ -837,7 +1015,6 @@
             if (!currentGitPath) return;
 
             document.getElementById('gitModal').style.display = 'flex';
-            const list = document.getElementById('commitList');
 
             // Update label
             const filename = currentGitPath.split(/[\\/]/).pop();
@@ -846,7 +1023,11 @@
             updateSelectedGitFileMeta(currentGitPath);
 
             // Load commits
-            attemptLoadCommits(currentGitPath);
+            const hasCommits = await attemptLoadCommits(currentGitPath);
+            if (!hasCommits) {
+                closeGitModal();
+                showToast('No commits found for this file.', 'success');
+            }
         }
 
         async function attemptLoadCommits(path) {
@@ -865,20 +1046,21 @@
                     const errorData = await res.json().catch(() => ({ error: res.statusText }));
                     list.innerHTML = `<div style="padding:20px; color:var(--danger);">Error: ${errorData.error || 'Failed to load commits'}</div>`;
                     setStatus(errorData.error || 'Failed to load commits', 'error');
-                    return;
+                    return true;
                 }
 
                 const data = await res.json();
                 if (data.error) {
                     list.innerHTML = `<div style="padding:20px; color:var(--danger);">Error: ${data.error}</div>`;
                     setStatus(data.error, 'error');
-                    return;
+                    return true;
                 }
 
-                renderCommits(data.commits);
+                return renderCommits(data.commits);
             } catch (e) {
                 list.innerHTML = `<div style="padding:20px; color:var(--text-secondary);">Failed to fetch commits</div>`;
                 setStatus('Failed to fetch commits', 'error');
+                return true;
             }
         }
 
@@ -904,7 +1086,7 @@
             if (commits.length === 0) {
                 list.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-secondary);">No commits found for this file.</div>';
                 setStatus('No commits found for this file.', 'warn');
-                return;
+                return false;
             }
             setStatus(`Loaded ${commits.length} commits. Select one to view.`, 'info');
 
@@ -929,6 +1111,8 @@
 
                 list.appendChild(item);
             });
+
+            return true;
         }
 
         document.getElementById('loadCommitBtn').onclick = async () => {
@@ -975,13 +1159,15 @@
             document.getElementById('gitModal').style.display = 'none';
         }
 
-        document.getElementById('compareForm').addEventListener('submit', (e) => {
-            if (!(hasPathSelection('old') && hasPathSelection('new'))) {
-                e.preventDefault();
+        document.getElementById('compareForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!(hasSelection('old') && hasSelection('new'))) {
                 showToast('Select both OLD and NEW files before comparing.', 'error');
                 return;
             }
+            await enforceOldIsEarlierSelection();
             showLoadingOverlay('Converting & Comparing...', 'This may take a few moments for large files.', 'compare');
+            e.target.submit();
         });
 
         // Set up click handlers for drop zones
@@ -997,6 +1183,9 @@
             pickFile('new');
         });
 
+        setupDropZone('old');
+        setupDropZone('new');
+        setupGlobalDropTargets();
         checkDependencyHealth();
         updateCompareButtonState();
     </script>

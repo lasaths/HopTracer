@@ -57,7 +57,7 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon_colored.png" Color="#020817" />
+		<MauiIcon Include="Resources\AppIcon\hoptrace_logo.png" Color="#020817" />
 
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\Splash\hoptrace_logo_noshadow.png" Color="#0f1115" BaseSize="128,128" />

@@ -9,6 +9,7 @@ namespace HopTracer.Core.Services;
 public class Differ : IDiffer
 {
     private readonly ILogger<Differ> _logger;
+    private const double MovementComparisonTolerance = 0.05;
     private static readonly HashSet<string> ScriptPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "ScriptSource", "Code", "Script", "Expression",
@@ -140,17 +141,42 @@ public class Differ : IDiffer
                 node.InRemoved = stats.InRemoved;
                 node.OutAdded = stats.OutAdded;
                 node.OutRemoved = stats.OutRemoved;
+                var hasConnectionChanges = (stats.InAdded + stats.InRemoved + stats.OutAdded + stats.OutRemoved) > 0;
 
                 if (node.Status == "same" &&
-                    (stats.InAdded > 0 || stats.InRemoved > 0 || stats.OutAdded > 0 || stats.OutRemoved > 0))
+                    hasConnectionChanges)
                 {
                     node.Status = "modified";
                 }
 
-                if (node.RiskScore > 0 && (stats.InAdded + stats.InRemoved + stats.OutAdded + stats.OutRemoved) > 0 && !node.RiskReasons.Contains("Connection changes"))
+                if (!hasConnectionChanges)
+                {
+                    continue;
+                }
+
+                if (node.RiskScore == 0)
+                {
+                    node.RiskScore = 15;
+                }
+
+                if (!node.RiskReasons.Contains("Connection changes"))
                 {
                     node.RiskReasons.Add("Connection changes");
                 }
+            }
+        }
+
+        foreach (var node in result.Nodes)
+        {
+            if (!string.Equals(node.Status, "modified", StringComparison.Ordinal) || node.RiskScore > 0)
+            {
+                continue;
+            }
+
+            node.RiskScore = 15;
+            if (!node.RiskReasons.Contains("Node modified"))
+            {
+                node.RiskReasons.Add("Node modified");
             }
         }
 
@@ -301,8 +327,8 @@ public class Differ : IDiffer
 
     private Node BuildMergedNode(Node nOld, Node nNew)
     {
-        var dx = nNew.X - nOld.X;
-        var dy = nNew.Y - nOld.Y;
+        var dx = NormalizeMovement(nNew.X - nOld.X);
+        var dy = NormalizeMovement(nNew.Y - nOld.Y);
         var modified = nOld.Name != nNew.Name || nOld.Nickname != nNew.Nickname;
 
         var mergedInputs = DiffPorts(nOld.Inputs, nNew.Inputs);
@@ -499,7 +525,7 @@ public class Differ : IDiffer
             reasons.Add("Cluster internals changed");
         }
 
-        if (target.Dx != 0 || target.Dy != 0)
+        if (HasSignificantMovement(target.Dx, target.Dy))
         {
             score += 10;
             reasons.Add("Component moved");
@@ -508,6 +534,16 @@ public class Differ : IDiffer
         score = Math.Min(score, 100);
         target.RiskScore = score;
         target.RiskReasons = reasons;
+    }
+
+    private static bool HasSignificantMovement(double dx, double dy)
+    {
+        return Math.Abs(dx) >= MovementComparisonTolerance || Math.Abs(dy) >= MovementComparisonTolerance;
+    }
+
+    private static double NormalizeMovement(double delta)
+    {
+        return Math.Abs(delta) < MovementComparisonTolerance ? 0 : delta;
     }
 
     private static bool HasClusterHashChange(Dictionary<string, string> oldProps, Dictionary<string, string> newProps)
@@ -697,11 +733,29 @@ internal class EdgeComparer : IEqualityComparer<Edge>
     {
         if (ReferenceEquals(x, y)) return true;
         if (x is null || y is null) return false;
-        return x.Source == y.Source && x.SourcePort == y.SourcePort && x.Target == y.Target && x.TargetPort == y.TargetPort;
+
+        return string.Equals(NormalizeEdgeToken(x.Source), NormalizeEdgeToken(y.Source), StringComparison.Ordinal) &&
+               string.Equals(NormalizeEdgeToken(x.SourcePort), NormalizeEdgeToken(y.SourcePort), StringComparison.Ordinal) &&
+               string.Equals(NormalizeEdgeToken(x.Target), NormalizeEdgeToken(y.Target), StringComparison.Ordinal) &&
+               string.Equals(NormalizeEdgeToken(x.TargetPort), NormalizeEdgeToken(y.TargetPort), StringComparison.Ordinal);
     }
 
     public int GetHashCode(Edge obj)
     {
-        return HashCode.Combine(obj.Source, obj.SourcePort, obj.Target, obj.TargetPort);
+        return HashCode.Combine(
+            NormalizeEdgeToken(obj.Source),
+            NormalizeEdgeToken(obj.SourcePort),
+            NormalizeEdgeToken(obj.Target),
+            NormalizeEdgeToken(obj.TargetPort));
+    }
+
+    private static string NormalizeEdgeToken(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return string.Empty;
+        }
+
+        return token.Trim().Replace("{", string.Empty, StringComparison.Ordinal).Replace("}", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
     }
 }

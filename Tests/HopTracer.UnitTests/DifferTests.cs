@@ -254,4 +254,147 @@ public class DifferTests
         Assert.Equal("same", detailed.Edges[0].Status);
         Assert.Contains(detailed.Diagnostics, d => d.Code == "NODE_IDENTITY_FALLBACK");
     }
+
+    [Fact]
+    public void DiffDetailed_ConnectionOnlyChangesStillReceiveRisk()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Source", Outputs = new List<Port> { new() { Id = "A:out:0", Name = "Out", Kind = "output" } } },
+                ["B"] = new() { Id = "B", Name = "Panel", Inputs = new List<Port> { new() { Id = "B:in:0", Name = "In", Kind = "input" } } },
+                ["C"] = new() { Id = "C", Name = "Panel", Inputs = new List<Port> { new() { Id = "C:in:0", Name = "In", Kind = "input" } } }
+            },
+            Edges = new List<Edge>
+            {
+                new() { Source = "A", SourcePort = "A:out:0", Target = "B", TargetPort = "B:in:0", Status = "same" }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Source", Outputs = new List<Port> { new() { Id = "A:out:0", Name = "Out", Kind = "output" } } },
+                ["B"] = new() { Id = "B", Name = "Panel", Inputs = new List<Port> { new() { Id = "B:in:0", Name = "In", Kind = "input" } } },
+                ["C"] = new() { Id = "C", Name = "Panel", Inputs = new List<Port> { new() { Id = "C:in:0", Name = "In", Kind = "input" } } }
+            },
+            Edges = new List<Edge>
+            {
+                new() { Source = "A", SourcePort = "A:out:0", Target = "C", TargetPort = "C:in:0", Status = "same" }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var nodes = detailed.Nodes.Where(n => n.Id is "A" or "B" or "C").ToDictionary(n => n.Id, StringComparer.Ordinal);
+
+        foreach (var id in new[] { "A", "B", "C" })
+        {
+            Assert.Equal("modified", nodes[id].Status);
+            Assert.Equal(15, nodes[id].RiskScore);
+            Assert.Contains("Connection changes", nodes[id].RiskReasons);
+        }
+    }
+
+    [Fact]
+    public void DiffDetailed_SmallMovementBelowTolerance_IsRoundedOut()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Slider", X = 100.00, Y = 200.00 }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Slider", X = 100.04, Y = 200.04 }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var node = detailed.Nodes.Single(n => n.Id == "A");
+
+        Assert.Equal("same", node.Status);
+        Assert.Equal(0, node.RiskScore);
+        Assert.Equal(0, node.Dx);
+        Assert.Equal(0, node.Dy);
+        Assert.DoesNotContain("Component moved", node.RiskReasons);
+    }
+
+    [Fact]
+    public void DiffDetailed_ModifiedNodesAlwaysHaveRiskScore()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Panel", Properties = new Dictionary<string, string> { ["Value"] = "1" } },
+                ["B"] = new() { Id = "B", Name = "Relay", Inputs = new List<Port> { new() { Id = "B:in:0", Name = "In", Kind = "input" } } }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Panel", Properties = new Dictionary<string, string> { ["Value"] = "2" } },
+                ["B"] = new() { Id = "B", Name = "Relay", Inputs = new List<Port> { new() { Id = "B:in:0", Name = "In", Kind = "input" } } }
+            },
+            Edges = new List<Edge>
+            {
+                new() { Source = "A", SourcePort = "A:out:0", Target = "B", TargetPort = "B:in:0", Status = "same" }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var modifiedNodes = detailed.Nodes.Where(n => n.Status == "modified").ToList();
+
+        Assert.NotEmpty(modifiedNodes);
+        Assert.All(modifiedNodes, node => Assert.True(node.RiskScore > 0));
+    }
+
+    [Fact]
+    public void DiffDetailed_DoesNotFlagConnectionChanges_ForBraceOrCaseOnlyEdgeIdDifferences()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Source", Outputs = new List<Port> { new() { Id = "out-guid", Name = "Out", Kind = "output" } } },
+                ["B"] = new() { Id = "B", Name = "Merge", Inputs = new List<Port> { new() { Id = "in-guid", Name = "In", Kind = "input" } } }
+            },
+            Edges = new List<Edge>
+            {
+                new() { Source = "{A}", SourcePort = "{OUT-GUID}", Target = "{B}", TargetPort = "{IN-GUID}", Status = "same" }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new() { Id = "A", Name = "Source", Outputs = new List<Port> { new() { Id = "out-guid", Name = "Out", Kind = "output" } } },
+                ["B"] = new() { Id = "B", Name = "Merge", Inputs = new List<Port> { new() { Id = "in-guid", Name = "In", Kind = "input" } } }
+            },
+            Edges = new List<Edge>
+            {
+                new() { Source = "a", SourcePort = "out-guid", Target = "b", TargetPort = "in-guid", Status = "same" }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var nodeA = detailed.Nodes.Single(n => n.Id == "A");
+        var nodeB = detailed.Nodes.Single(n => n.Id == "B");
+
+        Assert.Equal("same", nodeA.Status);
+        Assert.Equal("same", nodeB.Status);
+        Assert.Equal(0, nodeA.RiskScore);
+        Assert.Equal(0, nodeB.RiskScore);
+        Assert.All(detailed.Edges, e => Assert.Equal("same", e.Status));
+    }
 }

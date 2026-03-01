@@ -1,5 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui.LifecycleEvents;
 using System.Diagnostics;
+#if WINDOWS
+using Microsoft.UI.Windowing;
+using WinRT.Interop;
+#endif
 
 namespace HopTracer.Maui;
 
@@ -20,6 +25,26 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
+
+#if WINDOWS
+		builder.ConfigureLifecycleEvents(events =>
+		{
+			events.AddWindows(windows =>
+			{
+				windows.OnWindowCreated(window =>
+				{
+					var hwnd = WindowNative.GetWindowHandle(window);
+					var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+					var appWindow = AppWindow.GetFromWindowId(windowId);
+					var iconPath = Path.Combine(AppContext.BaseDirectory, "HopTracer.ico");
+					if (File.Exists(iconPath))
+					{
+						appWindow.SetIcon(iconPath);
+					}
+				});
+			});
+		});
+#endif
 
 #if DEBUG
 		builder.Logging.AddDebug();

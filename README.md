@@ -10,139 +10,259 @@
 [![CI](https://github.com/lasaths/HopTracer/actions/workflows/build.yml/badge.svg)](https://github.com/lasaths/HopTracer/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/lasaths/HopTracer)](https://github.com/lasaths/HopTracer/releases)
 
-HopTracer is a desktop tool designed to help architects and computational designers visualize changes in their Grasshopper definitions. It provides a clear, interactive comparison between two versions of a file, highlighting what has been added, removed, or modified.
+HopTracer is a Windows desktop diff tool for Grasshopper definitions (`.gh`, `.ghx`).
+It compares two versions, renders an interactive graph diff, and surfaces risk-focused change diagnostics for review.
 
-## Features
+## What Works Today
 
-* **Visual Diffing**: See added, removed, and modified components on an interactive canvas.
-* **Git Integration**: View commit history for a file and compare against previous versions.
-* **Portable**: Self-contained Windows package with no external .NET runtime dependency.
-* **Interactive UI**: Pan, zoom, filter by change type, and search for components.
-* **File Format Support**: Works with both binary `.gh` and XML `.ghx` files.
+### Input and Compare Flows
+- Start screen supports drag-and-drop at launch for both **OLD** and **NEW** files.
+- Native file picker support for local path-based workflows.
+- Accepts both `.ghx` and `.gh`.
+- Compares:
+  - file vs file
+  - file vs Git commit
+  - commit vs commit (via source selection in diff flow)
+- File validation enforces extension and size constraints (100 MB upload limit in compare endpoint).
 
-![HopTracer UI](Tests/data/gh_ui_ports.png)
+### Diff Engine
+- Node statuses: `same`, `added`, `removed`, `modified`.
+- Edge statuses: `same`, `added`, `removed`.
+- Port-level diffs:
+  - added/removed/modified ports
+  - value change tracking (`ValueOld`, `ValueNew`, `ValueChanged`)
+  - wire display mode propagation
+- Connection change accounting per node:
+  - `InAdded`, `InRemoved`, `OutAdded`, `OutRemoved`
+- Fallback node identity matching when GUIDs churn:
+  - name/nickname, topology, port schema, distance, and metadata heuristics
+- Edge identity normalization avoids false wire diffs from token formatting differences:
+  - case-insensitive handling
+  - `{GUID}` vs `GUID` normalization
+- Movement tolerance guardrail:
+  - deltas below `0.05` are normalized to zero
+- Risk scoring with reasons and summary buckets:
+  - critical/high/medium/low summary
+  - top-risk node list
+  - invariant: `modified` nodes are emitted with non-zero risk
+
+### Parser and Data Extraction
+- Parses `.ghx` object graphs into nodes/edges with geometry and metadata.
+- `.gh` conversion to `.ghx` using `GH_IO.dll` (reflection-based loading).
+- Extracts common component properties including values and script-like fields.
+- Parses both modern and legacy parameter schemas (`InputParam/OutputParam`, `param_input/param_output`).
+- Group extraction:
+  - group node detection
+  - member list extraction (`GroupMemberIds`)
+- Cluster support:
+  - cluster payload detection
+  - hash and size extraction
+  - recursive cluster preview graph extraction with limits
+  - cluster diagnostics (parsed/failed/depth-limited counters)
+
+### Diff Viewer (Web UI inside Desktop App)
+- Interactive canvas:
+  - pan, zoom, fit-to-view
+  - minimap
+  - node/edge coloring by status
+- Left panel:
+  - search
+  - status filters (`all`, `added`, `removed`, `modified`)
+  - component list sorting:
+    - A-Z
+    - Z-A
+    - distance from origin
+    - data size (with fallback property-size estimation)
+  - optional visibility toggles for ports and groups
+- Bottom controls:
+  - wire visibility threshold slider
+  - old/new version interpolation slider
+- Inspector panel:
+  - component metadata
+  - connection deltas
+  - movement delta
+  - risk score/reasons
+  - component property value comparisons
+- Script Diff tab for script-capable nodes.
+- Cluster internals preview tab with internal graph diff rendering.
+- Source picker modal in diff view:
+  - swap old/new source by file or Git commit.
+- Large-model handling:
+  - chunked normalization/loading
+  - viewport culling mode with performance indicator
+
+### Git and Review Features
+- Git integration:
+  - detect repository status
+  - list commits touching a file (`--follow`)
+  - retrieve file content at selected commit
+  - commit metadata includes author, age, and file size
+- Baseline workflows (API):
+  - save baseline snapshot
+  - compare against baseline using fingerprint + risk summary
+- Forensic report generation (API):
+  - signed JSON report
+  - HTML report artifact
+  - includes diagnostics and top risks
+
+### Desktop Host and Packaging
+- .NET MAUI host app with embedded ASP.NET Core backend + WebView.
+- Embedded static web assets for portable deployment.
+- Self-contained portable Windows publish output.
+- Microsoft Store/MSIX build scripts and readiness checks included.
+- Startup update check against latest GitHub release (cached).
+
+## Current Gaps / Missing Pieces
+
+- Baseline/report actions are implemented server-side, but corresponding UI buttons are not currently exposed in the default diff sidebar.
+- `toggle-changed-edges` logic exists in viewer code, but the checkbox is not currently present in visible markup.
+- Official build/distribution path is Windows-focused (MAUI project currently targets Windows in active config).
+- Full `.gh` conversion and best-effort cluster archive decoding depend on `GH_IO.dll` availability.
+- Cluster internals can still be unavailable for some archives/environments (diagnostics are surfaced when this happens).
 
 ## Installation
 
 1. Download the latest release from the [Releases](https://github.com/lasaths/HopTracer/releases) page.
 2. Extract `HopTracer-Windows-x64.zip`.
-3. Ensure `GH_IO.dll` is available (see **Required Dependency: GH_IO.dll** below).
-4. Run `HopTracer.exe` from the extracted `HopTracer_Portable` folder.
+3. Run `HopTracer.exe` from `HopTracer_Portable`.
 
-No .NET runtime installation is required.
+No separate .NET runtime installation is required for release builds.
 
-### Required Dependency: `GH_IO.dll`
+### Dependency: `GH_IO.dll`
 
-HopTracer requires Grasshopper's `GH_IO.dll` at runtime.
+`GH_IO.dll` is required for:
+- `.gh` to `.ghx` conversion
+- enhanced cluster archive decoding paths
 
-How to satisfy this requirement:
+It is not required for plain `.ghx`-only comparisons.
 
-1. Install Rhino 7 or Rhino 8 (recommended), which provides `GH_IO.dll`.
-2. If you are building from source, run:
-   ```powershell
-   .\scripts\setup_dependencies.ps1
-   ```
-3. If auto-discovery fails, manually copy `GH_IO.dll` from one of:
-   - `C:\Program Files\Rhino 8\Plug-ins\Grasshopper\GH_IO.dll`
-   - `C:\Program Files\Rhino 7\Plug-ins\Grasshopper\GH_IO.dll`
-   - `C:\Program Files\Rhino 6\Plug-ins\Grasshopper\GH_IO.dll`
-   into:
-   - `Source\HopTracer.Web\tools\` (source builds), or
-   - the same directory as `HopTracer.exe` (portable/runtime scenario).
+To provision it automatically:
+
+```powershell
+.\scripts\setup_dependencies.ps1
+```
+
+Script search locations:
+- `C:\Program Files\Rhino 8\Plug-ins\Grasshopper\GH_IO.dll`
+- `C:\Program Files\Rhino 7\Plug-ins\Grasshopper\GH_IO.dll`
+- `C:\Program Files\Rhino 6\Plug-ins\Grasshopper\GH_IO.dll`
 
 ## Usage
 
-1. **Launch the App**: Open `HopTracer.exe` from the extracted `HopTracer_Portable` folder.
-2. **Select Files**:
-   * Drag your "Old" file into the left box (supports both `.gh` and `.ghx`).
-   * Drag your "New" file into the right box.
-   * *Optional*: If the file is in a Git repo, click "Select from Git History" to pick a previous commit.
-3. **Compare**: Click "Compare Files".
-4. **Explore**:
-   * Use the sidebar to filter changes (Added, Removed, Modified).
-   * Click nodes to see property changes.
-   * Use the "Wire Visibility" slider to hide long wires for cleaner viewing.
+1. Launch `HopTracer.exe`.
+2. At startup, select files using either:
+   - drag and drop, or
+   - click each drop zone for native file picker.
+3. (Optional) For old-file Git workflows, choose from Git history.
+4. Click **Compare Files**.
+5. Explore results:
+   - filter/search/sort components
+   - click nodes for details, script diff, and cluster internals
+   - use wire/version sliders for visual analysis
 
-## Credits
+## Build From Source
 
-* **GH to GHX Conversion**: Binary `.gh` to XML `.ghx` conversion functionality adapted from [GhToGhx](https://bitbucket.org/rilgh/ghtoghx/wiki/Home) by rilgh.
+### Prerequisites
+- .NET 10 SDK
+- Visual Studio 2022 (17.12+) or VS Code
+- Windows 10/11
+- Rhino 7/8 optional (or manual `GH_IO.dll`) for `.gh` conversion support
 
-## For Developers
-
-This section contains technical details for those interested in the backend or contributing to the project.
-
-### Architecture
-
-The project is built using **.NET 10** and **.NET MAUI** for Windows desktop support. It uses a hybrid approach where the UI is rendered via a local ASP.NET Core server hosting a web-based visualization.
-
-* **Core**: Handles parsing of `.gh`/`.ghx` files and the diffing logic.
-* **Web**: Serves the HTML/JS visualization and API endpoints.
-* **MAUI**: Wraps the web application in a native desktop window using WebView2.
-
-### Building from Source
-
-#### Prerequisites
-
-* .NET 10 SDK
-* Visual Studio 2022 or VS Code
-* Windows 10/11 (for MAUI Windows target)
-* Rhino 7/8 (or Rhino 6) so `GH_IO.dll` is available
-
-#### Steps
-
-1. Clone the repository: `git clone https://github.com/lasaths/HopTracer.git`
-2. Run dependency setup: `.\scripts\setup_dependencies.ps1`
-3. Open `Source/HopTracer.sln`.
-4. Build the `HopTracer` project.
-5. Run the application.
-
-#### Production Build
-
-To create a portable release package:
+### Local Build
 
 ```powershell
 .\scripts\build.ps1
 ```
 
-**Options:**
-- `-SkipClean` - Keep previous builds
-- `-SkipTests` - Skip running tests
+Options:
+- `-SkipClean`
+- `-SkipTests`
 
-The build creates:
+Outputs:
+- `Release\HopTracer_Portable\`
+- `Release\HopTracer-Windows-x64.zip`
 
-- `Release\HopTracer_Portable\` (self-contained app folder)
-- `Release\HopTracer-Windows-x64.zip` (GitHub-ready release artifact)
-
-**Note**: The package includes the full .NET 10 runtime, MAUI framework, ASP.NET Core server, and all dependencies, so it works on Windows 10+ without a preinstalled runtime.
-
-### Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Community & Security
-
-- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- Security Policy: [SECURITY.md](SECURITY.md)
-
-### Microsoft Store Packaging
-
-Use the MSIX build script to create Store-ready artifacts:
+### Microsoft Store / MSIX
 
 ```powershell
 .\scripts\build_msix.ps1
 ```
 
-Detailed Store submission steps are documented in [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md).
+Optional strict readiness check:
 
-## Changelog
+```powershell
+.\scripts\build_msix.ps1 -RequireStoreReadiness
+```
 
-See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
+Store documentation:
+- [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md)
+
+## Architecture Overview
+
+- `Source/HopTracer`:
+  - MAUI desktop host
+  - launches embedded ASP.NET Core server
+  - hosts viewer in WebView
+- `Source/HopTracer.Web`:
+  - controllers and static web UI (`index.html`, `diff_viewer.html`)
+  - compare, git, review/baseline/report endpoints
+- `Source/HopTracer.Core`:
+  - parser (`GhxParser`)
+  - diff engine (`Differ`)
+  - Git wrapper (`GitWrapper`)
+  - conversion (`ConverterService`)
+- `Tests/HopTracer.UnitTests`:
+  - parser, differ, and validation tests
+
+## API Surface (Internal App Endpoints)
+
+- Compare:
+  - `POST /compare`
+- Git:
+  - `POST /git/check`
+  - `POST /git/commits`
+  - `POST /git/compare`
+  - `POST /git/view_diff`
+  - `POST /git/file_info`
+- File picker:
+  - `GET /api/filepicker/pick-native-file`
+  - `GET /api/filepicker/last-file-path`
+  - `POST /api/filepicker/capture-file-path`
+- Review:
+  - `POST /review/baseline/save`
+  - `POST /review/baseline/compare`
+  - `POST /review/report/forensic`
+  - `POST /review/report/from_diff`
+- System:
+  - `GET /system/dependency_health`
+  - `POST /system/pick_file`
+
+## Quality and Tests
+
+Current unit test coverage includes:
+- parser behavior (bounds, legacy params, cluster preview, group extraction)
+- diff behavior (property/connection/cluster changes, identity fallback, risk guardrails)
+- file validation behavior (path validation and sanitization)
+
+Run tests:
+
+```powershell
+dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj
+```
+
+## Contributing and Policies
+
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Security: [SECURITY.md](SECURITY.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE).
 
-## Acknowledgments
+## Credits
 
-* Built with [.NET MAUI](https://dotnet.microsoft.com/apps/maui) and [ASP.NET Core](https://dotnet.microsoft.com/apps/aspnet)
-* GH/GHX conversion based on [GhToGhx](https://bitbucket.org/rilgh/ghtoghx/wiki/Home) by David Rutten
+- Built with [.NET MAUI](https://dotnet.microsoft.com/apps/maui) and [ASP.NET Core](https://dotnet.microsoft.com/apps/aspnet)
+- GH/GHX conversion approach based on [GhToGhx](https://bitbucket.org/rilgh/ghtoghx/wiki/Home)
+- Development and documentation include AI-assisted workflows with maintainer review

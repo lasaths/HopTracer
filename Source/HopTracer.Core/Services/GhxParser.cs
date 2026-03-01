@@ -516,6 +516,31 @@ public class GhxParser : IGhxParser
             if (!string.IsNullOrEmpty(code)) result["ScriptSource"] = code;
         }
 
+        // Script components may store code under Script/Text (often as Base64).
+        var scriptChunk = chunk.Descendants("chunk")
+            .FirstOrDefault(c => string.Equals(c.Attribute("name")?.Value, "Script", StringComparison.OrdinalIgnoreCase));
+        if (scriptChunk != null)
+        {
+            var rawScriptText = GetDirectValue(scriptChunk, "Text") ?? GetValue(scriptChunk, "Text");
+            var normalizedScript = NormalizeScriptText(rawScriptText);
+            if (!string.IsNullOrWhiteSpace(normalizedScript))
+            {
+                result["ScriptSource"] = normalizedScript;
+            }
+        }
+
+        // Fallback: some script components store code in top-level Text without a Script chunk.
+        if (!result.ContainsKey("ScriptSource") &&
+            result.TryGetValue("Text", out var rawText) &&
+            LooksLikeScriptContainer(chunk, result))
+        {
+            var normalizedScript = NormalizeScriptText(rawText);
+            if (!string.IsNullOrWhiteSpace(normalizedScript))
+            {
+                result["ScriptSource"] = normalizedScript;
+            }
+        }
+
         // 3. Panel contents (FIX: Ensure UserText is captured correctly)
         // Panels usually store 'UserText' in 'PanelProperties'
         var panelProps = chunk.Descendants("chunk")
@@ -717,6 +742,8 @@ public class GhxParser : IGhxParser
                         W = n.W,
                         H = n.H,
                         Properties = BuildClusterPreviewProperties(n.Properties),
+                        Inputs = BuildClusterPreviewPorts(n.Inputs),
+                        Outputs = BuildClusterPreviewPorts(n.Outputs),
                         IsCluster = IsClusterNode(n.Properties),
                         ClusterHash = GetPropertyValue(n.Properties, "ClusterHash"),
                         NestedClusterCount = CountNestedClusters(n.Properties),
@@ -728,7 +755,9 @@ public class GhxParser : IGhxParser
                     .Select(e => new ClusterPreviewEdge
                     {
                         Source = e.Source,
-                        Target = e.Target
+                        SourcePort = e.SourcePort,
+                        Target = e.Target,
+                        TargetPort = e.TargetPort
                     })
                     .ToList(),
                 Truncated = totalNodes > MaxClusterPreviewNodes || totalEdges > MaxClusterPreviewEdges,
@@ -840,24 +869,44 @@ public class GhxParser : IGhxParser
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
 
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        // Include full node details for cluster preview inspector, but avoid recursive/noisy preview metadata.
+        var blocked = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "IsGroup",
-            "GroupMemberIds",
-            "GroupColor",
-            "Description"
+            "ClusterPreviewGraph",
+            "ClusterPreviewStatus",
+            "ClusterPreviewMessage",
+            "ClusterPreviewDepth"
         };
 
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var kv in props)
         {
-            if (allowed.Contains(kv.Key))
+            if (!blocked.Contains(kv.Key))
             {
                 result[kv.Key] = kv.Value;
             }
         }
 
         return result;
+    }
+
+    private static List<ClusterPreviewPort> BuildClusterPreviewPorts(List<Port> ports)
+    {
+        if (ports == null || ports.Count == 0)
+        {
+            return new List<ClusterPreviewPort>();
+        }
+
+        return ports.Select(p => new ClusterPreviewPort
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Nickname = p.Nickname,
+            Kind = p.Kind,
+            Type = p.Type,
+            Value = p.Value,
+            WireDisplay = p.WireDisplay
+        }).ToList();
     }
 
     private static string? GetPropertyValue(Dictionary<string, string> props, string key)
@@ -881,6 +930,97 @@ public class GhxParser : IGhxParser
                lower.Contains("python") ||
                lower.Contains("csharp") ||
                lower.Contains("expression");
+    }
+
+    private static bool LooksLikeScriptContainer(XElement chunk, Dictionary<string, string> values)
+    {
+        if (values.Keys.Any(IsScriptLikeKey))
+        {
+            return true;
+        }
+
+        var title = GetDirectValue(chunk, "Title") ?? string.Empty;
+        var name = GetDirectValue(chunk, "Name") ?? string.Empty;
+        var nick = GetDirectValue(chunk, "NickName") ?? string.Empty;
+        var combined = $"{title} {name} {nick}".ToLowerInvariant();
+
+        return combined.Contains("script", StringComparison.Ordinal) ||
+               combined.Contains("c#", StringComparison.Ordinal) ||
+               combined.Contains("csharp", StringComparison.Ordinal) ||
+               combined.Contains("python", StringComparison.Ordinal) ||
+               combined.Contains("ghpython", StringComparison.Ordinal) ||
+               combined.Contains("vb", StringComparison.Ordinal);
+    }
+
+    private static string? NormalizeScriptText(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var trimmed = raw.Trim();
+        if (TryDecodeBase64ToUtf8(trimmed, out var decoded) && IsMostlyTextual(decoded))
+        {
+            return decoded;
+        }
+
+        if (IsMostlyTextual(trimmed))
+        {
+            return trimmed;
+        }
+
+        return null;
+    }
+
+    private static bool TryDecodeBase64ToUtf8(string text, out string decoded)
+    {
+        decoded = string.Empty;
+        try
+        {
+            var normalized = text.Replace("\r", string.Empty, StringComparison.Ordinal)
+                                 .Replace("\n", string.Empty, StringComparison.Ordinal)
+                                 .Trim();
+            var bytes = Convert.FromBase64String(normalized);
+            decoded = Encoding.UTF8.GetString(bytes).Trim('\0', '\uFEFF');
+            return !string.IsNullOrWhiteSpace(decoded);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsMostlyTextual(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var total = 0;
+        var printable = 0;
+        foreach (var ch in text)
+        {
+            total++;
+            if (ch is '\r' or '\n' or '\t')
+            {
+                printable++;
+                continue;
+            }
+
+            if (!char.IsControl(ch))
+            {
+                printable++;
+            }
+        }
+
+        if (total == 0)
+        {
+            return false;
+        }
+
+        return (printable / (double)total) >= 0.9;
     }
 
     private static string? TryDecodeClusterXmlText(byte[] bytes)
@@ -1024,6 +1164,8 @@ public class GhxParser : IGhxParser
         public double W { get; set; }
         public double H { get; set; }
         public Dictionary<string, string> Properties { get; set; } = new();
+        public List<ClusterPreviewPort> Inputs { get; set; } = new();
+        public List<ClusterPreviewPort> Outputs { get; set; } = new();
         public bool IsCluster { get; set; }
         public string? ClusterHash { get; set; }
         public int NestedClusterCount { get; set; }
@@ -1033,7 +1175,20 @@ public class GhxParser : IGhxParser
     private sealed class ClusterPreviewEdge
     {
         public string Source { get; set; } = string.Empty;
+        public string SourcePort { get; set; } = string.Empty;
         public string Target { get; set; } = string.Empty;
+        public string TargetPort { get; set; } = string.Empty;
+    }
+
+    private sealed class ClusterPreviewPort
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Nickname { get; set; } = string.Empty;
+        public string Kind { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string? Value { get; set; }
+        public int WireDisplay { get; set; }
     }
 
     private sealed class ParseDiagnostics

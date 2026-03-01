@@ -49,6 +49,7 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses
 1.  Open `Source/HopTracer.sln`.
 2.  Set **HopTracer** as the startup project.
 3.  Run (F5).
+4.  For every code-change cycle, run `.\scripts\build.ps1` before handoff/commit.
 
 ### Creating a Portable Release
 Use the build script:
@@ -122,6 +123,12 @@ This will clean, build, test, and create a portable executable in `Release/HopTr
   - Using `-p:PublishSingleFile=true` causes `ClassFactory cannot supply requested class` error
   - The application must be distributed as a multi-file package (~575 files)
   - All files in the output directory are required for the app to run
+
+### Diff Engine Guardrails (Feb 2026)
+- Movement noise tolerance is `0.05` units: deltas below this are normalized to `0` so `Delta 0.0, 0.0` is not treated as meaningful movement.
+- Invariant: any node emitted with `status = modified` must have `RiskScore > 0`.
+- Connection-only modifications receive a low risk floor (`15`) with reason `Connection changes` to avoid `modified + risk 0` output.
+- Edge identity comparison normalizes GUID tokens (trim, remove `{}` braces, lowercase) so format-only ID differences do not create false wire add/remove changes.
 
 ## Code Organization
 ```
