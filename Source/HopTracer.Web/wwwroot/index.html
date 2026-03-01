@@ -581,10 +581,48 @@
 
         let currentGitPath = null;
         let selectedCommit = null;
+        let sessionToken = null;
         const gitStatus = document.getElementById('gitStatus');
         const selectedGitFileLabel = document.getElementById('selectedGitFile');
         const selectedGitFileMeta = document.getElementById('selectedGitFileMeta');
         const compareBtn = document.getElementById('compareBtn');
+
+        async function ensureSessionToken() {
+            if (sessionToken) return sessionToken;
+
+            const response = await fetch('/system/session_token');
+            if (!response.ok) {
+                throw new Error('Failed to initialize session token.');
+            }
+
+            const payload = await response.json().catch(() => ({}));
+            sessionToken = String(payload.token || '');
+            if (!sessionToken) {
+                throw new Error('Session token is missing.');
+            }
+
+            return sessionToken;
+        }
+
+        async function authFetch(url, options = {}) {
+            const token = await ensureSessionToken();
+            const headers = new Headers(options.headers || {});
+            headers.set('X-HopTracer-Session', token);
+            return fetch(url, { ...options, headers });
+        }
+
+        async function ensureFormSessionToken(form) {
+            if (!form) return;
+            const token = await ensureSessionToken();
+            let input = form.querySelector('input[name="_session_token"]');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = '_session_token';
+                form.appendChild(input);
+            }
+            input.value = token;
+        }
 
         function formatBytes(bytes) {
             const value = Number(bytes);
@@ -603,7 +641,7 @@
         async function fetchFileInfo(path) {
             if (!path) return null;
             try {
-                const res = await fetch('/git/file_info', {
+                const res = await authFetch('/git/file_info', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path })
@@ -739,7 +777,7 @@
 
         async function checkDependencyHealth() {
             try {
-                const res = await fetch('/system/dependency_health');
+                const res = await authFetch('/system/dependency_health');
                 if (!res.ok) return;
                 const data = await res.json();
                 if (data && data.ok === false) {
@@ -825,7 +863,7 @@
             zone.zone.style.cursor = 'wait';
 
             try {
-                const response = await fetch('/api/filepicker/pick-native-file');
+                const response = await authFetch('/api/filepicker/pick-native-file');
 
                 if (response.ok) {
                     const data = await response.json();
@@ -972,7 +1010,7 @@
             if (existing) existing.remove();
 
             try {
-                const res = await fetch('/git/check', {
+                const res = await authFetch('/git/check', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path })
@@ -1036,7 +1074,7 @@
             setStatus('Loading commits…', 'info');
 
             try {
-                const res = await fetch('/git/commits', {
+                const res = await authFetch('/git/commits', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path: path })
@@ -1126,7 +1164,7 @@
             closeGitModal();
 
             try {
-                postData('/git/view_diff', {
+                await postData('/git/view_diff', {
                     path: currentGitPath,
                     hash_old: selectedCommit
                 });
@@ -1138,7 +1176,7 @@
             }
         };
 
-        function postData(url, data) {
+        async function postData(url, data) {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = url;
@@ -1151,6 +1189,7 @@
                 form.appendChild(input);
             }
 
+            await ensureFormSessionToken(form);
             document.body.appendChild(form);
             form.submit();
         }
@@ -1166,6 +1205,7 @@
                 return;
             }
             await enforceOldIsEarlierSelection();
+            await ensureFormSessionToken(e.target);
             showLoadingOverlay('Converting & Comparing...', 'This may take a few moments for large files.', 'compare');
             e.target.submit();
         });
@@ -1186,6 +1226,10 @@
         setupDropZone('old');
         setupDropZone('new');
         setupGlobalDropTargets();
+        ensureSessionToken().catch((err) => {
+            console.error('Session token init failed', err);
+            showToast('Failed to initialize secure session.', 'error');
+        });
         checkDependencyHealth();
         updateCompareButtonState();
     </script>

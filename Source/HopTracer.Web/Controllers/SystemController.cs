@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using HopTracer.Core.Services;
+using HopTracer.Web.Services;
 
 namespace HopTracer.Web.Controllers;
 
@@ -9,11 +10,13 @@ public class SystemController : ControllerBase
 {
     private readonly INativeIntegration _native;
     private readonly IConverterService _converter;
+    private readonly ISessionTokenService _sessionToken;
 
-    public SystemController(INativeIntegration native, IConverterService converter)
+    public SystemController(INativeIntegration native, IConverterService converter, ISessionTokenService sessionToken)
     {
         _native = native;
         _converter = converter;
+        _sessionToken = sessionToken;
     }
 
     [HttpPost("pick_file")]
@@ -28,5 +31,11 @@ public class SystemController : ControllerBase
     {
         var ok = _converter.TryCheckDependencies(out var message);
         return Ok(new { ok, message });
+    }
+
+    [HttpGet("session_token")]
+    public IActionResult SessionToken()
+    {
+        return Ok(new { token = _sessionToken.Token });
     }
 }

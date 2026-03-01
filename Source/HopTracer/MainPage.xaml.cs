@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using HopTracer.Core.Services;
 using HopTracer.Maui.Services;
 using HopTracer.Web.Services;
@@ -36,13 +38,15 @@ public partial class MainPage : ContentPage
     {
         try
         {
-            var port = GetAvailablePort(5000);
-            var url = $"http://localhost:{port}";
+            string? resolvedUrl = null;
 
             _webHost = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseUrls(url);
+                    webBuilder.UseKestrel(options =>
+                    {
+                        options.ListenLocalhost(0);
+                    });
                     
                     // Use Embedded File Provider for single-file portability
                     // In portable builds, wwwroot files are embedded in the main assembly (HopTracer.Maui)
@@ -68,13 +72,14 @@ public partial class MainPage : ContentPage
                         env.WebRootFileProvider = embeddedProvider;
 
                         // Restrict CORS to localhost only for security
-                        app.UseCors(x => x.WithOrigins(url, $"http://127.0.0.1:{port}")
+                        app.UseCors(x => x.SetIsOriginAllowed(IsLoopbackOrigin)
                                           .AllowAnyMethod()
                                           .AllowAnyHeader());
                         
                         app.UseStaticFiles();
 
                         app.UseRouting();
+                        app.UseMiddleware<SessionTokenMiddleware>();
                         app.UseEndpoints(endpoints =>
                         {
                             endpoints.MapControllers();
@@ -98,14 +103,30 @@ public partial class MainPage : ContentPage
                         services.AddSingleton<IFileValidationService, FileValidationService>();
                         services.AddSingleton<IFileSelectionCache, FileSelectionCache>();
                         services.AddSingleton<IAppDataStorageService, AppDataStorageService>();
+                        services.AddSingleton<ITempFileManager, TempFileManager>();
+                        services.AddSingleton<ISessionTokenService, SessionTokenService>();
                     });
                 })
                 .Build();
 
+            _ = _webHost.Services.GetRequiredService<ITempFileManager>();
+            _ = _webHost.Services.GetRequiredService<ISessionTokenService>();
+
             await _webHost.StartAsync();
+
+            var server = _webHost.Services.GetRequiredService<IServer>();
+            var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses;
+            resolvedUrl = addresses?.FirstOrDefault(addr =>
+                addr.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase) ||
+                addr.StartsWith("http://127.0.0.1:", StringComparison.OrdinalIgnoreCase));
+
+            if (string.IsNullOrWhiteSpace(resolvedUrl))
+            {
+                resolvedUrl = "http://localhost:5000";
+            }
             
             // Navigate to localhost
-            DiffWebView.Source = url;
+            DiffWebView.Source = resolvedUrl;
         }
         catch (Exception ex)
         {
@@ -113,17 +134,21 @@ public partial class MainPage : ContentPage
         }
     }
 
-    private int GetAvailablePort(int startingPort)
+    private static bool IsLoopbackOrigin(string? origin)
     {
-        var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
-        var listeners = properties.GetActiveTcpListeners();
-        var port = startingPort;
-
-        while (listeners.Any(x => x.Port == port))
+        if (string.IsNullOrWhiteSpace(origin))
         {
-            port++;
+            return false;
         }
-        return port;
+
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var host = uri.Host;
+        return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task CheckForUpdatesAsync()

@@ -21,6 +21,7 @@ public class CompareController : ControllerBase
     private readonly IFileValidationService _fileValidator;
     private readonly IFileSelectionCache _fileSelectionCache;
     private readonly IAppDataStorageService _storage;
+    private readonly ITempFileManager _tempFiles;
     private const long MaxFileSize = 100 * 1024 * 1024; // 100MB - reasonable limit for GH files
 
     public CompareController(
@@ -31,7 +32,8 @@ public class CompareController : ControllerBase
         IConverterService converter,
         IFileValidationService fileValidator,
         IFileSelectionCache fileSelectionCache,
-        IAppDataStorageService storage)
+        IAppDataStorageService storage,
+        ITempFileManager tempFiles)
     {
         _env = env;
         _logger = logger;
@@ -41,6 +43,7 @@ public class CompareController : ControllerBase
         _fileValidator = fileValidator;
         _fileSelectionCache = fileSelectionCache;
         _storage = storage;
+        _tempFiles = tempFiles;
     }
 
     [HttpPost]
@@ -50,6 +53,8 @@ public class CompareController : ControllerBase
     {
         try
         {
+            using var tempScope = _tempFiles.CreateScope();
+
             string finalPathOld;
             string finalPathNew;
             string sourcePathOld;
@@ -65,7 +70,7 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(pathError);
                 }
-                finalPathOld = StageWorkingCopy(normalizedPath, "old");
+                finalPathOld = StageWorkingCopy(normalizedPath, "old", tempScope);
                 sourcePathOld = normalizedPath;
                 originalFileNameOld = Path.GetFileName(normalizedPath);
                 _fileSelectionCache.Record(normalizedPath);
@@ -86,6 +91,7 @@ public class CompareController : ControllerBase
                 {
                     await file_old.CopyToAsync(stream);
                 }
+                tempScope.Track(finalPathOld);
                 sourcePathOld = finalPathOld;
                 originalFileNameOld = file_old.FileName;
                 _fileSelectionCache.Record(finalPathOld);
@@ -103,7 +109,7 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(pathError);
                 }
-                finalPathNew = StageWorkingCopy(normalizedPath, "new");
+                finalPathNew = StageWorkingCopy(normalizedPath, "new", tempScope);
                 sourcePathNew = normalizedPath;
                 originalFileNameNew = Path.GetFileName(normalizedPath);
                 _fileSelectionCache.Record(normalizedPath);
@@ -124,6 +130,7 @@ public class CompareController : ControllerBase
                 {
                     await file_new.CopyToAsync(stream);
                 }
+                tempScope.Track(finalPathNew);
                 sourcePathNew = finalPathNew;
                 originalFileNameNew = file_new.FileName;
                 _logger.LogInformation("Uploaded new file: {FileName}", file_new.FileName);
@@ -140,7 +147,12 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(dependencyMessage);
                 }
-                finalPathOld = _converter.ConvertGhToGhx(finalPathOld);
+                var convertedPath = _converter.ConvertGhToGhx(finalPathOld);
+                if (!string.Equals(convertedPath, finalPathOld, StringComparison.OrdinalIgnoreCase))
+                {
+                    tempScope.Track(convertedPath);
+                }
+                finalPathOld = convertedPath;
                 _fileSelectionCache.Record(finalPathOld);
             }
 
@@ -150,7 +162,12 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(dependencyMessage);
                 }
-                finalPathNew = _converter.ConvertGhToGhx(finalPathNew);
+                var convertedPath = _converter.ConvertGhToGhx(finalPathNew);
+                if (!string.Equals(convertedPath, finalPathNew, StringComparison.OrdinalIgnoreCase))
+                {
+                    tempScope.Track(convertedPath);
+                }
+                finalPathNew = convertedPath;
                 _fileSelectionCache.Record(finalPathNew);
             }
 
@@ -241,11 +258,12 @@ public class CompareController : ControllerBase
         return Content(html, "text/html");
     }
 
-    private string StageWorkingCopy(string normalizedPath, string sideTag)
+    private string StageWorkingCopy(string normalizedPath, string sideTag, ITempFileScope tempScope)
     {
         var extension = Path.GetExtension(normalizedPath);
         var stagedPath = Path.Combine(_storage.UploadsPath, $"compare_{sideTag}_{Guid.NewGuid():N}{extension}");
         System.IO.File.Copy(normalizedPath, stagedPath, overwrite: true);
+        tempScope.Track(stagedPath);
         return stagedPath;
     }
 }

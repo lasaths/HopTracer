@@ -20,6 +20,7 @@ diff_graph.json
 
 # Uploads directory (temporary file storage)
 uploads/
+%APPDATA%/
 
 # C# / .NET
 bin/

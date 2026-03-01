@@ -13,6 +13,8 @@ builder.Services.AddSingleton<INativeIntegration, HopTracer.Web.Services.Windows
 builder.Services.AddSingleton<IFileValidationService, FileValidationService>();
 builder.Services.AddSingleton<IFileSelectionCache, FileSelectionCache>();
 builder.Services.AddSingleton<IAppDataStorageService, AppDataStorageService>();
+builder.Services.AddSingleton<ITempFileManager, TempFileManager>();
+builder.Services.AddSingleton<ISessionTokenService, SessionTokenService>();
 
 // Health checks for production monitoring
 builder.Services.AddHealthChecks();
@@ -30,10 +32,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Force eager creation so startup stale temp cleanup runs once.
+_ = app.Services.GetRequiredService<ITempFileManager>();
+_ = app.Services.GetRequiredService<ISessionTokenService>();
+
 // Configure the HTTP request pipeline
 app.UseCors();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseMiddleware<SessionTokenMiddleware>();
 app.MapControllers();
 app.MapHealthChecks("/health");
 

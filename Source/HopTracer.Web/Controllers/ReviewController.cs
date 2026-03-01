@@ -19,6 +19,7 @@ public class ReviewController : ControllerBase
     private readonly IConverterService _converter;
     private readonly IFileValidationService _fileValidator;
     private readonly IAppDataStorageService _storage;
+    private readonly ITempFileManager _tempFiles;
 
     public ReviewController(
         ILogger<ReviewController> logger,
@@ -26,7 +27,8 @@ public class ReviewController : ControllerBase
         IDiffer differ,
         IConverterService converter,
         IFileValidationService fileValidator,
-        IAppDataStorageService storage)
+        IAppDataStorageService storage,
+        ITempFileManager tempFiles)
     {
         _logger = logger;
         _parser = parser;
@@ -34,6 +36,7 @@ public class ReviewController : ControllerBase
         _converter = converter;
         _fileValidator = fileValidator;
         _storage = storage;
+        _tempFiles = tempFiles;
     }
 
     [HttpPost("baseline/save")]
@@ -51,13 +54,15 @@ public class ReviewController : ControllerBase
 
         try
         {
+            using var tempScope = _tempFiles.CreateScope();
+
             var baselineDir = _storage.BaselinesPath;
 
             var safeName = SanitizeName(request.Name);
             var snapshotPath = Path.Combine(baselineDir, $"{safeName}.ghx");
             var metadataPath = Path.Combine(baselineDir, $"{safeName}.json");
 
-            var preparedPath = EnsureGhx(normalizedPath);
+            var preparedPath = EnsureGhx(normalizedPath, tempScope);
             System.IO.File.Copy(preparedPath, snapshotPath, overwrite: true);
 
             var graph = _parser.Parse(snapshotPath);
@@ -106,6 +111,8 @@ public class ReviewController : ControllerBase
 
         try
         {
+            using var tempScope = _tempFiles.CreateScope();
+
             var baseline = LoadBaseline(request.Name);
             if (baseline == null)
             {
@@ -117,7 +124,7 @@ public class ReviewController : ControllerBase
                 return NotFound(new { error = $"Baseline snapshot is missing: {baseline.SnapshotPath}" });
             }
 
-            var currentPath = EnsureGhx(normalizedPath);
+            var currentPath = EnsureGhx(normalizedPath, tempScope);
             var oldGraph = _parser.Parse(baseline.SnapshotPath);
             var newGraph = _parser.Parse(currentPath);
             var diff = _differ.DiffDetailed(oldGraph, newGraph);
@@ -163,8 +170,9 @@ public class ReviewController : ControllerBase
 
         try
         {
-            var oldPath = EnsureGhx(normalizedOld);
-            var newPath = EnsureGhx(normalizedNew);
+            using var tempScope = _tempFiles.CreateScope();
+            var oldPath = EnsureGhx(normalizedOld, tempScope);
+            var newPath = EnsureGhx(normalizedNew, tempScope);
 
             var oldGraph = _parser.Parse(oldPath);
             var newGraph = _parser.Parse(newPath);
@@ -259,12 +267,13 @@ public class ReviewController : ControllerBase
         }
     }
 
-    private string EnsureGhx(string normalizedPath)
+    private string EnsureGhx(string normalizedPath, ITempFileScope tempScope)
     {
         var uploadsPath = _storage.UploadsPath;
         var extension = Path.GetExtension(normalizedPath);
         var tempSourcePath = Path.Combine(uploadsPath, $"review_{Guid.NewGuid():N}{extension}");
         System.IO.File.Copy(normalizedPath, tempSourcePath, overwrite: true);
+        tempScope.Track(tempSourcePath);
 
         if (tempSourcePath.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase))
         {
@@ -276,7 +285,13 @@ public class ReviewController : ControllerBase
             throw new InvalidOperationException(dependencyMessage);
         }
 
-        return _converter.ConvertGhToGhx(tempSourcePath);
+        var convertedPath = _converter.ConvertGhToGhx(tempSourcePath);
+        if (!string.Equals(convertedPath, tempSourcePath, StringComparison.OrdinalIgnoreCase))
+        {
+            tempScope.Track(convertedPath);
+        }
+
+        return convertedPath;
     }
 
     private BaselineArtifact? LoadBaseline(string name)
