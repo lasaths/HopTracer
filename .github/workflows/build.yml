@@ -38,10 +38,14 @@ jobs:
       run: dotnet restore Source/HopTracer.sln
 
     - name: Build
-      run: dotnet build Source/HopTracer/HopTracer.csproj --configuration Release --no-restore
+      run: dotnet build Source/HopTracer/HopTracer.csproj --configuration Release --no-restore -warnaserror
 
     - name: Run Tests
-      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj --configuration Release --no-restore
+      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj --configuration Release --no-restore -warnaserror
+
+    - name: Validate Store Manifest Readiness
+      run: ./scripts/check_store_readiness.ps1
+      shell: pwsh
 
     - name: Publish Portable Package
       run: |
