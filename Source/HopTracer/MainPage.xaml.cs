@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using System.Reflection;
 using System.Diagnostics;
+using System.Net;
 
 namespace HopTracer.Maui;
 
@@ -45,7 +46,9 @@ public partial class MainPage : ContentPage
                 {
                     webBuilder.UseKestrel(options =>
                     {
-                        options.ListenLocalhost(0);
+                        // Some Kestrel/Windows combinations reject ListenLocalhost(0).
+                        // Bind explicitly to loopback with an ephemeral port.
+                        options.Listen(IPAddress.Loopback, 0);
                     });
                     
                     // Use Embedded File Provider for single-file portability

@@ -397,4 +397,93 @@ public class DifferTests
         Assert.Equal(0, nodeB.RiskScore);
         Assert.All(detailed.Edges, e => Assert.Equal("same", e.Status));
     }
+
+    [Fact]
+    public void DiffDetailed_DetectsScriptChange_WhenKeyCasingDiffers()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["S"] = new()
+                {
+                    Id = "S",
+                    Name = "C# Script",
+                    Properties = new Dictionary<string, string>
+                    {
+                        ["scriptsource"] = "int x = 1;"
+                    }
+                }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["S"] = new()
+                {
+                    Id = "S",
+                    Name = "C# Script",
+                    Properties = new Dictionary<string, string>
+                    {
+                        ["ScriptSource"] = "int x = 2;"
+                    }
+                }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var node = detailed.Nodes.Single(n => n.Id == "S");
+
+        Assert.Equal("modified", node.Status);
+        Assert.NotNull(node.PropertiesOld);
+        Assert.Equal("int x = 1;", node.PropertiesOld!["ScriptSource"]);
+        Assert.Equal("int x = 2;", node.Properties["ScriptSource"]);
+    }
+
+    [Fact]
+    public void DiffDetailed_CapturesEmptyOldValue_ForNewScriptPropertyOnModifiedNode()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["S"] = new()
+                {
+                    Id = "S",
+                    Name = "Python Script",
+                    X = 0,
+                    Y = 0,
+                    Properties = new Dictionary<string, string>()
+                }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["S"] = new()
+                {
+                    Id = "S",
+                    Name = "Python Script",
+                    X = 10,
+                    Y = 0,
+                    Properties = new Dictionary<string, string>
+                    {
+                        ["ScriptSource"] = "x = 1\nprint(x)"
+                    }
+                }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var node = detailed.Nodes.Single(n => n.Id == "S");
+
+        Assert.Equal("modified", node.Status);
+        Assert.NotNull(node.PropertiesOld);
+        Assert.Equal(string.Empty, node.PropertiesOld!["ScriptSource"]);
+        Assert.Equal("x = 1\nprint(x)", node.Properties["ScriptSource"]);
+    }
 }

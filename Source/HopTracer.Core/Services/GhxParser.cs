@@ -17,8 +17,8 @@ public class GhxParser : IGhxParser
 {
     private readonly ILogger<GhxParser> _logger;
     private const int MaxClusterPreviewDepth = 3;
-    private const int MaxClusterPreviewNodes = 600;
-    private const int MaxClusterPreviewEdges = 2000;
+    // Align cluster preview caps with viewer large-model thresholds to reduce dropped internals.
+    private const int MaxClusterPreviewNodes = 4000;
 
     public GhxParser(ILogger<GhxParser> logger)
     {
@@ -751,7 +751,6 @@ public class GhxParser : IGhxParser
                     })
                     .ToList(),
                 Edges = clusterGraph.Edges
-                    .Take(MaxClusterPreviewEdges)
                     .Select(e => new ClusterPreviewEdge
                     {
                         Source = e.Source,
@@ -760,7 +759,7 @@ public class GhxParser : IGhxParser
                         TargetPort = e.TargetPort
                     })
                     .ToList(),
-                Truncated = totalNodes > MaxClusterPreviewNodes || totalEdges > MaxClusterPreviewEdges,
+                Truncated = totalNodes > MaxClusterPreviewNodes,
                 Depth = clusterDepth
             };
 

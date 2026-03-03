@@ -337,21 +337,32 @@ public class Differ : IDiffer
         var properties = new Dictionary<string, string>(nNew.Properties, StringComparer.Ordinal);
         var propertiesOld = new Dictionary<string, string>(StringComparer.Ordinal);
         var propertiesChanged = false;
+        var includeScriptComparisonBaseline = false;
 
         foreach (var kv in nOld.Properties)
         {
-            if (!properties.ContainsKey(kv.Key))
+            if (!ContainsKeyIgnoreCase(properties, kv.Key))
             {
                 properties[kv.Key] = kv.Value;
             }
 
-            if (nNew.Properties.TryGetValue(kv.Key, out var newVal) && kv.Value != newVal)
+            if (TryGetValueIgnoreCase(nNew.Properties, kv.Key, out var newKey, out var newVal) && kv.Value != newVal)
             {
                 modified = true;
                 propertiesChanged = true;
-                propertiesOld[kv.Key] = kv.Value;
+                propertiesOld[newKey] = kv.Value;
             }
         }
+
+        ReconcileScriptProperties(
+            nOld.Properties,
+            nNew.Properties,
+            properties,
+            propertiesOld,
+            modified,
+            ref includeScriptComparisonBaseline,
+            ref propertiesChanged,
+            ref modified);
 
         if (mergedInputs.Any(p => p.Status != "same" || p.ValueChanged) ||
             mergedOutputs.Any(p => p.Status != "same" || p.ValueChanged))
@@ -381,8 +392,122 @@ public class Differ : IDiffer
             Inputs = mergedInputs,
             Outputs = mergedOutputs,
             Properties = properties,
-            PropertiesOld = propertiesChanged ? propertiesOld : null
+            PropertiesOld = (propertiesChanged || includeScriptComparisonBaseline) ? propertiesOld : null
         };
+    }
+
+    private static void ReconcileScriptProperties(
+        Dictionary<string, string> oldProps,
+        Dictionary<string, string> newProps,
+        Dictionary<string, string> mergedProps,
+        Dictionary<string, string> oldValuesOut,
+        bool nodeAlreadyModified,
+        ref bool includeScriptComparisonBaseline,
+        ref bool propertiesChanged,
+        ref bool modified)
+    {
+        // Keep baseline script values on modified nodes so UI can distinguish unchanged vs added/removed script keys.
+        if (!nodeAlreadyModified && !HasScriptChange(oldProps, newProps))
+        {
+            return;
+        }
+
+        var oldScriptKeys = BuildScriptKeyLookup(oldProps);
+        var newScriptKeys = BuildScriptKeyLookup(newProps);
+        var union = new HashSet<string>(oldScriptKeys.Keys, StringComparer.OrdinalIgnoreCase);
+        union.UnionWith(newScriptKeys.Keys);
+
+        foreach (var key in union)
+        {
+            var hasOld = TryResolveValue(oldProps, oldScriptKeys, key, out _, out var oldVal);
+            var hasNew = TryResolveValue(newProps, newScriptKeys, key, out var newResolvedKey, out var newVal);
+
+            var displayKey = hasNew ? newResolvedKey : (oldScriptKeys.TryGetValue(key, out var oldResolvedKey) ? oldResolvedKey : key);
+            var normalizedOld = hasOld ? oldVal : string.Empty;
+            var normalizedNew = hasNew ? newVal : string.Empty;
+
+            mergedProps[displayKey] = normalizedNew;
+            oldValuesOut[displayKey] = normalizedOld;
+            includeScriptComparisonBaseline = true;
+
+            if (!string.Equals(normalizedOld, normalizedNew, StringComparison.Ordinal))
+            {
+                modified = true;
+                propertiesChanged = true;
+            }
+        }
+    }
+
+    private static Dictionary<string, string> BuildScriptKeyLookup(Dictionary<string, string> props)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var key in props.Keys)
+        {
+            if (!IsScriptLikeKey(key))
+            {
+                continue;
+            }
+
+            if (!map.ContainsKey(key))
+            {
+                map[key] = key;
+            }
+        }
+
+        return map;
+    }
+
+    private static bool TryResolveValue(
+        Dictionary<string, string> props,
+        Dictionary<string, string> keyLookup,
+        string key,
+        out string resolvedKey,
+        out string resolvedValue)
+    {
+        if (keyLookup.TryGetValue(key, out var mappedKey) &&
+            props.TryGetValue(mappedKey, out var directValue))
+        {
+            resolvedKey = mappedKey;
+            resolvedValue = directValue ?? string.Empty;
+            return true;
+        }
+
+        if (TryGetValueIgnoreCase(props, key, out var fallbackKey, out var fallbackValue))
+        {
+            resolvedKey = fallbackKey;
+            resolvedValue = fallbackValue;
+            return true;
+        }
+
+        resolvedKey = key;
+        resolvedValue = string.Empty;
+        return false;
+    }
+
+    private static bool ContainsKeyIgnoreCase(Dictionary<string, string> props, string key)
+    {
+        return props.Keys.Any(existing => string.Equals(existing, key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool TryGetValueIgnoreCase(
+        Dictionary<string, string> props,
+        string key,
+        out string resolvedKey,
+        out string resolvedValue)
+    {
+        foreach (var kv in props)
+        {
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                resolvedKey = kv.Key;
+                resolvedValue = kv.Value ?? string.Empty;
+                return true;
+            }
+        }
+
+        resolvedKey = key;
+        resolvedValue = string.Empty;
+        return false;
     }
 
     private static void PreserveClusterPreviewOldValues(Dictionary<string, string> destination, Dictionary<string, string> source)

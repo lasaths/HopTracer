@@ -1424,6 +1424,13 @@
                         <span>Show groups</span>
                     </label>
                 </div>
+                <div
+                    style="margin-top: 2px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+                    <label for="toggle-high-level-mods" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="toggle-high-level-mods" style="accent-color: var(--accent-color);" />
+                        <span>Include high-level modifications</span>
+                    </label>
+                </div>
                 <div class="component-results">
                     <div class="component-results-header">
                         <span>Components</span>
@@ -1606,8 +1613,15 @@
     </div>
 
     <script>
-        // Placeholder for injected data
-        const GRAPH_DATA = {json_data};
+        // Placeholder for injected data. When opened directly (without template replacement),
+        // fall back to an empty model so the UI can still initialize safely.
+        const GRAPH_DATA = (() => {
+            try {
+                return {json_data};
+            } catch {
+                return {};
+            }
+        })();
 
         // Configuration
         const CONFIG = {
@@ -1661,6 +1675,7 @@
             sidebarHidden: false,
             detailsHidden: false,
             showChangedEdgesOnly: false,
+            includeHighLevelModifications: false,
             largeModelMode: false,
             processingData: false,
             source: {
@@ -1724,6 +1739,7 @@
         const componentResultsList = document.getElementById('component-results-list');
         const componentResultsCount = document.getElementById('component-results-count');
         const componentSortSelect = document.getElementById('component-sort');
+        const toggleHighLevelMods = document.getElementById('toggle-high-level-mods');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingTitle = document.getElementById('loadingTitle');
         const loadingSubtitle = document.getElementById('loadingSubtitle');
@@ -1764,6 +1780,7 @@
                 await processData();
                 initSourceContext();
                 if (isNarrowViewport()) {
+                    state.sidebarHidden = true;
                     state.detailsHidden = true;
                 }
                 enforceResponsivePanelState();
@@ -1956,8 +1973,7 @@
 
             const filtered = getFilteredNodes();
             const total = filtered.length;
-            const limit = 400;
-            const visible = filtered.slice(0, limit);
+            const visible = filtered;
 
             componentResultsCount.textContent = total.toLocaleString();
             componentResultsList.innerHTML = '';
@@ -2003,14 +2019,6 @@
             });
 
             componentResultsList.appendChild(fragment);
-
-            if (total > limit) {
-                const note = document.createElement('div');
-                note.className = 'component-results-empty';
-                note.style.borderTop = '1px solid var(--border-color)';
-                note.textContent = `Showing first ${limit.toLocaleString()} of ${total.toLocaleString()} matching components. Refine search to narrow.`;
-                componentResultsList.appendChild(note);
-            }
         }
 
         function zoomToNode(nodeId) {
@@ -2230,6 +2238,8 @@
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = url;
+            // /compare binds IFormFile parameters; enforce multipart to avoid HTTP 415.
+            form.enctype = 'multipart/form-data';
 
             Object.entries(data).forEach(([key, value]) => {
                 if (value === undefined || value === null || value === '') return;
@@ -2641,6 +2651,7 @@
             state.bounds = { ...tab.bounds };
             state.selected = tab.selected || null;
             state.view = tab.view ? { ...tab.view } : { x: 0, y: 0, scale: 1 };
+            applyModificationStatusToNodes(state.nodes);
 
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             updateDetailsPanel(selectedNode || null);
@@ -3066,6 +3077,7 @@
             }
 
             initializeGraphTabs(state.nodes, state.edges, state.groups);
+            applyModificationStatusMode({ refreshUI: false });
             updateBounds();
             state.processingData = false;
             let perfMessage = '';
@@ -3077,12 +3089,134 @@
             showPerf(perfMessage);
         }
 
+        function normalizeNodeStatus(rawStatus) {
+            const status = String(rawStatus || 'same').trim().toLowerCase();
+            if (status === 'added' || status === 'removed' || status === 'modified') return status;
+            return 'same';
+        }
+
+        function getNodeOriginalStatus(node) {
+            return normalizeNodeStatus(node?.statusOriginal ?? node?.status ?? 'same');
+        }
+
+        function valuesDifferForPropertyComparison(keyA, keyB, oldValue, newValue) {
+            const oldText = String(oldValue ?? '');
+            const newText = String(newValue ?? '');
+            const scriptLike = isLikelyScriptPropertyKey(keyA) ||
+                isLikelyScriptPropertyKey(keyB) ||
+                looksLikeScriptContent(oldText) ||
+                looksLikeScriptContent(newText);
+            if (scriptLike) {
+                return normalizeScriptForCompare(oldText) !== normalizeScriptForCompare(newText);
+            }
+            return oldText !== newText;
+        }
+
+        function hasValueLevelPropertyDifferences(node) {
+            const props = node?.properties || {};
+            const oldProps = node?.propertiesOld || {};
+            const oldByLowerKey = new Map();
+
+            Object.entries(oldProps).forEach(([key, value]) => {
+                oldByLowerKey.set(String(key || '').toLowerCase(), { key, value });
+            });
+
+            const matchedOldKeys = new Set();
+            for (const [key, newValue] of Object.entries(props)) {
+                const lowerKey = String(key || '').toLowerCase();
+                const oldEntry = oldByLowerKey.get(lowerKey);
+                if (!oldEntry) {
+                    if (String(newValue ?? '') !== '') return true;
+                    continue;
+                }
+
+                matchedOldKeys.add(lowerKey);
+                if (valuesDifferForPropertyComparison(key, oldEntry.key, oldEntry.value, newValue)) {
+                    return true;
+                }
+            }
+
+            for (const [lowerKey, oldEntry] of oldByLowerKey.entries()) {
+                if (matchedOldKeys.has(lowerKey)) continue;
+                if (String(oldEntry.value ?? '') !== '') return true;
+            }
+
+            return false;
+        }
+
+        function hasValueLevelPortDifferences(node) {
+            const ports = [
+                ...(Array.isArray(node?.inputs) ? node.inputs : []),
+                ...(Array.isArray(node?.outputs) ? node.outputs : [])
+            ];
+
+            return ports.some(port => {
+                if (isTrueish(port?.valueChanged)) return true;
+                const status = String(port?.status || port?.Status || 'same').trim().toLowerCase();
+                return status === 'modified';
+            });
+        }
+
+        function hasValueLevelModification(node) {
+            return hasValueLevelPropertyDifferences(node) || hasValueLevelPortDifferences(node);
+        }
+
+        function computeEffectiveNodeStatus(node, includeHighLevel = showHighLevelModificationDetails()) {
+            const originalStatus = getNodeOriginalStatus(node);
+            if (originalStatus !== 'modified') return originalStatus;
+            if (includeHighLevel) return 'modified';
+            return hasValueLevelModification(node) ? 'modified' : 'same';
+        }
+
+        function applyModificationStatusToNodes(nodes, includeHighLevel = showHighLevelModificationDetails()) {
+            if (!Array.isArray(nodes) || nodes.length === 0) return false;
+
+            let changed = false;
+            nodes.forEach(node => {
+                const nextStatus = computeEffectiveNodeStatus(node, includeHighLevel);
+                if (node.status !== nextStatus) {
+                    node.status = nextStatus;
+                    changed = true;
+                }
+            });
+
+            return changed;
+        }
+
+        function applyModificationStatusMode(options = {}) {
+            const refreshUI = options.refreshUI !== false;
+            const includeHighLevel = showHighLevelModificationDetails();
+
+            if (Array.isArray(state.graphTabs) && state.graphTabs.length > 0) {
+                state.graphTabs.forEach(tab => {
+                    applyModificationStatusToNodes(tab.nodes, includeHighLevel);
+                });
+            }
+
+            applyModificationStatusToNodes(state.nodes, includeHighLevel);
+
+            if (!refreshUI) return;
+
+            updateStats();
+            const selectedNode = state.nodes.find(n => n.id === state.selected) || null;
+            updateDetailsPanel(selectedNode);
+            renderComponentResultsList();
+            draw();
+        }
+
         function normalizeNode(n) {
             const id = n.id || n.Id || `node_${Math.random().toString(36).slice(2, 10)}`;
             const name = n.name || n.Name || 'Unknown';
             const nickname = n.nickname || n.Nickname || name;
+            const status = normalizeNodeStatus(n.status || n.Status || 'same');
             const properties = normalizePropertyMap(n.properties || n.Properties);
             const propertiesOld = normalizePropertyMap(n.propertiesOld || n.PropertiesOld);
+            const riskScoreRaw = n.riskScore ?? n.RiskScore;
+            const riskScore = Number.isFinite(Number(riskScoreRaw)) ? Number(riskScoreRaw) : undefined;
+            const riskReasonsRaw = n.riskReasons ?? n.RiskReasons;
+            const riskReasons = Array.isArray(riskReasonsRaw)
+                ? riskReasonsRaw.map(r => String(r || '').trim()).filter(Boolean)
+                : [];
             const rawX = n.x !== undefined ? n.x : (n.X !== undefined ? n.X : 0);
             const rawY = n.y !== undefined ? n.y : (n.Y !== undefined ? n.Y : 0);
             const rawW = n.w !== undefined ? n.w : (n.W !== undefined ? n.W : CONFIG.node.width);
@@ -3106,7 +3240,8 @@
                 id,
                 name,
                 nickname,
-                status: n.status || n.Status || 'same',
+                status,
+                statusOriginal: status,
                 x,
                 y,
                 w,
@@ -3114,6 +3249,8 @@
                 hasExplicitBounds,
                 properties,
                 propertiesOld,
+                riskScore,
+                riskReasons,
                 inputs: normalizePorts(n.inputs || n.Inputs || [], 'input', id),
                 outputs: normalizePorts(n.outputs || n.Outputs || [], 'output', id),
                 vx: 0,
@@ -3812,6 +3949,18 @@
                     state.showGroups = !!toggleGroups.checked;
                     draw();
                 });
+            }
+
+            if (toggleHighLevelMods) {
+                toggleHighLevelMods.checked = !!state.includeHighLevelModifications;
+
+                const applyHighLevelModeToggle = () => {
+                    state.includeHighLevelModifications = !!toggleHighLevelMods.checked;
+                    applyModificationStatusMode();
+                };
+
+                toggleHighLevelMods.addEventListener('change', applyHighLevelModeToggle);
+                toggleHighLevelMods.addEventListener('input', applyHighLevelModeToggle);
             }
 
             const toggleChangedEdges = document.getElementById('toggle-changed-edges');
@@ -4691,6 +4840,10 @@
             });
         }
 
+        function showHighLevelModificationDetails() {
+            return !!state.includeHighLevelModifications;
+        }
+
         function updateDetailsPanel(node) {
             if (!node) {
                 detailsPaneInspector.innerHTML = '<div class="empty-state">Select a node in the graph<br>to view details</div>';
@@ -4703,8 +4856,12 @@
             const togglePorts = document.getElementById('toggle-ports');
             const showPorts = togglePorts ? !!togglePorts.checked : !!state.showPortDetails;
             state.showPortDetails = showPorts;
+            const riskScore = Number.isFinite(Number(node.riskScore)) ? Number(node.riskScore) : undefined;
+            const riskReasons = Array.isArray(node.riskReasons) ? node.riskReasons : [];
+            const showHighLevelDetails = showHighLevelModificationDetails();
+            const riskReasonText = showHighLevelDetails && riskReasons.length ? ` (${riskReasons.slice(0, 2).join(', ')})` : '';
 
-            const connectionsBlock = `
+            const connectionsBlock = showHighLevelDetails ? `
                 <div class="detail-card connections-card" style="${showPorts ? '' : 'display:none;'}">
                     <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Connections</div>
                     <div class="prop-row">
@@ -4718,7 +4875,7 @@
                     ${renderPorts(node.inputs, 'Inputs')}
                     ${renderPorts(node.outputs, 'Outputs')}
                 </div>
-            `;
+            ` : '';
 
             const html = `
                 <div class="detail-card">
@@ -4740,18 +4897,19 @@
                         <span class="prop-label">Position</span>
                         <span class="prop-value">${Math.round(node.x)}, ${Math.round(node.y)}</span>
                     </div>
-                    ${node.riskScore !== undefined ? `
+                    ${showHighLevelDetails && riskScore !== undefined ? `
                     <div class="prop-row">
                         <span class="prop-label">Risk Score</span>
-                        <span class="prop-value">${node.riskScore}${node.riskReasons && node.riskReasons.length ? ` (${(node.riskReasons || []).slice(0, 2).join(', ')})` : ''}</span>
+                        <span class="prop-value">${riskScore}${riskReasonText}</span>
                     </div>` : ''}
-                    ${node.dx !== undefined ? `
+                    ${showHighLevelDetails && node.dx !== undefined ? `
                     <div class="prop-row">
                         <span class="prop-label">Movement</span>
                         <span class="prop-value">Δ ${node.dx.toFixed(1)}, ${node.dy.toFixed(1)}</span>
                     </div>` : ''}
                 </div>
 
+                ${renderChangeSummary(node)}
                 ${renderProperties(node)}
                 ${connectionsBlock}
             `;
@@ -5375,6 +5533,16 @@
 
             switchGraphTab(targetTab.id, { fit: true });
 
+            const wasTruncated = !!oldGraph?.truncated || !!newGraph?.truncated;
+            if (wasTruncated) {
+                showPerf(clusterPreview.message || `Cluster preview truncated to ${diffGraph.nodes.length} nodes / ${diffGraph.edges.length} edges.`);
+                window.setTimeout(() => {
+                    if (!state.processingData && !state.largeModelMode) {
+                        showPerf('');
+                    }
+                }, 3200);
+            }
+
             if (componentNodes.length === 0 && renderableGroups.length === 0) {
                 showPerf(clusterPreview.message || 'No internal cluster graph available for this component.');
                 window.setTimeout(() => {
@@ -5383,7 +5551,6 @@
                     }
                 }, 2200);
             } else if (internalsChanged && !hasVisibleInternalDiff) {
-                const wasTruncated = !!oldGraph?.truncated || !!newGraph?.truncated;
                 const fallbackMessage = wasTruncated
                     ? 'Cluster internals changed, but preview is truncated so exact changes are not fully visible.'
                     : 'Cluster internals changed, but this preview has no explicit node/edge deltas.';
@@ -5404,8 +5571,92 @@
             openClusterGraphTab(selectedNode);
         }
 
+        function getPropertyValueIgnoreCase(props, key) {
+            if (!props || typeof props !== 'object') return { found: false, value: '', actualKey: key };
+            if (Object.prototype.hasOwnProperty.call(props, key)) {
+                return { found: true, value: String(props[key] ?? ''), actualKey: key };
+            }
+
+            const target = String(key || '').toLowerCase();
+            for (const [candidateKey, candidateValue] of Object.entries(props)) {
+                if (String(candidateKey || '').toLowerCase() === target) {
+                    return { found: true, value: String(candidateValue ?? ''), actualKey: candidateKey };
+                }
+            }
+
+            return { found: false, value: '', actualKey: key };
+        }
+
+        function getChangedPropertyCount(node) {
+            const props = node?.properties || {};
+            const oldProps = node?.propertiesOld || {};
+            let changed = 0;
+
+            Object.entries(props).forEach(([key, val]) => {
+                const prior = getPropertyValueIgnoreCase(oldProps, key);
+                if (!prior.found) return;
+                if (String(prior.value) !== String(val ?? '')) changed++;
+            });
+
+            return changed;
+        }
+
+        function renderChangeSummary(node) {
+            if (!node || String(node.status || '').toLowerCase() !== 'modified') return '';
+
+            const includeHighLevel = showHighLevelModificationDetails();
+            const reasons = [];
+            const backendReasons = Array.isArray(node.riskReasons) ? node.riskReasons : [];
+            if (includeHighLevel) {
+                backendReasons.forEach(reason => {
+                    const text = String(reason || '').trim();
+                    if (text && !reasons.includes(text)) reasons.push(text);
+                });
+            }
+
+            const changedProps = getChangedPropertyCount(node);
+            if (changedProps > 0) {
+                reasons.push(`${changedProps} property value${changedProps === 1 ? '' : 's'} changed`);
+            }
+
+            if (includeHighLevel) {
+                const moved = Number(node.dx || 0) !== 0 || Number(node.dy || 0) !== 0;
+                if (moved) {
+                    reasons.push(`Moved by Δ ${Number(node.dx || 0).toFixed(1)}, ${Number(node.dy || 0).toFixed(1)}`);
+                }
+
+                const connChanges = Number(node.inAdded || 0) + Number(node.inRemoved || 0) + Number(node.outAdded || 0) + Number(node.outRemoved || 0);
+                if (connChanges > 0) {
+                    reasons.push(`Connections changed (in +${node.inAdded || 0}/-${node.inRemoved || 0}, out +${node.outAdded || 0}/-${node.outRemoved || 0})`);
+                }
+            }
+
+            const scriptEntries = getScriptPropertyEntries(node);
+            const changedScript = scriptEntries.filter(e => e.isChanged).length;
+            if (changedScript > 0) {
+                reasons.push(`${changedScript} script block${changedScript === 1 ? '' : 's'} changed`);
+            }
+
+            if (reasons.length === 0) {
+                reasons.push(includeHighLevel
+                    ? 'Marked as modified by backend diff heuristics (high-level), but no explicit value-level change was detected.'
+                    : 'No explicit value-level changes detected for this component.');
+            }
+
+            const rows = reasons.map(r => `<div class="prop-row"><span class="prop-label">Change</span><span class="prop-value">${escapeHtml(r)}</span></div>`).join('');
+            return `
+                <div class="detail-card" style="border-left: 3px solid var(--modified);">
+                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">What Changed</div>
+                    ${rows}
+                </div>
+            `;
+        }
+
         function renderProperties(node) {
             if (!node.properties || Object.keys(node.properties).length === 0) return '';
+            const showOnlyChangedValues =
+                !showHighLevelModificationDetails() &&
+                String(node.status || '').toLowerCase() === 'modified';
 
             // Check if this is a cluster node
             const isCluster = isTrueish(node.properties.isCluster) || isTrueish(node.properties.IsCluster);
@@ -5479,15 +5730,19 @@
                 if (clusterKeys.includes(key)) continue;
 
                 // Check if this property changed (has old value)
-                const hasOldValue = node.propertiesOld && Object.prototype.hasOwnProperty.call(node.propertiesOld, key);
-                const oldValue = hasOldValue ? String(node.propertiesOld[key] ?? '') : '';
+                const oldLookup = getPropertyValueIgnoreCase(node.propertiesOld || {}, key);
+                const hasOldValue = oldLookup.found;
+                const oldValue = hasOldValue ? String(oldLookup.value ?? '') : '';
                 const newValue = String(val ?? '');
+                const valueChanged = hasOldValue && oldValue !== newValue;
 
                 // Check if it's a script/code property
                 const isScript = isLikelyScriptPropertyKey(key);
 
                 if (isScript) {
-                    const scriptChanged = hasOldValue && oldValue !== newValue;
+                    const scriptChanged = hasOldValue &&
+                        normalizeScriptForCompare(oldValue) !== normalizeScriptForCompare(newValue);
+                    if (showOnlyChangedValues && !scriptChanged) continue;
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 8px; align-items: flex-start; padding-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -5506,7 +5761,7 @@
                             </button>
                         </div>
                     `;
-                } else if (hasOldValue) {
+                } else if (valueChanged) {
                     // Regular property changed
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
@@ -5519,6 +5774,7 @@
                         </div>
                     `;
                 } else {
+                    if (showOnlyChangedValues) continue;
                     // Show single value (unchanged or new property)
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
