@@ -243,6 +243,7 @@
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
             z-index: 10;
             box-shadow: 4px 0 12px rgba(0, 0, 0, 0.2);
         }
@@ -306,7 +307,11 @@
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            padding: 4px 8px;
         }
 
         .stat-dot {
@@ -315,39 +320,322 @@
             border-radius: 50%;
         }
 
+        .stat-label {
+            color: var(--text-secondary);
+        }
+
+        .sidebar-header-actions {
+            margin-top: 14px;
+        }
+
+        .sidebar-primary-action {
+            text-decoration: none;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
         /* Controls */
         .controls {
-            padding: 16px;
-            border-bottom: 1px solid var(--border);
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
         }
 
-        .search-box {
-            position: relative;
+        .sidebar-card {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px;
         }
 
-        .search-box input {
-            width: 100%;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 12px;
+        .sidebar-card-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
             color: var(--text-primary);
-            font-family: inherit;
-            font-size: 13px;
-            outline: none;
-            transition: border-color 0.2s;
+            margin-bottom: 8px;
         }
 
-        .search-box input:focus {
+        .analytics-source {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .source-side-label {
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .source-side-label.left {
+            color: var(--accent-color);
+        }
+
+        .source-side-label.right {
+            color: var(--warning);
+        }
+
+        .source-name {
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 11px;
+        }
+
+        .source-date {
+            color: var(--text-secondary);
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 10px;
+            opacity: 0.9;
+        }
+
+        .time-diff-chip {
+            margin: 8px 0;
+            padding: 6px 8px;
+            background: rgba(92, 128, 247, 0.1);
+            border-left: 3px solid var(--accent-color);
+            border-radius: 6px;
+        }
+
+        .time-diff-label {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-bottom: 2px;
+            color: var(--text-secondary);
+        }
+
+        .time-diff-value {
+            font-weight: 600;
+            color: var(--accent-color);
+            font-size: 11px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .search-launcher {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: linear-gradient(180deg, rgba(92, 128, 247, 0.14), rgba(92, 128, 247, 0.06));
+            border: 1px solid rgba(92, 128, 247, 0.45);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.18s ease;
+        }
+
+        .search-launcher:hover {
+            border-color: rgba(92, 128, 247, 0.72);
+            background: linear-gradient(180deg, rgba(92, 128, 247, 0.22), rgba(92, 128, 247, 0.08));
+            transform: translateY(-1px);
+        }
+
+        .search-launcher.active {
             border-color: var(--accent-color);
+            box-shadow: 0 0 0 1px rgba(92, 128, 247, 0.35);
+        }
+
+        .search-launcher-main {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .search-launcher-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .search-launcher-meta {
+            font-size: 10px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .search-launcher-kbd {
+            font-size: 10px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-bottom-width: 2px;
+            border-radius: 6px;
+            padding: 3px 6px;
+            background: rgba(0, 0, 0, 0.25);
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        .spotlight-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 280;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 8vh 16px 20px;
+            background: rgba(10, 12, 16, 0.55);
+            backdrop-filter: blur(8px);
+        }
+
+        .spotlight-backdrop.open {
+            display: flex;
+        }
+
+        .spotlight-panel {
+            width: min(760px, 100%);
+            max-height: min(68vh, 720px);
+            background: rgba(18, 20, 25, 0.98);
+            border: 1px solid rgba(150, 170, 220, 0.28);
+            border-radius: 14px;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .spotlight-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            background: linear-gradient(180deg, rgba(92, 128, 247, 0.12), rgba(92, 128, 247, 0.03));
+        }
+
+        .spotlight-input {
+            width: 100%;
+            background: rgba(14, 16, 20, 0.92);
+            border: 1px solid rgba(150, 170, 220, 0.3);
+            border-radius: 9px;
+            padding: 11px 12px;
+            color: #f7f9ff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .spotlight-input:focus {
+            border-color: rgba(122, 158, 255, 0.88);
+            box-shadow: 0 0 0 1px rgba(122, 158, 255, 0.35);
+        }
+
+        .spotlight-hint {
+            flex: 0 0 auto;
+            font-size: 10px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            background: rgba(0, 0, 0, 0.28);
+        }
+
+        .spotlight-results {
+            overflow-y: auto;
+            min-height: 120px;
+            max-height: min(56vh, 640px);
+            padding: 6px;
+        }
+
+        .spotlight-empty {
+            padding: 14px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .spotlight-item {
+            width: 100%;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            color: inherit;
+            text-align: left;
+            padding: 9px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            transition: background-color 0.14s ease;
+        }
+
+        .spotlight-item:hover {
+            background: rgba(92, 128, 247, 0.14);
+        }
+
+        .spotlight-item.active {
+            background: rgba(92, 128, 247, 0.22);
+            outline: 1px solid rgba(92, 128, 247, 0.48);
+        }
+
+        .spotlight-item-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .spotlight-item-title {
+            font-size: 12px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .spotlight-item-status {
+            font-size: 9px;
+            line-height: 1;
+            text-transform: uppercase;
+            padding: 4px 6px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            flex: 0 0 auto;
+            margin-top: 1px;
+            letter-spacing: 0.25px;
+        }
+
+        .spotlight-item-subtitle {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .spotlight-item-preview {
+            font-size: 11px;
+            color: rgba(231, 237, 255, 0.86);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
         }
 
         .filter-group {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
         }
 
@@ -355,7 +643,7 @@
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-secondary);
-            padding: 4px 10px;
+            padding: 5px 10px;
             border-radius: 12px;
             font-size: 11px;
             cursor: pointer;
@@ -374,9 +662,82 @@
             color: white;
         }
 
+        .sidebar-collapsible {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-collapsible summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .sidebar-collapsible summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .sidebar-collapsible summary::after {
+            content: "▾";
+            color: var(--text-secondary);
+            font-size: 10px;
+            transition: transform 0.18s ease;
+        }
+
+        .sidebar-collapsible:not([open]) summary::after {
+            transform: rotate(-90deg);
+        }
+
+        .sidebar-collapsible-body {
+            border-top: 1px solid var(--border-color);
+            padding: 8px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sidebar-collapsible .sidebar-card-title {
+            margin: 0;
+            font-size: 11px;
+            letter-spacing: 0;
+            color: var(--text-primary);
+        }
+
+        .analytics-card .analytics-source + .analytics-source {
+            margin-top: 8px;
+        }
+
+        .option-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .option-toggle input {
+            accent-color: var(--accent-color);
+        }
+
         .component-results {
-            margin-top: 4px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
             min-height: 0;
+            overflow: hidden;
         }
 
         .component-results-header {
@@ -389,7 +750,6 @@
         }
 
         .component-sort-row {
-            margin-top: 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -414,8 +774,8 @@
         }
 
         .component-results-list {
-            margin-top: 8px;
-            max-height: clamp(160px, 36vh, 420px);
+            flex: 1;
+            min-height: 120px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -633,6 +993,8 @@
             position: relative;
             background: radial-gradient(circle at center, #13151a 0%, #0f1115 100%);
             overflow: hidden;
+            container-type: inline-size;
+            container-name: mainview;
         }
 
         #graph-canvas {
@@ -648,8 +1010,8 @@
         /* Overlay Controls */
         .overlay-controls {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            bottom: 16px;
+            right: 16px;
             display: flex;
             gap: 8px;
             background: var(--bg-panel);
@@ -657,6 +1019,7 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 125;
         }
 
         .icon-btn {
@@ -932,8 +1295,8 @@
         /* Minimap */
         #minimap-container {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
+            bottom: 16px;
+            left: 16px;
             width: 200px;
             height: 140px;
             background: var(--bg-panel);
@@ -941,6 +1304,7 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 120;
         }
 
         #minimap-canvas {
@@ -949,19 +1313,33 @@
         }
 
         /* Legend */
-        .legend {
+        .top-right-tools {
+            --top-tool-size: 40px;
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+            z-index: 145;
+            max-width: calc(100% - 24px);
+        }
+
+        .legend {
             background: var(--bg-panel);
-            padding: 10px 14px;
+            padding: 0 12px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
             display: flex;
-            gap: 16px;
+            align-items: center;
+            gap: 14px;
             font-size: 11px;
             color: var(--text-secondary);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            height: var(--top-tool-size);
+            max-width: calc(100% - 52px);
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         .legend-item {
@@ -996,25 +1374,79 @@
         /* Bottom Controls */
         .bottom-controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 16px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 24px;
+            align-items: stretch;
+            gap: 14px;
             background: var(--bg-panel);
-            padding: 12px 24px;
+            padding: 10px 14px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             z-index: 100;
             backdrop-filter: blur(8px);
+            width: min(560px, calc(100% - 464px));
+            min-width: 0;
         }
 
         .slider-group {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            width: 240px;
+            flex: 1;
+            min-width: 0;
+            width: auto;
+        }
+
+        .top-right-tools .search-launcher-floating {
+            position: relative;
+            top: auto;
+            right: auto;
+            width: var(--top-tool-size);
+            min-width: var(--top-tool-size);
+            height: var(--top-tool-size);
+            padding: 0;
+            border-radius: 8px;
+            justify-content: center;
+            background: var(--bg-panel);
+            border-color: var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-launcher-floating:hover {
+            background: rgba(92, 128, 247, 0.18);
+            transform: none;
+        }
+
+        .search-launcher-floating .search-launcher-main,
+        .search-launcher-floating .search-launcher-kbd {
+            display: none;
+        }
+
+        .search-launcher-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            color: var(--text-secondary);
+        }
+
+        .search-launcher-floating:hover .search-launcher-icon,
+        .search-launcher-floating.active .search-launcher-icon {
+            color: var(--text-primary);
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         .slider-header {
@@ -1054,6 +1486,42 @@
             backdrop-filter: blur(4px);
         }
 
+        @container mainview (max-width: 860px) {
+            #minimap-container {
+                width: 132px;
+                height: 94px;
+                left: 10px;
+                bottom: 104px;
+            }
+
+            .overlay-controls {
+                right: 10px;
+                bottom: 104px;
+            }
+
+            .bottom-controls {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+                transform: none;
+                width: auto;
+                padding: 10px;
+                gap: 10px;
+            }
+        }
+
+        @container mainview (max-width: 620px) {
+            .top-right-tools {
+                --top-tool-size: 36px;
+            }
+
+            .legend {
+                gap: 10px;
+                font-size: 10px;
+                padding: 0 10px;
+            }
+        }
+
         @media (max-width: 900px) {
             #sidebar {
                 width: min(78vw, 300px);
@@ -1066,31 +1534,10 @@
                 max-width: min(82vw, 320px);
             }
 
-            .legend {
+            .top-right-tools {
                 top: 10px;
                 right: 10px;
-                gap: 10px;
-                flex-wrap: wrap;
-                max-width: calc(100vw - 20px);
-            }
-
-            #minimap-container {
-                width: 140px;
-                height: 100px;
-                left: 10px;
-                bottom: 10px;
-            }
-
-            .bottom-controls {
-                left: 50%;
-                width: calc(100% - 20px);
-                max-width: none;
-                padding: 10px 12px;
-                gap: 12px;
-            }
-
-            .slider-group {
-                width: calc(50% - 6px);
+                max-width: calc(100% - 20px);
             }
         }
 
@@ -1346,91 +1793,36 @@
                 <div class="stats-row">
                     <div class="stat-item" title="Added Nodes">
                         <div class="stat-dot" style="background: var(--added)"></div>
-                        <span style="color: var(--text-secondary); margin-right: 4px;">Added:</span>
-                        <span id="stat-added" class="stat-number" style="color: var(--text-primary);">0</span>
+                        <span class="stat-label">Added</span>
+                        <span id="stat-added" class="stat-number">0</span>
                     </div>
                     <div class="stat-item" title="Removed Nodes">
                         <div class="stat-dot" style="background: var(--removed)"></div>
-                        <span style="color: var(--text-secondary); margin-right: 4px;">Removed:</span>
-                        <span id="stat-removed" class="stat-number" style="color: var(--text-primary);">0</span>
+                        <span class="stat-label">Removed</span>
+                        <span id="stat-removed" class="stat-number">0</span>
                     </div>
                     <div class="stat-item" title="Modified Nodes">
                         <div class="stat-dot" style="background: var(--modified)"></div>
-                        <span style="color: var(--text-secondary); margin-right: 4px;">Modified:</span>
-                        <span id="stat-modified" class="stat-number" style="color: var(--text-primary);">0</span>
+                        <span class="stat-label">Modified</span>
+                        <span id="stat-modified" class="stat-number">0</span>
                     </div>
                 </div>
-                <div style="margin-top: 16px;">
-                    <a href="/" class="filter-btn"
-                        style="text-decoration: none; display: inline-block; text-align: center; width: 100%;">New
-                        Comparison</a>
+                <div class="sidebar-header-actions">
+                    <a href="/" class="filter-btn sidebar-primary-action">New Comparison</a>
                 </div>
             </div>
 
             <div class="controls">
-                <!-- File Analytics -->
-                <div
-                    style="margin-bottom: 16px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">File Analytics</div>
-
-                    <div style="margin-bottom: 8px;">
-                        <div style="color: var(--accent-color);">Left Source</div>
-                        <div id="meta-new-name"
-                            style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 11px;">
-                            -</div>
-                        <div id="meta-new-date"
-                            style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; opacity: 0.7;">
-                            -</div>
-                    </div>
-
-                    <!-- Time difference indicator -->
-                    <div id="time-diff-container"
-                        style="display: none; margin: 8px 0; padding: 6px 8px; background: rgba(92, 128, 247, 0.1); border-left: 3px solid var(--accent-color); border-radius: 4px;">
-                        <div style="font-size: 10px; opacity: 0.8; margin-bottom: 2px;">Time Difference</div>
-                        <div id="time-diff-value" style="font-weight: 600; color: var(--accent-color);">-</div>
-                    </div>
-
-                    <div>
-                        <div style="color: var(--warning);">Right Source</div>
-                        <div id="meta-old-name"
-                            style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 11px;">
-                            -</div>
-                        <div id="meta-old-date"
-                            style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; opacity: 0.7;">
-                            -</div>
+                <div class="sidebar-card">
+                    <div class="section-label">Status Filters</div>
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="added">Added</button>
+                        <button class="filter-btn" data-filter="removed">Removed</button>
+                        <button class="filter-btn" data-filter="modified">Modified</button>
                     </div>
                 </div>
 
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Search components...">
-                </div>
-                <div class="filter-group">
-                    <button class="filter-btn active" data-filter="all">All</button>
-                    <button class="filter-btn" data-filter="added">Added</button>
-                    <button class="filter-btn" data-filter="removed">Removed</button>
-                    <button class="filter-btn" data-filter="modified">Modified</button>
-                </div>
-                <div
-                    style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-                    <label for="toggle-ports" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="toggle-ports" style="accent-color: var(--accent-color);" />
-                        <span>Show inputs/output details</span>
-                    </label>
-                </div>
-                <div
-                    style="margin-top: 2px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-                    <label for="toggle-groups" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="toggle-groups" style="accent-color: var(--accent-color);" checked />
-                        <span>Show groups</span>
-                    </label>
-                </div>
-                <div
-                    style="margin-top: 2px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-                    <label for="toggle-high-level-mods" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="toggle-high-level-mods" style="accent-color: var(--accent-color);" />
-                        <span>Include high-level modifications</span>
-                    </label>
-                </div>
                 <div class="component-results">
                     <div class="component-results-header">
                         <span>Components</span>
@@ -1449,6 +1841,46 @@
                         <div class="component-results-empty">No components available.</div>
                     </div>
                 </div>
+
+                <details class="sidebar-card sidebar-collapsible view-options">
+                    <summary>View Options</summary>
+                    <div class="sidebar-collapsible-body">
+                        <label for="toggle-ports" class="option-toggle">
+                            <input type="checkbox" id="toggle-ports" />
+                            <span>Show inputs/output details</span>
+                        </label>
+                        <label for="toggle-groups" class="option-toggle">
+                            <input type="checkbox" id="toggle-groups" checked />
+                            <span>Show groups</span>
+                        </label>
+                        <label for="toggle-high-level-mods" class="option-toggle">
+                            <input type="checkbox" id="toggle-high-level-mods" />
+                            <span>Include high-level modifications</span>
+                        </label>
+                    </div>
+                </details>
+
+                <details class="sidebar-card sidebar-collapsible analytics-card">
+                    <summary><span id="analytics-section-title" class="sidebar-card-title">File Analytics</span></summary>
+                    <div class="sidebar-collapsible-body">
+                        <div class="analytics-source">
+                            <div class="source-side-label left">Left Source</div>
+                            <div id="meta-new-name" class="source-name">-</div>
+                            <div id="meta-new-date" class="source-date">-</div>
+                        </div>
+
+                        <div id="time-diff-container" class="time-diff-chip" style="display: none;">
+                            <div class="time-diff-label">Time Difference</div>
+                            <div id="time-diff-value" class="time-diff-value">-</div>
+                        </div>
+
+                        <div class="analytics-source">
+                            <div class="source-side-label right">Right Source</div>
+                            <div id="meta-old-name" class="source-name">-</div>
+                            <div id="meta-old-date" class="source-date">-</div>
+                        </div>
+                    </div>
+                </details>
             </div>
 
         </div>
@@ -1457,26 +1889,41 @@
 
         <div id="main-view">
             <div id="graph-tabs" class="graph-tabs"></div>
+            <div class="top-right-tools">
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--added)"></div> Added
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--removed)"></div> Removed
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--modified)"></div> Modified
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--same)"></div> Unchanged
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #7c4dff; border: 1px solid #b388ff; box-sizing: border-box;"></div> Cluster
+                    </div>
+                </div>
+                <button type="button" id="search-launcher" class="search-launcher search-launcher-floating"
+                    title="Search components + code (Ctrl+K)" aria-label="Search components + code (Ctrl+K)">
+                    <span class="search-launcher-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="7"></circle>
+                            <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+                        </svg>
+                    </span>
+                    <span class="search-launcher-main visually-hidden">
+                        <span id="search-launcher-title" class="search-launcher-title">Search components + code</span>
+                        <span id="search-launcher-meta" class="search-launcher-meta">Spotlight search for C#/Python script components</span>
+                    </span>
+                    <span class="search-launcher-kbd visually-hidden">Ctrl+K</span>
+                </button>
+            </div>
             <button type="button" id="btn-sidebar-expand" class="panel-expand-btn left" title="Show left panel">▶</button>
             <button type="button" id="btn-details-expand" class="panel-expand-btn right" title="Show right panel">◀</button>
-
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: var(--added)"></div> Added
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: var(--removed)"></div> Removed
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: var(--modified)"></div> Modified
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: var(--same)"></div> Unchanged
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #7c4dff; border: 1px solid #b388ff; box-sizing: border-box;"></div> Cluster
-                </div>
-            </div>
 
             <div id="perf-indicator"
                 style="position:absolute; top:16px; right:16px; z-index:120; font-size:11px; background:rgba(12,14,18,0.8); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px; color:var(--text-secondary); display:none;">
@@ -1497,7 +1944,6 @@
                     </div>
                     <input type="range" id="wire-slider" min="0" max="100" value="0">
                 </div>
-                <div style="width: 1px; background: var(--border-color);"></div>
                 <div class="slider-group">
                     <div class="slider-header">
                         <span>Version Compare</span>
@@ -1612,6 +2058,20 @@
         </div>
     </div>
 
+    <div id="spotlight-backdrop" class="spotlight-backdrop" aria-hidden="true">
+        <div class="spotlight-panel" role="dialog" aria-modal="true" aria-label="Search components and script code">
+            <div class="spotlight-input-row">
+                <input id="spotlight-input" class="spotlight-input" type="text"
+                    placeholder="Search components and C#/Python code..." autocomplete="off" spellcheck="false" />
+                <span class="spotlight-hint">ESC</span>
+            </div>
+            <div id="spotlight-results" class="spotlight-results">
+                <div class="spotlight-empty">Type to search C#/Python scripts and component names.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/vendor/fuse.min.js"></script>
     <script>
         // Placeholder for injected data. When opened directly (without template replacement),
         // fall back to an empty model so the UI can still initialize safely.
@@ -1661,6 +2121,12 @@
             filterMode: 'all',
             filterStatuses: new Set(CHANGED_STATUS_FILTERS),
             search: '',
+            searchMatches: new Set(),
+            searchCatalog: [],
+            searchEngine: null,
+            spotlightOpen: false,
+            spotlightResults: [],
+            spotlightActiveIndex: 0,
             componentSort: 'az',
             bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
             showPortDetails: true,
@@ -1694,6 +2160,7 @@
         };
 
         const ROOT_GRAPH_TAB_ID = 'graph-root';
+        const SPOTLIGHT_MAX_RESULTS = 28;
 
         // Elements
         const canvas = document.getElementById('graph-canvas');
@@ -1736,6 +2203,12 @@
         const btnSourceApply = document.getElementById('btn-source-apply');
         const btnSourceCancel = document.getElementById('btn-source-cancel');
         const btnSourceModalClose = document.getElementById('btn-source-modal-close');
+        const searchLauncher = document.getElementById('search-launcher');
+        const searchLauncherTitle = document.getElementById('search-launcher-title');
+        const searchLauncherMeta = document.getElementById('search-launcher-meta');
+        const spotlightBackdrop = document.getElementById('spotlight-backdrop');
+        const spotlightInput = document.getElementById('spotlight-input');
+        const spotlightResults = document.getElementById('spotlight-results');
         const componentResultsList = document.getElementById('component-results-list');
         const componentResultsCount = document.getElementById('component-results-count');
         const componentSortSelect = document.getElementById('component-sort');
@@ -1748,6 +2221,7 @@
         let sessionToken = null;
         let loadingProgressTimer = null;
         let loadingProgressValue = 0;
+        let spotlightReturnFocus = null;
 
         async function ensureSessionToken() {
             if (sessionToken) return sessionToken;
@@ -1843,16 +2317,364 @@
             return state.filterStatuses.has(status);
         }
 
+        function normalizeSearchText(value, maxLength = 8000) {
+            return String(value ?? '')
+                .replace(/\r\n/g, '\n')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, maxLength);
+        }
+
+        function detectScriptLanguage(node, key, sourceText) {
+            const keyText = String(key || '').toLowerCase();
+            const nameText = `${String(node?.name || '').toLowerCase()} ${String(node?.nickname || '').toLowerCase()}`;
+            const sample = String(sourceText || '').toLowerCase();
+
+            if (keyText.includes('python') || nameText.includes('python') ||
+                /\b(def|import|from|lambda|elif|print)\b/.test(sample)) {
+                return 'Python';
+            }
+
+            if (keyText.includes('c#') || keyText.includes('csharp') ||
+                nameText.includes('c#') || nameText.includes('csharp') ||
+                /\b(using|namespace|public class|private|var|new)\b/.test(sample)) {
+                return 'C#';
+            }
+
+            return 'Other';
+        }
+
+        function summarizeScriptSnippet(sourceText, query) {
+            const compact = normalizeSearchText(sourceText, 2200);
+            if (!compact) return '';
+            const needle = String(query || '').trim().toLowerCase();
+            if (!needle) return compact.slice(0, 140);
+
+            const idx = compact.toLowerCase().indexOf(needle);
+            if (idx < 0) return compact.slice(0, 140);
+            const start = Math.max(0, idx - 50);
+            const end = Math.min(compact.length, idx + Math.max(needle.length, 70));
+            const prefix = start > 0 ? '...' : '';
+            const suffix = end < compact.length ? '...' : '';
+            return `${prefix}${compact.slice(start, end)}${suffix}`;
+        }
+
+        function nodeMatchesSearch(node) {
+            const search = String(state.search || '').trim().toLowerCase();
+            if (!search) return true;
+
+            const canonical = canonicalizeId(node?.id);
+            if (canonical && state.searchMatches.has(canonical)) {
+                return true;
+            }
+
+            const name = String(node?.name || '').toLowerCase();
+            const nickname = String(node?.nickname || '').toLowerCase();
+            return name.includes(search) || nickname.includes(search);
+        }
+
+        function buildSearchCatalog(nodes) {
+            const catalog = [];
+            (nodes || []).forEach(node => {
+                if (!node) return;
+
+                const nodeId = String(node.id || '');
+                if (!nodeId) return;
+
+                const title = String(node.nickname || node.name || 'Unnamed Component');
+                const subtitle = String(node.name || '');
+                const status = String(node.status || 'same').toLowerCase();
+                const idText = String(node.id || '');
+
+                catalog.push({
+                    id: `component:${nodeId}`,
+                    type: 'component',
+                    nodeId,
+                    scriptKey: '',
+                    language: '',
+                    title,
+                    subtitle: subtitle || 'Component',
+                    preview: '',
+                    status,
+                    searchText: normalizeSearchText(`${title} ${subtitle} ${idText}`, 1000)
+                });
+
+                if (!isScriptComponent(node)) return;
+                const scriptEntries = getScriptPropertyEntries(node);
+                scriptEntries.forEach(entry => {
+                    const rawScript = String(entry?.newValue || entry?.oldValue || '');
+                    if (!rawScript.trim()) return;
+
+                    const language = detectScriptLanguage(node, entry.key, rawScript);
+                    if (language !== 'C#' && language !== 'Python') return;
+
+                    const scriptText = normalizeSearchText(rawScript, 12000);
+                    if (!scriptText) return;
+
+                    const scriptKey = String(entry.key || 'Script');
+                    const diffTag = entry.isChanged ? 'modified' : 'unchanged';
+                    catalog.push({
+                        id: `script:${nodeId}:${scriptKey}`,
+                        type: 'script',
+                        nodeId,
+                        scriptKey,
+                        language,
+                        title,
+                        subtitle: `${language} code • ${scriptKey} (${diffTag})`,
+                        preview: scriptText,
+                        status,
+                        searchText: normalizeSearchText(`${title} ${subtitle} ${language} ${scriptKey} ${scriptText}`, 14000)
+                    });
+                });
+            });
+            return catalog;
+        }
+
+        function createSearchEngine(catalog) {
+            if (!window.Fuse || !Array.isArray(catalog) || catalog.length === 0) {
+                return null;
+            }
+
+            return new window.Fuse(catalog, {
+                includeScore: true,
+                threshold: 0.32,
+                ignoreLocation: true,
+                minMatchCharLength: 2,
+                keys: [
+                    { name: 'title', weight: 0.24 },
+                    { name: 'subtitle', weight: 0.12 },
+                    { name: 'searchText', weight: 0.64 }
+                ]
+            });
+        }
+
+        function runBasicSearch(query) {
+            const needle = String(query || '').trim().toLowerCase();
+            if (!needle) return [];
+
+            return (state.searchCatalog || [])
+                .filter(entry => doesNodeMatchStatusFilter(entry.status))
+                .filter(entry => String(entry.searchText || '').toLowerCase().includes(needle));
+        }
+
+        function runCatalogSearch(query) {
+            const needle = String(query || '').trim();
+            if (!needle) return [];
+
+            const rawResults = state.searchEngine
+                ? state.searchEngine.search(needle).map(result => result.item)
+                : runBasicSearch(needle);
+            const deduped = [];
+            const seen = new Set();
+
+            rawResults.forEach(entry => {
+                if (!entry || !doesNodeMatchStatusFilter(entry.status)) return;
+                const dedupeKey = entry.type === 'component' ? `component:${entry.nodeId}` : entry.id;
+                if (seen.has(dedupeKey)) return;
+                seen.add(dedupeKey);
+                deduped.push(entry);
+            });
+
+            return deduped;
+        }
+
+        function getVisibleSpotlightResults() {
+            return (state.spotlightResults || []).slice(0, SPOTLIGHT_MAX_RESULTS);
+        }
+
+        function isFuseAvailable() {
+            return typeof window.Fuse === 'function';
+        }
+
+        function updateSearchLauncherState() {
+            if (!searchLauncher || !searchLauncherTitle || !searchLauncherMeta) return;
+
+            const query = String(state.search || '').trim();
+            searchLauncher.classList.toggle('active', !!query);
+            if (!query) {
+                searchLauncherTitle.textContent = 'Search components + code';
+                searchLauncherMeta.textContent = isFuseAvailable()
+                    ? 'Spotlight search for C#/Python script components'
+                    : 'Basic search mode (Fuse.js unavailable)';
+                return;
+            }
+
+            const nodeMatches = state.searchMatches.size;
+            searchLauncherTitle.textContent = `Search: ${query}`;
+            searchLauncherMeta.textContent = `${nodeMatches.toLocaleString()} matching component${nodeMatches === 1 ? '' : 's'}`;
+        }
+
+        function renderSpotlightResults() {
+            if (!spotlightResults) return;
+
+            const query = String(state.search || '').trim();
+            if (!query) {
+                spotlightResults.innerHTML = '<div class="spotlight-empty">Type to search C#/Python scripts and component names.</div>';
+                return;
+            }
+
+            const visible = getVisibleSpotlightResults();
+            if (visible.length === 0) {
+                spotlightResults.innerHTML = '<div class="spotlight-empty">No matches for the current query.</div>';
+                return;
+            }
+
+            const active = Math.max(0, Math.min(state.spotlightActiveIndex, visible.length - 1));
+            state.spotlightActiveIndex = active;
+            spotlightResults.innerHTML = visible.map((entry, index) => {
+                const preview = entry.type === 'script'
+                    ? `<div class="spotlight-item-preview">${escapeHtml(summarizeScriptSnippet(entry.preview, query))}</div>`
+                    : '';
+
+                return `
+                    <button type="button" class="spotlight-item ${index === active ? 'active' : ''}" data-spotlight-index="${index}">
+                        <div class="spotlight-item-head">
+                            <div class="spotlight-item-title">${escapeHtml(entry.title || 'Unnamed')}</div>
+                            <span class="spotlight-item-status" style="background:${CONFIG.colors[entry.status] || CONFIG.colors.same}">
+                                ${escapeHtml(entry.status || 'same')}
+                            </span>
+                        </div>
+                        <div class="spotlight-item-subtitle">${escapeHtml(entry.subtitle || 'Component')}</div>
+                        ${preview}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function applySearchQuery(query, options = {}) {
+            const { refreshView = true, syncInput = false } = options;
+            const normalized = String(query ?? '').trim();
+            state.search = normalized;
+
+            if (!state.search) {
+                state.searchMatches = new Set();
+                state.spotlightResults = [];
+                state.spotlightActiveIndex = 0;
+            } else {
+                state.spotlightResults = runCatalogSearch(state.search);
+                state.searchMatches = new Set();
+                state.spotlightResults.forEach(entry => {
+                    const canonical = canonicalizeId(entry.nodeId);
+                    if (canonical) state.searchMatches.add(canonical);
+                });
+                const visible = getVisibleSpotlightResults();
+                state.spotlightActiveIndex = visible.length > 0
+                    ? Math.min(state.spotlightActiveIndex, visible.length - 1)
+                    : 0;
+            }
+
+            if (syncInput && spotlightInput) {
+                spotlightInput.value = normalized;
+            }
+
+            updateSearchLauncherState();
+            renderSpotlightResults();
+
+            if (refreshView) {
+                renderComponentResultsList();
+                draw();
+            }
+        }
+
+        function rebuildSearchCatalog(options = {}) {
+            const { refreshView = true } = options;
+            state.searchCatalog = buildSearchCatalog(state.nodes);
+            state.searchEngine = createSearchEngine(state.searchCatalog);
+            applySearchQuery(state.search || '', { refreshView, syncInput: false });
+        }
+
+        function openSpotlight() {
+            if (!spotlightBackdrop || !spotlightInput) return;
+            const currentFocus = document.activeElement;
+            const validFocus = currentFocus instanceof HTMLElement &&
+                currentFocus !== document.body &&
+                currentFocus !== document.documentElement
+                ? currentFocus
+                : null;
+            spotlightReturnFocus = validFocus || searchLauncher;
+            state.spotlightOpen = true;
+            if (mainContainer) mainContainer.setAttribute('inert', '');
+            if (sourceModal && sourceModal.classList.contains('open')) sourceModal.setAttribute('inert', '');
+            spotlightBackdrop.classList.add('open');
+            spotlightBackdrop.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            renderSpotlightResults();
+            spotlightInput.value = String(state.search || '');
+            window.setTimeout(() => {
+                spotlightInput.focus();
+                spotlightInput.select();
+            }, 0);
+        }
+
+        function closeSpotlight(options = {}) {
+            if (!spotlightBackdrop) return;
+            const { clearQuery = false } = options;
+
+            if (spotlightInput && document.activeElement === spotlightInput) {
+                spotlightInput.blur();
+            }
+
+            state.spotlightOpen = false;
+            spotlightBackdrop.classList.remove('open');
+            spotlightBackdrop.setAttribute('aria-hidden', 'true');
+            if (mainContainer) mainContainer.removeAttribute('inert');
+            if (sourceModal) sourceModal.removeAttribute('inert');
+            document.body.style.overflow = '';
+            if (clearQuery) {
+                applySearchQuery('', { refreshView: true, syncInput: true });
+            }
+
+            const returnTarget = spotlightReturnFocus;
+            spotlightReturnFocus = null;
+            if (returnTarget instanceof HTMLElement && returnTarget.isConnected) {
+                returnTarget.focus();
+            } else if (searchLauncher) {
+                searchLauncher.focus();
+            }
+        }
+
+        function toggleSpotlight() {
+            if (state.spotlightOpen) {
+                closeSpotlight();
+            } else {
+                openSpotlight();
+            }
+        }
+
+        function moveSpotlightSelection(delta) {
+            const visible = getVisibleSpotlightResults();
+            if (visible.length === 0) return;
+            const current = Math.max(0, Math.min(state.spotlightActiveIndex, visible.length - 1));
+            const next = (current + delta + visible.length) % visible.length;
+            state.spotlightActiveIndex = next;
+            renderSpotlightResults();
+
+            const activeButton = spotlightResults?.querySelector(`[data-spotlight-index="${next}"]`);
+            if (activeButton) {
+                activeButton.scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        function activateSpotlightSelection(index = state.spotlightActiveIndex) {
+            const visible = getVisibleSpotlightResults();
+            if (visible.length === 0) return;
+            const targetIndex = Math.max(0, Math.min(index, visible.length - 1));
+            const entry = visible[targetIndex];
+            if (!entry) return;
+
+            zoomToNode(entry.nodeId);
+            if (entry.type === 'script' && entry.scriptKey) {
+                openScriptView(entry.scriptKey);
+            }
+            closeSpotlight();
+        }
+
         function getFilteredNodes() {
-            const search = state.search || '';
             const filtered = [];
 
             for (let i = 0; i < state.nodes.length; i++) {
                 const n = state.nodes[i];
-                const name = String(n.name || '').toLowerCase();
-                const nickname = String(n.nickname || '').toLowerCase();
-                const matchesSearch = !search || name.includes(search) || nickname.includes(search);
-                if (doesNodeMatchStatusFilter(n.status) && matchesSearch) {
+                if (doesNodeMatchStatusFilter(n.status) && nodeMatchesSearch(n)) {
                     filtered.push(n);
                 }
             }
@@ -2652,6 +3474,7 @@
             state.selected = tab.selected || null;
             state.view = tab.view ? { ...tab.view } : { x: 0, y: 0, scale: 1 };
             applyModificationStatusToNodes(state.nodes);
+            rebuildSearchCatalog({ refreshView: false });
 
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             updateDetailsPanel(selectedNode || null);
@@ -2788,7 +3611,7 @@
             const sourceHashNew = meta.sourceHashNew || meta.SourceHashNew || null;
             const isCommitContext = sourceTypeOld === 'commit' || sourceTypeNew === 'commit';
 
-            const analyticsTitle = document.querySelector('.controls > div:first-child > div:first-child');
+            const analyticsTitle = document.getElementById('analytics-section-title');
             if (analyticsTitle) {
                 analyticsTitle.textContent = isCommitContext ? 'Source Details' : 'File Analytics';
             }
@@ -3112,17 +3935,32 @@
             return oldText !== newText;
         }
 
+        const CLUSTER_METADATA_PROPERTY_KEYS = new Set([
+            'iscluster',
+            'clusterhash',
+            'clustersize',
+            'clusterpreviewstatus',
+            'clusterpreviewmessage',
+            'clusterpreviewgraph'
+        ]);
+
+        function isClusterMetadataPropertyKey(key) {
+            return CLUSTER_METADATA_PROPERTY_KEYS.has(String(key || '').trim().toLowerCase());
+        }
+
         function hasValueLevelPropertyDifferences(node) {
             const props = node?.properties || {};
             const oldProps = node?.propertiesOld || {};
             const oldByLowerKey = new Map();
 
             Object.entries(oldProps).forEach(([key, value]) => {
+                if (isClusterMetadataPropertyKey(key)) return;
                 oldByLowerKey.set(String(key || '').toLowerCase(), { key, value });
             });
 
             const matchedOldKeys = new Set();
             for (const [key, newValue] of Object.entries(props)) {
+                if (isClusterMetadataPropertyKey(key)) continue;
                 const lowerKey = String(key || '').toLowerCase();
                 const oldEntry = oldByLowerKey.get(lowerKey);
                 if (!oldEntry) {
@@ -3194,6 +4032,7 @@
             }
 
             applyModificationStatusToNodes(state.nodes, includeHighLevel);
+            rebuildSearchCatalog({ refreshView: false });
 
             if (!refreshUI) return;
 
@@ -3860,9 +4699,30 @@
 
             // Keyboard shortcuts
             window.addEventListener('keydown', (e) => {
-                if (e.target.tagName === 'INPUT') return; // Ignore if typing in search
+                const key = String(e.key || '').toLowerCase();
+                const targetTag = String(e.target?.tagName || '').toUpperCase();
+                const isTypingTarget = targetTag === 'INPUT' ||
+                    targetTag === 'TEXTAREA' ||
+                    !!e.target?.isContentEditable;
+                const isSpotlightShortcut = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && key === 'k';
 
-                switch (e.key.toLowerCase()) {
+                if (isSpotlightShortcut) {
+                    e.preventDefault();
+                    toggleSpotlight();
+                    return;
+                }
+
+                if (state.spotlightOpen) {
+                    if (key === 'escape') {
+                        e.preventDefault();
+                        closeSpotlight();
+                    }
+                    return;
+                }
+
+                if (isTypingTarget) return;
+
+                switch (key) {
                     case 'f': fitView(); break;
                     case 'escape':
                         state.selected = null;
@@ -3877,11 +4737,54 @@
             });
 
             // Controls
-            document.getElementById('search-input').addEventListener('input', (e) => {
-                state.search = e.target.value.toLowerCase();
-                renderComponentResultsList();
-                draw();
-            });
+            if (searchLauncher) {
+                searchLauncher.addEventListener('click', () => openSpotlight());
+            }
+
+            if (spotlightBackdrop) {
+                spotlightBackdrop.addEventListener('click', (e) => {
+                    if (e.target === spotlightBackdrop) {
+                        closeSpotlight();
+                    }
+                });
+            }
+
+            if (spotlightInput) {
+                spotlightInput.addEventListener('input', (e) => {
+                    applySearchQuery(e.target.value, { refreshView: true, syncInput: false });
+                });
+
+                spotlightInput.addEventListener('keydown', (e) => {
+                    switch (String(e.key || '').toLowerCase()) {
+                        case 'arrowdown':
+                            e.preventDefault();
+                            moveSpotlightSelection(1);
+                            break;
+                        case 'arrowup':
+                            e.preventDefault();
+                            moveSpotlightSelection(-1);
+                            break;
+                        case 'enter':
+                            e.preventDefault();
+                            activateSpotlightSelection();
+                            break;
+                        case 'escape':
+                            e.preventDefault();
+                            closeSpotlight();
+                            break;
+                    }
+                });
+            }
+
+            if (spotlightResults) {
+                spotlightResults.addEventListener('click', (e) => {
+                    const trigger = e.target.closest('[data-spotlight-index]');
+                    if (!trigger) return;
+                    const index = Number.parseInt(trigger.dataset.spotlightIndex || '0', 10);
+                    if (!Number.isFinite(index)) return;
+                    activateSpotlightSelection(index);
+                });
+            }
 
             document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -3907,6 +4810,7 @@
                     }
 
                     syncStatusFilterButtons();
+                    applySearchQuery(state.search, { refreshView: false, syncInput: false });
                     renderComponentResultsList();
                     draw();
                 });
@@ -4268,10 +5172,8 @@
                     if (outside) return;
                 }
 
-                const name = (n.name || '').toLowerCase();
-                const nickname = (n.nickname || '').toLowerCase();
                 const matchesFilter = doesNodeMatchStatusFilter(n.status) &&
-                    (!state.search || name.includes(state.search) || nickname.includes(state.search));
+                    nodeMatchesSearch(n);
 
                 nodesToDraw.push({ node: n, dimmed: !matchesFilter, alpha: n.alpha });
             });
@@ -4859,6 +5761,7 @@
             const riskScore = Number.isFinite(Number(node.riskScore)) ? Number(node.riskScore) : undefined;
             const riskReasons = Array.isArray(node.riskReasons) ? node.riskReasons : [];
             const showHighLevelDetails = showHighLevelModificationDetails();
+            const effectiveStatus = computeEffectiveNodeStatus(node, showHighLevelDetails);
             const riskReasonText = showHighLevelDetails && riskReasons.length ? ` (${riskReasons.slice(0, 2).join(', ')})` : '';
 
             const connectionsBlock = showHighLevelDetails ? `
@@ -4884,8 +5787,8 @@
                             <div class="node-name">${node.nickname || node.name}</div>
                             <div class="node-type">${node.name}</div>
                         </div>
-                        <span class="status-badge" style="background: ${CONFIG.colors[node.status]}; color: white">
-                            ${node.status}
+                        <span class="status-badge" style="background: ${CONFIG.colors[effectiveStatus]}; color: white">
+                            ${effectiveStatus}
                         </span>
                     </div>
                     
@@ -5115,16 +6018,24 @@
             `;
         }
 
+        function isClusterLikeNode(node) {
+            const props = node?.properties || {};
+            const oldProps = node?.propertiesOld || {};
+            return isTrueish(props.isCluster) ||
+                isTrueish(props.IsCluster) ||
+                isTrueish(oldProps.isCluster) ||
+                isTrueish(oldProps.IsCluster) ||
+                !!(props.clusterHash || props.ClusterHash || oldProps.clusterHash || oldProps.ClusterHash) ||
+                !!(props.clusterPreviewGraph || props.ClusterPreviewGraph || oldProps.clusterPreviewGraph || oldProps.ClusterPreviewGraph) ||
+                /cluster/i.test(String(node?.name || '')) ||
+                /cluster/i.test(String(node?.nickname || ''));
+        }
+
         function getClusterPreviewData(node) {
             const props = node.properties || {};
             const oldProps = node.propertiesOld || {};
 
-            const isCluster = isTrueish(props.isCluster) ||
-                isTrueish(props.IsCluster) ||
-                isTrueish(oldProps.isCluster) ||
-                isTrueish(oldProps.IsCluster) ||
-                /cluster/i.test(String(node.name || '')) ||
-                /cluster/i.test(String(node.nickname || ''));
+            const isCluster = isClusterLikeNode(node);
             if (!isCluster) {
                 return { isCluster: false };
             }
@@ -5470,14 +6381,13 @@
             }
 
             const diffGraph = buildClusterDiffGraph(oldGraph, newGraph);
-            const hasVisibleInternalDiff = diffGraph.nodes.some(n => n.status !== 'same') ||
-                diffGraph.edges.some(e => e.status !== 'same');
             const normalizedNodes = diffGraph.nodes.map(n => normalizeNode({
                 ...n,
                 name: n.name || n.id || 'Cluster Component',
                 nickname: n.name || n.id || 'Cluster Component'
             }));
             const { componentNodes, groupNodes } = splitComponentAndGroupNodes(normalizedNodes);
+            applyModificationStatusToNodes(componentNodes, showHighLevelModificationDetails());
             const renderableGroups = buildRenderableGroups(groupNodes, componentNodes);
 
             const nodeMap = buildNodeLookupMap(componentNodes);
@@ -5497,6 +6407,8 @@
                     };
                 })
                 .filter(e => !!e);
+            const hasVisibleInternalDiff = componentNodes.some(n => n.status !== 'same') ||
+                edges.some(e => e.status !== 'same');
 
             const baseName = getGraphNodeTabLabel(node);
             const parentSegments = Array.isArray(parentTab?.breadcrumbSegments) && parentTab.breadcrumbSegments.length
@@ -5593,6 +6505,7 @@
             let changed = 0;
 
             Object.entries(props).forEach(([key, val]) => {
+                if (isClusterMetadataPropertyKey(key)) return;
                 const prior = getPropertyValueIgnoreCase(oldProps, key);
                 if (!prior.found) return;
                 if (String(prior.value) !== String(val ?? '')) changed++;
@@ -5602,7 +6515,7 @@
         }
 
         function renderChangeSummary(node) {
-            if (!node || String(node.status || '').toLowerCase() !== 'modified') return '';
+            if (!node || computeEffectiveNodeStatus(node) !== 'modified') return '';
 
             const includeHighLevel = showHighLevelModificationDetails();
             const reasons = [];
@@ -5637,6 +6550,11 @@
                 reasons.push(`${changedScript} script block${changedScript === 1 ? '' : 's'} changed`);
             }
 
+            const clusterPreview = getClusterPreviewData(node);
+            if (clusterPreview.isCluster && clusterInternalsChanged(node, clusterPreview)) {
+                reasons.push('Cluster internals changed');
+            }
+
             if (reasons.length === 0) {
                 reasons.push(includeHighLevel
                     ? 'Marked as modified by backend diff heuristics (high-level), but no explicit value-level change was detected.'
@@ -5654,12 +6572,13 @@
 
         function renderProperties(node) {
             if (!node.properties || Object.keys(node.properties).length === 0) return '';
+            const effectiveStatus = computeEffectiveNodeStatus(node);
             const showOnlyChangedValues =
                 !showHighLevelModificationDetails() &&
-                String(node.status || '').toLowerCase() === 'modified';
+                effectiveStatus === 'modified';
 
             // Check if this is a cluster node
-            const isCluster = isTrueish(node.properties.isCluster) || isTrueish(node.properties.IsCluster);
+            const isCluster = isClusterLikeNode(node);
             const clusterHash = node.properties.clusterHash || node.properties.ClusterHash;
             const clusterSize = node.properties.clusterSize || node.properties.ClusterSize;
             const oldClusterHash = node.propertiesOld && (node.propertiesOld.clusterHash || node.propertiesOld.ClusterHash);
@@ -5715,19 +6634,9 @@
             }
 
             let rows = '';
-            // Filter out cluster-specific properties from the generic display
-            const clusterKeys = [
-                'isCluster', 'IsCluster',
-                'clusterHash', 'ClusterHash',
-                'clusterSize', 'ClusterSize',
-                'clusterPreviewStatus', 'ClusterPreviewStatus',
-                'clusterPreviewMessage', 'ClusterPreviewMessage',
-                'clusterPreviewGraph', 'ClusterPreviewGraph'
-            ];
-
             for (const [key, val] of Object.entries(node.properties)) {
                 // Skip cluster-specific keys (rendered in the dedicated section above)
-                if (clusterKeys.includes(key)) continue;
+                if (isClusterMetadataPropertyKey(key)) continue;
 
                 // Check if this property changed (has old value)
                 const oldLookup = getPropertyValueIgnoreCase(node.propertiesOld || {}, key);
