@@ -1,10 +1,12 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap rescap">
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap rescap desktop4 com">
 
   <Identity Name="com.hoptracer.app" Publisher="CN=HopTracer" Version="1.0.0.0" />
 
@@ -36,6 +38,24 @@
         <uap:DefaultTile Square71x71Logo="Resources\AppIcon\hoptrace_logo.png" Wide310x150Logo="Resources\AppIcon\hoptrace_logo.png" Square310x310Logo="Resources\AppIcon\hoptrace_logo.png" />
         <uap:SplashScreen Image="Resources\Splash\hoptrace_logo_noshadow.png" />
       </uap:VisualElements>
+
+      <Extensions>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:SurrogateServer DisplayName="HopTracer Shell Extension">
+              <com:Class Id="2BD57837-61DF-4270-AFF3-461D8E862D09" Path="HopTracer.ShellExtension.dll" ThreadingModel="STA" />
+            </com:SurrogateServer>
+          </com:ComServer>
+        </com:Extension>
+
+        <desktop4:Extension Category="windows.fileExplorerContextMenus">
+          <desktop4:FileExplorerContextMenus>
+            <desktop4:ItemType Type=".gh">
+              <desktop4:Verb Id="HopTracerConvertToGhx" Clsid="2BD57837-61DF-4270-AFF3-461D8E862D09" />
+            </desktop4:ItemType>
+          </desktop4:FileExplorerContextMenus>
+        </desktop4:Extension>
+      </Extensions>
     </Application>
   </Applications>
 
@@ -44,3 +64,5 @@
   </Capabilities>
 
 </Package>
+
+

@@ -94,4 +94,12 @@
 		</EmbeddedResource>
 	</ItemGroup>
 
+	<ItemGroup Condition="'$(ShellExtensionDllPath)' != '' and Exists('$(ShellExtensionDllPath)')">
+		<Content Include="$(ShellExtensionDllPath)">
+			<Link>HopTracer.ShellExtension.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
 </Project>
+

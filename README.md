@@ -124,7 +124,10 @@ It compares two versions, renders an interactive graph diff, and surfaces risk-f
 
 1. Download the latest release from the [Releases](https://github.com/lasaths/HopTracer/releases) page.
 2. Extract `HopTracer-Windows-x64.zip`.
-3. Run `HopTracer.exe` from `HopTracer_Portable`.
+3. (Optional) Run `Install-ExplorerMenu.ps1` in `HopTracer_Portable` to add **Convert to GHX (HopTracer)** to `.gh` file right-click menus.
+4. Run `HopTracer.exe` from `HopTracer_Portable`.
+
+To remove the context-menu entry later, run `Uninstall-ExplorerMenu.ps1` from the same folder.
 
 No separate .NET runtime installation is required for release builds.
 
@@ -266,3 +269,4 @@ MIT License. See [LICENSE](LICENSE).
 - Built with [.NET MAUI](https://dotnet.microsoft.com/apps/maui) and [ASP.NET Core](https://dotnet.microsoft.com/apps/aspnet)
 - GH/GHX conversion approach based on [GhToGhx](https://bitbucket.org/rilgh/ghtoghx/wiki/Home)
 - Development and documentation include AI-assisted workflows with maintainer review
+

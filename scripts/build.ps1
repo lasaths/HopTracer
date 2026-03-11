@@ -19,16 +19,16 @@ Write-Host ""
 # Step 1: Clean build outputs
 if (-not $SkipClean) {
     Write-Host "[1/5] Cleaning..." -ForegroundColor Yellow
-    
+
     # Remove bin/obj
-    Get-ChildItem -Path $sourceDir -Include bin,obj -Recurse -Directory -ErrorAction SilentlyContinue | 
+    Get-ChildItem -Path $sourceDir -Include bin,obj -Recurse -Directory -ErrorAction SilentlyContinue |
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    
+
     # Clean Release
     if (Test-Path $releaseDir) {
         Remove-Item "$releaseDir\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
-    
+
     Write-Host "  ✓ Clean complete" -ForegroundColor Green
 }
 
@@ -41,7 +41,8 @@ try {
     dotnet restore $testProject --verbosity quiet
     if ($LASTEXITCODE -ne 0) { throw "Test restore failed" }
     Write-Host "  ✓ Dependencies restored" -ForegroundColor Green
-} finally {
+}
+finally {
     Pop-Location
 }
 
@@ -53,7 +54,8 @@ if (-not $SkipTests) {
         throw "Tests failed"
     }
     Write-Host "  ✓ Tests passed" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "`n[3/5] Tests skipped" -ForegroundColor Gray
 }
 
@@ -64,7 +66,8 @@ try {
     dotnet build $appProject -c Release --no-restore --verbosity quiet
     if ($LASTEXITCODE -ne 0) { throw "Build failed" }
     Write-Host "  ✓ Build successful" -ForegroundColor Green
-} finally {
+}
+finally {
     Pop-Location
 }
 
@@ -89,11 +92,23 @@ try {
         -p:PublishSingleFile=false `
         -o $outputDir `
         --verbosity quiet
-    
+
     if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
-    
+
     $exePath = Join-Path $outputDir "HopTracer.exe"
     if (Test-Path $exePath) {
+        $portableScripts = @(
+            "Install-ExplorerMenu.ps1",
+            "Uninstall-ExplorerMenu.ps1"
+        )
+
+        foreach ($scriptName in $portableScripts) {
+            $sourceScript = Join-Path $rootDir "scripts\$scriptName"
+            if (Test-Path $sourceScript) {
+                Copy-Item -Path $sourceScript -Destination (Join-Path $outputDir $scriptName) -Force
+            }
+        }
+
         $fileCount = (Get-ChildItem -Path $outputDir -Recurse -File).Count
         $folderSizeMb = [math]::Round(((Get-ChildItem -Path $outputDir -Recurse -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 2)
 
@@ -107,7 +122,8 @@ try {
         $zipSizeMb = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
         Write-Host "  ✓ Release archive created: $zipPath ($zipSizeMb MB)" -ForegroundColor Green
     }
-} finally {
+}
+finally {
     Pop-Location
 }
 

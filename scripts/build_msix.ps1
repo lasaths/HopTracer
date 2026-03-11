@@ -4,6 +4,7 @@
 param(
     [switch]$SkipClean = $false,
     [switch]$SkipTests = $false,
+    [switch]$RequireStoreReadiness = $false,
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
     [string]$Version = "",
@@ -19,12 +20,55 @@ $sourceDir = Join-Path $rootDir "Source"
 $releaseDir = Join-Path $rootDir "Release"
 $projectFile = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
 $msixOutputDir = Join-Path $releaseDir "MSIX"
+$shellExtensionProject = Join-Path $sourceDir "HopTracer.ShellExtension\HopTracer.ShellExtension.vcxproj"
+$shellExtensionDll = Join-Path $sourceDir "HopTracer.ShellExtension\bin\$Configuration\x64\HopTracer.ShellExtension.dll"
+
+function Resolve-MSBuildPath {
+    $fromPath = Get-Command msbuild -ErrorAction SilentlyContinue
+    if ($null -ne $fromPath) {
+        return $fromPath.Source
+    }
+
+    $vswhereCandidates = @(
+        (Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"),
+        (Join-Path $env:ProgramFiles "Microsoft Visual Studio\Installer\vswhere.exe")
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) }
+
+    foreach ($vswhere in $vswhereCandidates) {
+        $installPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($installPath)) {
+            $candidate = Join-Path $installPath "MSBuild\Current\Bin\MSBuild.exe"
+            if (Test-Path $candidate) {
+                return $candidate
+            }
+        }
+    }
+
+    $fallbacks = @(
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe"
+    )
+
+    foreach ($candidate in $fallbacks) {
+        if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path $candidate)) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
 
 Write-Host "=== HopTracer MSIX Build ===" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not $SkipClean) {
-    Write-Host "[1/5] Cleaning..." -ForegroundColor Yellow
+    Write-Host "[1/7] Cleaning..." -ForegroundColor Yellow
     Get-ChildItem -Path $sourceDir -Include bin,obj -Recurse -Directory -ErrorAction SilentlyContinue |
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
@@ -35,10 +79,10 @@ if (-not $SkipClean) {
     Write-Host "  ✓ Clean complete" -ForegroundColor Green
 }
 else {
-    Write-Host "[1/5] Clean skipped" -ForegroundColor Gray
+    Write-Host "[1/7] Clean skipped" -ForegroundColor Gray
 }
 
-Write-Host "`n[2/5] Restoring dependencies..." -ForegroundColor Yellow
+Write-Host "`n[2/7] Restoring dependencies..." -ForegroundColor Yellow
 Push-Location $sourceDir
 try {
     dotnet restore HopTracer.sln --verbosity quiet
@@ -50,16 +94,48 @@ finally {
 }
 
 if (-not $SkipTests) {
-    Write-Host "`n[3/5] Running tests..." -ForegroundColor Yellow
+    Write-Host "`n[3/7] Running tests..." -ForegroundColor Yellow
     dotnet test (Join-Path $rootDir "Tests\HopTracer.UnitTests\HopTracer.UnitTests.csproj") --configuration $Configuration --verbosity quiet --no-restore
     if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
     Write-Host "  ✓ Tests passed" -ForegroundColor Green
 }
 else {
-    Write-Host "`n[3/5] Tests skipped" -ForegroundColor Gray
+    Write-Host "`n[3/7] Tests skipped" -ForegroundColor Gray
 }
 
-Write-Host "`n[4/5] Publishing MSIX package..." -ForegroundColor Yellow
+Write-Host "`n[4/7] Checking Store readiness..." -ForegroundColor Yellow
+$readinessScript = Join-Path $rootDir "scripts\check_store_readiness.ps1"
+if (-not (Test-Path $readinessScript)) {
+    throw "Store readiness script not found: $readinessScript"
+}
+
+& $readinessScript -Strict:$RequireStoreReadiness
+if ($LASTEXITCODE -ne 0) {
+    throw "Store readiness checks failed."
+}
+
+Write-Host "`n[5/7] Building Explorer shell extension..." -ForegroundColor Yellow
+if (-not (Test-Path $shellExtensionProject)) {
+    throw "Shell extension project not found: $shellExtensionProject"
+}
+
+$msbuildPath = Resolve-MSBuildPath
+if ([string]::IsNullOrWhiteSpace($msbuildPath)) {
+    throw "msbuild.exe not found. Install Visual Studio Build Tools with the C++ workload to build the MSIX shell extension."
+}
+
+& $msbuildPath $shellExtensionProject "/t:Build" "/p:Configuration=$Configuration" "/p:Platform=x64" "/m" "/nologo"
+if ($LASTEXITCODE -ne 0) {
+    throw "Shell extension build failed"
+}
+
+if (-not (Test-Path $shellExtensionDll)) {
+    throw "Shell extension DLL was not produced: $shellExtensionDll"
+}
+
+Write-Host "  ✓ Shell extension built: $shellExtensionDll" -ForegroundColor Green
+
+Write-Host "`n[6/7] Publishing MSIX package..." -ForegroundColor Yellow
 if (-not (Test-Path $msixOutputDir)) {
     New-Item -ItemType Directory -Path $msixOutputDir -Force | Out-Null
 }
@@ -81,8 +157,9 @@ $publishArgs = @(
     "-p:WindowsAppSDKSelfContained=true",
     "-p:AppxBundle=Never",
     "-p:UapAppxPackageBuildMode=StoreUpload",
-    "-p:AppxPackageDir=$msixOutputDir\",
-    "-p:AppxPackageSigningEnabled=$appxSigningEnabled"
+    "-p:AppxPackageDir=$msixOutputDir\\",
+    "-p:AppxPackageSigningEnabled=$appxSigningEnabled",
+    "-p:ShellExtensionDllPath=$shellExtensionDll"
 )
 
 if (-not [string]::IsNullOrWhiteSpace($Version)) {
@@ -114,7 +191,7 @@ finally {
     Pop-Location
 }
 
-Write-Host "`n[5/5] Collecting artifacts..." -ForegroundColor Yellow
+Write-Host "`n[7/7] Collecting artifacts..." -ForegroundColor Yellow
 $msixFiles = Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msix -ErrorAction SilentlyContinue
 $msixUploadFiles = Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msixupload -ErrorAction SilentlyContinue
 
