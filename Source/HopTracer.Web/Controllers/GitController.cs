@@ -91,7 +91,8 @@ public partial class GitController : ControllerBase
         
         try
         {
-            var commits = wrapper.GetCommits(normalizedPath);
+            // Load full history for the selected file in the source picker.
+            var commits = wrapper.GetCommits(normalizedPath, 0);
             return Ok(new { commits = commits });
         }
         catch (Exception ex)

@@ -3951,6 +3951,8 @@
         function hasValueLevelPropertyDifferences(node) {
             const props = node?.properties || {};
             const oldProps = node?.propertiesOld || {};
+            const originalStatus = getNodeOriginalStatus(node);
+            const hasSparseOldValues = originalStatus === 'modified' || originalStatus === 'same';
             const oldByLowerKey = new Map();
 
             Object.entries(oldProps).forEach(([key, value]) => {
@@ -3964,7 +3966,7 @@
                 const lowerKey = String(key || '').toLowerCase();
                 const oldEntry = oldByLowerKey.get(lowerKey);
                 if (!oldEntry) {
-                    if (String(newValue ?? '') !== '') return true;
+                    if (!hasSparseOldValues && String(newValue ?? '') !== '') return true;
                     continue;
                 }
 
@@ -3976,7 +3978,7 @@
 
             for (const [lowerKey, oldEntry] of oldByLowerKey.entries()) {
                 if (matchedOldKeys.has(lowerKey)) continue;
-                if (String(oldEntry.value ?? '') !== '') return true;
+                if (!hasSparseOldValues && String(oldEntry.value ?? '') !== '') return true;
             }
 
             return false;
@@ -4402,6 +4404,8 @@
             }).filter(group => group.memberIds.length > 0 || !!group.fallbackRect);
         }
 
+        const GROUP_MEMBERSHIP_BLEND_WINDOW = 0.10;
+
         function getGroupMemberIdsForMix(group, mix = state.versionMix) {
             if (!group) return [];
             const oldMembers = Array.isArray(group.memberIdsOld) ? group.memberIdsOld : [];
@@ -4409,15 +4413,40 @@
             if (mix <= 0.001) return oldMembers;
             if (mix >= 0.999) return newMembers;
 
-            const merged = [];
-            const seen = new Set();
-            [...oldMembers, ...newMembers].forEach(id => {
+            const oldMap = new Map();
+            const newMap = new Map();
+            oldMembers.forEach(id => {
                 const canonical = canonicalizeId(id);
-                if (!canonical || seen.has(canonical)) return;
-                seen.add(canonical);
-                merged.push(id);
+                if (!canonical || oldMap.has(canonical)) return;
+                oldMap.set(canonical, id);
             });
-            return merged;
+            newMembers.forEach(id => {
+                const canonical = canonicalizeId(id);
+                if (!canonical || newMap.has(canonical)) return;
+                newMap.set(canonical, id);
+            });
+
+            const result = [];
+            const includeOldOnly = mix <= GROUP_MEMBERSHIP_BLEND_WINDOW;
+            const includeNewOnly = mix >= (1 - GROUP_MEMBERSHIP_BLEND_WINDOW);
+            const keys = new Set([...oldMap.keys(), ...newMap.keys()]);
+            keys.forEach(key => {
+                const inOld = oldMap.has(key);
+                const inNew = newMap.has(key);
+                if (inOld && inNew) {
+                    result.push(newMap.get(key) || oldMap.get(key));
+                    return;
+                }
+                if (inOld && includeOldOnly) {
+                    result.push(oldMap.get(key));
+                    return;
+                }
+                if (inNew && includeNewOnly) {
+                    result.push(newMap.get(key));
+                }
+            });
+
+            return result.filter(Boolean);
         }
 
         function normalizePorts(ports, kind, nodeId) {
@@ -5762,6 +5791,7 @@
             const riskReasons = Array.isArray(node.riskReasons) ? node.riskReasons : [];
             const showHighLevelDetails = showHighLevelModificationDetails();
             const effectiveStatus = computeEffectiveNodeStatus(node, showHighLevelDetails);
+            const renderTopUserInputs = !isPanelLikeNode(node);
             const riskReasonText = showHighLevelDetails && riskReasons.length ? ` (${riskReasons.slice(0, 2).join(', ')})` : '';
 
             const connectionsBlock = showHighLevelDetails ? `
@@ -5813,6 +5843,7 @@
                 </div>
 
                 ${renderChangeSummary(node)}
+                ${renderTopUserInputs ? renderUserInputSummary(node) : ''}
                 ${renderProperties(node)}
                 ${connectionsBlock}
             `;
@@ -6499,16 +6530,195 @@
             return { found: false, value: '', actualKey: key };
         }
 
+        function normalizePropertyKeyName(key) {
+            return String(key || '').trim().toLowerCase();
+        }
+
+        const PANEL_VALUE_PROPERTY_KEYS = new Set([
+            'usertext',
+            'panelcontent',
+            'text',
+            'string',
+            'value'
+        ]);
+
+        const USER_INPUT_PRIORITY = new Map([
+            ['usertext', 1],
+            ['panelcontent', 2],
+            ['text', 3],
+            ['string', 4],
+            ['value', 5],
+            ['url', 6],
+            ['uri', 7],
+            ['path', 8],
+            ['filepath', 9],
+            ['expression', 10],
+            ['note', 11],
+            ['comment', 12],
+            ['message', 13]
+        ]);
+
+        const USER_INPUT_EXCLUDE_KEYS = new Set([
+            'guid',
+            'instanceguid',
+            'source',
+            'sourcecount',
+            'bounds',
+            'pivot',
+            'scrollratio',
+            'optional'
+        ]);
+
+        function isPanelValuePropertyKey(key) {
+            return PANEL_VALUE_PROPERTY_KEYS.has(normalizePropertyKeyName(key));
+        }
+
+        function isUserInputPropertyKey(key) {
+            const normalized = normalizePropertyKeyName(key);
+            if (!normalized || USER_INPUT_EXCLUDE_KEYS.has(normalized)) return false;
+            if (USER_INPUT_PRIORITY.has(normalized)) return true;
+            return /(user.?text|panel.?content|url|uri|file.?path|^path$|note|comment|message|prompt)/i.test(normalized);
+        }
+
+        function isPanelLikeNode(node) {
+            const name = String(node?.name || '').toLowerCase();
+            const nickname = String(node?.nickname || '').toLowerCase();
+            if (name.includes('panel') || nickname.includes('panel')) return true;
+
+            const props = node?.properties || {};
+            return Object.keys(props).some(k => isPanelValuePropertyKey(k));
+        }
+
+        function getPanelValueDetails(node) {
+            if (!node) {
+                return { hasAny: false, newValue: '', oldValue: '', changed: false };
+            }
+
+            const props = node.properties || {};
+            const oldProps = node.propertiesOld || {};
+            const candidates = ['UserText', 'PanelContent', 'Text', 'String', 'Value'];
+
+            let newValue = '';
+            let oldValue = '';
+            let hasNew = false;
+            let hasOld = false;
+
+            for (const key of candidates) {
+                const lookup = getPropertyValueIgnoreCase(props, key);
+                if (lookup.found) {
+                    hasNew = true;
+                    newValue = String(lookup.value ?? '');
+                    break;
+                }
+            }
+
+            for (const key of candidates) {
+                const lookup = getPropertyValueIgnoreCase(oldProps, key);
+                if (lookup.found) {
+                    hasOld = true;
+                    oldValue = String(lookup.value ?? '');
+                    break;
+                }
+            }
+
+            const hasAny = hasNew || hasOld;
+            const changed = hasNew && hasOld ? oldValue !== newValue : (hasNew ? newValue.length > 0 : oldValue.length > 0);
+            return { hasAny, hasNew, hasOld, newValue, oldValue, changed };
+        }
+
+        function getUserInputEntries(node) {
+            const props = node?.properties || {};
+            const oldProps = node?.propertiesOld || {};
+            const keys = new Set([...Object.keys(props), ...Object.keys(oldProps)]);
+            const entries = [];
+
+            keys.forEach(key => {
+                if (!isUserInputPropertyKey(key)) return;
+                if (isClusterMetadataPropertyKey(key)) return;
+                if (isScriptNoiseKey(key)) return;
+
+                const newLookup = getPropertyValueIgnoreCase(props, key);
+                const oldLookup = getPropertyValueIgnoreCase(oldProps, key);
+                const hasNew = newLookup.found;
+                const hasOld = oldLookup.found;
+                const newValue = hasNew ? String(newLookup.value ?? '') : '';
+                const oldValue = hasOld ? String(oldLookup.value ?? '') : '';
+
+                if (!hasNew && !hasOld) return;
+                if (!newValue.length && !oldValue.length) return;
+
+                entries.push({
+                    key: newLookup.actualKey || oldLookup.actualKey || key,
+                    normalizedKey: normalizePropertyKeyName(key),
+                    hasNew,
+                    hasOld,
+                    newValue,
+                    oldValue
+                });
+            });
+
+            entries.sort((a, b) => {
+                const pa = USER_INPUT_PRIORITY.get(a.normalizedKey) || 999;
+                const pb = USER_INPUT_PRIORITY.get(b.normalizedKey) || 999;
+                if (pa !== pb) return pa - pb;
+                return a.key.localeCompare(b.key);
+            });
+
+            return entries;
+        }
+
+        function renderUserInputSummary(node) {
+            const entries = getUserInputEntries(node);
+            if (!entries.length) return '';
+
+            const rows = entries.map(entry => {
+                if (entry.hasOld && entry.hasNew && entry.oldValue !== entry.newValue) {
+                    return `
+                        <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                            <span class="prop-label">${escapeHtml(entry.key)}</span>
+                            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7; white-space: pre-wrap;">${escapeHtml(entry.oldValue)}</span>
+                                <span style="color: var(--text-secondary);">→</span>
+                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; white-space: pre-wrap;">${escapeHtml(entry.newValue)}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const stableValue = entry.hasNew ? entry.newValue : entry.oldValue;
+                return `
+                    <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                        <span class="prop-label">${escapeHtml(entry.key)}</span>
+                        <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 180px; overflow-y: auto;">${escapeHtml(stableValue)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="detail-card" style="border-left: 3px solid var(--accent-color);">
+                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">User Inputs</div>
+                    ${rows}
+                </div>
+            `;
+        }
+
         function getChangedPropertyCount(node) {
             const props = node?.properties || {};
             const oldProps = node?.propertiesOld || {};
+            const originalStatus = getNodeOriginalStatus(node);
+            const hasSparseOldValues = originalStatus === 'modified' || originalStatus === 'same';
             let changed = 0;
 
             Object.entries(props).forEach(([key, val]) => {
                 if (isClusterMetadataPropertyKey(key)) return;
                 const prior = getPropertyValueIgnoreCase(oldProps, key);
-                if (!prior.found) return;
-                if (String(prior.value) !== String(val ?? '')) changed++;
+                const newValue = String(val ?? '');
+                if (!prior.found) {
+                    // Modified/same nodes usually only provide old values for changed keys.
+                    if (!hasSparseOldValues && newValue.length > 0) changed++;
+                    return;
+                }
+                if (String(prior.value ?? '') !== newValue) changed++;
             });
 
             return changed;
@@ -6573,12 +6783,16 @@
         function renderProperties(node) {
             if (!node.properties || Object.keys(node.properties).length === 0) return '';
             const effectiveStatus = computeEffectiveNodeStatus(node);
+            const originalStatus = getNodeOriginalStatus(node);
+            const hasSparseOldValues = originalStatus === 'modified' || originalStatus === 'same';
             const showOnlyChangedValues =
                 !showHighLevelModificationDetails() &&
                 effectiveStatus === 'modified';
 
             // Check if this is a cluster node
             const isCluster = isClusterLikeNode(node);
+            const isPanel = isPanelLikeNode(node);
+            const panelValue = getPanelValueDetails(node);
             const clusterHash = node.properties.clusterHash || node.properties.ClusterHash;
             const clusterSize = node.properties.clusterSize || node.properties.ClusterSize;
             const oldClusterHash = node.propertiesOld && (node.propertiesOld.clusterHash || node.propertiesOld.ClusterHash);
@@ -6633,24 +6847,62 @@
                 `;
             }
 
+            let panelSection = '';
+            if (isPanel && panelValue.hasAny) {
+                if (panelValue.changed && panelValue.hasOld && panelValue.hasNew) {
+                    panelSection = `
+                        <div class="detail-card" style="border-left: 3px solid var(--accent-color);">
+                            <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Panel Value</div>
+                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                                <span class="prop-label">UserText</span>
+                                <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                    <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7; white-space: pre-wrap;">${escapeHtml(panelValue.oldValue)}</span>
+                                    <span style="color: var(--text-secondary);">→</span>
+                                    <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; white-space: pre-wrap;">${escapeHtml(panelValue.newValue)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const stableValue = panelValue.hasNew ? panelValue.newValue : panelValue.oldValue;
+                    panelSection = `
+                        <div class="detail-card" style="border-left: 3px solid var(--accent-color);">
+                            <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Panel Value</div>
+                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                                <span class="prop-label">UserText</span>
+                                <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 180px; overflow-y: auto;">${escapeHtml(stableValue)}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
             let rows = '';
             for (const [key, val] of Object.entries(node.properties)) {
                 // Skip cluster-specific keys (rendered in the dedicated section above)
                 if (isClusterMetadataPropertyKey(key)) continue;
+                // User-entered inputs are surfaced at the top of the inspector.
+                if (isUserInputPropertyKey(key)) continue;
+                // Panel UserText is rendered in a dedicated section above.
+                if (isPanel && panelValue.hasAny && isPanelValuePropertyKey(key)) continue;
 
                 // Check if this property changed (has old value)
                 const oldLookup = getPropertyValueIgnoreCase(node.propertiesOld || {}, key);
                 const hasOldValue = oldLookup.found;
                 const oldValue = hasOldValue ? String(oldLookup.value ?? '') : '';
                 const newValue = String(val ?? '');
+                const valueAdded = !hasOldValue && !hasSparseOldValues && newValue.length > 0;
+                const valueRemoved = hasOldValue && oldValue.length > 0 && newValue.length === 0;
                 const valueChanged = hasOldValue && oldValue !== newValue;
+                const hasValueDelta = valueChanged || valueAdded || valueRemoved;
 
                 // Check if it's a script/code property
                 const isScript = isLikelyScriptPropertyKey(key);
 
                 if (isScript) {
-                    const scriptChanged = hasOldValue &&
-                        normalizeScriptForCompare(oldValue) !== normalizeScriptForCompare(newValue);
+                    const scriptChanged = hasOldValue
+                        ? normalizeScriptForCompare(oldValue) !== normalizeScriptForCompare(newValue)
+                        : newValue.length > 0;
                     if (showOnlyChangedValues && !scriptChanged) continue;
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 8px; align-items: flex-start; padding-bottom: 12px;">
@@ -6670,24 +6922,40 @@
                             </button>
                         </div>
                     `;
-                } else if (valueChanged) {
+                } else if (hasValueDelta) {
                     // Regular property changed
-                    rows += `
-                        <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                            <span class="prop-label">${key}</span>
-                            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${escapeHtml(oldValue)}</span>
-                                <span style="color: var(--text-secondary);">→</span>
-                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px;">${escapeHtml(newValue)}</span>
+                    if (valueAdded) {
+                        rows += `
+                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                                <span class="prop-label">${escapeHtml(key)}</span>
+                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px;">${escapeHtml(newValue)}</span>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    } else if (valueRemoved) {
+                        rows += `
+                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                                <span class="prop-label">${escapeHtml(key)}</span>
+                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${escapeHtml(oldValue)}</span>
+                            </div>
+                        `;
+                    } else {
+                        rows += `
+                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                                <span class="prop-label">${escapeHtml(key)}</span>
+                                <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                    <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${escapeHtml(oldValue)}</span>
+                                    <span style="color: var(--text-secondary);">→</span>
+                                    <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px;">${escapeHtml(newValue)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
                 } else {
                     if (showOnlyChangedValues) continue;
                     // Show single value (unchanged or new property)
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                            <span class="prop-label">${key}</span>
+                            <span class="prop-label">${escapeHtml(key)}</span>
                             <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 150px; overflow-y: auto;">${escapeHtml(newValue)}</span>
                         </div>
                     `;
@@ -6696,6 +6964,7 @@
 
             return `
                 ${clusterSection}
+                ${panelSection}
                 ${rows ? `
                 <div class="detail-card">
                     <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Component Values</div>
@@ -6711,22 +6980,29 @@
             const portItems = ports.map(p => {
                 const statusColor = CONFIG.colors[p.status] || CONFIG.colors.same;
                 const isInput = String(p.kind || p.Kind || '').toLowerCase() === 'input' || title.toLowerCase().startsWith('input');
+                const rawValue = p.value ?? p.Value;
+                const rawValueOld = p.valueOld ?? p.ValueOld;
+                const rawValueNew = p.valueNew ?? p.ValueNew;
+                const hasValue = rawValue !== null && rawValue !== undefined && String(rawValue).length > 0;
+                const portName = escapeHtml(p.nickname || p.name || p.id || '');
+                const portId = escapeHtml(String(p.id || ''));
+                const portStatus = escapeHtml(String(p.status || 'same'));
                 const wireDisplayLine = isInput
                     ? `<div class="port-value">Wire: ${wireDisplayModeLabel(p.wireDisplay ?? p.WireDisplay)}</div>`
                     : '';
                 const valueLine = p.valueChanged
-                    ? `<div class="port-value">Δ ${(p.valueOld || '')} → ${(p.valueNew || '')}</div>`
-                    : (p.value ? `<div class="port-value">${p.value}</div>` : '');
+                    ? `<div class="port-value">Δ ${escapeHtml(String(rawValueOld ?? ''))} → ${escapeHtml(String(rawValueNew ?? ''))}</div>`
+                    : (hasValue ? `<div class="port-value">${escapeHtml(String(rawValue))}</div>` : '');
 
                 return `
                     <div class="port-item">
                         <div class="port-meta">
-                            <div class="port-name">${p.nickname || p.name || p.id}</div>
+                            <div class="port-name">${portName}</div>
                             ${valueLine || ''}
                             ${wireDisplayLine}
-                            <div class="port-value" style="opacity:0.7;">${p.id}</div>
+                            <div class="port-value" style="opacity:0.7;">${portId}</div>
                         </div>
-                        <span class="port-status" style="background:${statusColor}; color:white;">${p.status}</span>
+                        <span class="port-status" style="background:${statusColor}; color:white;">${portStatus}</span>
                     </div>
                 `;
             }).join('');

@@ -480,7 +480,7 @@ public class GhxParser : IGhxParser
     private string? GetValue(XElement elem, string name)
     {
         var item = elem.Descendants("item")
-            .FirstOrDefault(i => i.Attribute("name")?.Value == name);
+            .FirstOrDefault(i => string.Equals(i.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
         
         return item?.Value?.Trim();
     }
@@ -494,6 +494,7 @@ public class GhxParser : IGhxParser
             "Value", "Number", "Text", "String", "Expression", "Code", "Script",
             "ScriptSource", "SourceCode", "CodeInput", "CodeOutput",
             "PythonScript", "PythonCode", "CSharpCode", "VBCode", "ScriptBody",
+            "UserText", "PanelContent",
             "Minimum", "Maximum", "Count", "Factor", "Length", "Width", "Height",
             "Radius", "Diameter", "Angle", "Distance", "Tolerance"
         };
@@ -544,23 +545,26 @@ public class GhxParser : IGhxParser
         // 3. Panel contents (FIX: Ensure UserText is captured correctly)
         // Panels usually store 'UserText' in 'PanelProperties'
         var panelProps = chunk.Descendants("chunk")
-            .FirstOrDefault(c => c.Attribute("name")?.Value == "PanelProperties");
+            .FirstOrDefault(c => string.Equals(c.Attribute("name")?.Value, "PanelProperties", StringComparison.OrdinalIgnoreCase));
+        string? userText = null;
         if (panelProps != null)
         {
-            var userText = GetValue(panelProps, "UserText");
-            if (!string.IsNullOrEmpty(userText))
-            {
-                result["PanelContent"] = userText;
-            }
+            userText = GetDirectValue(panelProps, "UserText") ?? GetValue(panelProps, "UserText");
         }
-        // Also check if 'UserText' appears directly or in other chunks
-        else 
+
+        // Common GHX panel shape stores UserText on the Container items, not PanelProperties.
+        if (string.IsNullOrWhiteSpace(userText))
         {
-            var directUserText = GetValue(chunk, "UserText");
-            if (!string.IsNullOrEmpty(directUserText))
-            {
-                result["PanelContent"] = directUserText;
-            }
+            var panelContainer = GetContainerChunk(chunk);
+            userText = (panelContainer != null ? (GetDirectValue(panelContainer, "UserText") ?? GetValue(panelContainer, "UserText")) : null)
+                ?? GetDirectValue(chunk, "UserText")
+                ?? GetValue(chunk, "UserText");
+        }
+
+        if (!string.IsNullOrWhiteSpace(userText))
+        {
+            result["PanelContent"] = userText;
+            result["UserText"] = userText;
         }
 
         // 4. Persistent data

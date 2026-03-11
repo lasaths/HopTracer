@@ -107,9 +107,10 @@ public class GitWrapper : IGitWrapper
     }
 
     /// <summary>
-    /// Gets the last N commits for a specific file.
+    /// Gets commits for a specific file.
     /// Returns commit info along with the path used for git log.
     /// Only returns commits where the file actually existed.
+    /// Pass limit <= 0 to return the full history.
     /// </summary>
     public List<CommitInfo> GetCommits(string filePath, int limit = 10)
     {
@@ -121,9 +122,11 @@ public class GitWrapper : IGitWrapper
             _logger?.LogInformation("Getting commits: file={RelPath}, repo={Repo}", relPath, _repoRoot);
             
             var format = "%h|%an|%ar|%s";
-            // Use --follow to track file renames/moves
-            // Request more than needed to account for filtering
-            var output = RunGitAt(_repoRoot, "log", "--follow", $"-n {limit * 2}", $"--pretty=format:{format}", "--", relPath);
+            // Use --follow to track file renames/moves.
+            // For bounded mode, request more than needed to account for filtering.
+            var output = limit > 0
+                ? RunGitAt(_repoRoot, "log", "--follow", $"-n {limit * 2}", $"--pretty=format:{format}", "--", relPath)
+                : RunGitAt(_repoRoot, "log", "--follow", $"--pretty=format:{format}", "--", relPath);
 
             var commits = new List<CommitInfo>();
             if (string.IsNullOrEmpty(output))
@@ -133,7 +136,7 @@ public class GitWrapper : IGitWrapper
 
             foreach (var line in output.Split('\n'))
             {
-                if (commits.Count >= limit)
+                if (limit > 0 && commits.Count >= limit)
                     break; // We have enough commits
                     
                 var parts = line.Split('|');
