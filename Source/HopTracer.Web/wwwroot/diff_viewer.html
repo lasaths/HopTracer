@@ -1859,10 +1859,10 @@
                 <div class="sidebar-card">
                     <div class="section-label">Status Filters</div>
                     <div class="filter-group">
-                        <button class="filter-btn active" data-filter="all">All</button>
-                        <button class="filter-btn" data-filter="added">Added</button>
-                        <button class="filter-btn" data-filter="removed">Removed</button>
-                        <button class="filter-btn" data-filter="modified">Modified</button>
+                        <button class="filter-btn" data-filter="all">All</button>
+                        <button class="filter-btn active" data-filter="added">Added</button>
+                        <button class="filter-btn active" data-filter="removed">Removed</button>
+                        <button class="filter-btn active" data-filter="modified">Modified</button>
                     </div>
                 </div>
 
@@ -2174,7 +2174,7 @@
             lastPos: { x: 0, y: 0 },
             selected: null,
             hovered: null,
-            filterMode: 'all',
+            filterMode: 'custom',
             filterStatuses: new Set(CHANGED_STATUS_FILTERS),
             search: '',
             searchMatches: new Set(),
