@@ -17,6 +17,8 @@ public class GraphMetadata
     public string Description { get; set; } = "";
     public DateTime? Date { get; set; }
     public string Author { get; set; } = "";
+    public string FileVersion { get; set; } = "";
+    public string ArchiveVersion { get; set; } = "";
     public int UnresolvedEdgeReferences { get; set; }
     public int ClusterPreviewParsed { get; set; }
     public int ClusterPreviewFailed { get; set; }

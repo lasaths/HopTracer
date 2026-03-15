@@ -457,9 +457,12 @@ public class GhxParser : IGhxParser
     private GraphMetadata ParseMetadata(XDocument doc)
     {
         var meta = new GraphMetadata();
+        meta.ArchiveVersion = GetVersionValue(doc.Root, "ArchiveVersion", compactMinorRevision: false) ?? "";
         
         var defChunk = doc.Descendants("chunk").FirstOrDefault(c => c.Attribute("name")?.Value == "Definition");
         if (defChunk == null) return meta;
+
+        meta.FileVersion = GetVersionValue(defChunk, "plugin_version", compactMinorRevision: true) ?? "";
 
         var propsChunk = defChunk.Descendants("chunk").FirstOrDefault(c => c.Attribute("name")?.Value == "DefinitionProperties");
         if (propsChunk != null)
@@ -475,6 +478,40 @@ public class GhxParser : IGhxParser
         }
         
         return meta;
+    }
+
+    private static string? GetVersionValue(XElement? parent, string itemName, bool compactMinorRevision)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        var item = parent.Element("items")?
+            .Elements("item")
+            .FirstOrDefault(i => string.Equals(i.Attribute("name")?.Value, itemName, StringComparison.OrdinalIgnoreCase));
+
+        return FormatVersionValue(item, compactMinorRevision);
+    }
+
+    private static string? FormatVersionValue(XElement? versionItem, bool compactMinorRevision)
+    {
+        if (versionItem == null)
+        {
+            return null;
+        }
+
+        if (!int.TryParse(versionItem.Element("Major")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var major))
+        {
+            return null;
+        }
+
+        _ = int.TryParse(versionItem.Element("Minor")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var minor);
+        _ = int.TryParse(versionItem.Element("Revision")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var revision);
+
+        return compactMinorRevision
+            ? $"{major}.{(minor * 100) + revision:000}"
+            : $"{major}.{minor}.{revision}";
     }
 
     private string? GetValue(XElement elem, string name)

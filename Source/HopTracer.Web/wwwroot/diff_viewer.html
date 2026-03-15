@@ -399,6 +399,40 @@
             opacity: 0.9;
         }
 
+        .source-version-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .source-inline-label {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .source-version {
+            color: var(--text-primary);
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .source-version.version-changed {
+            color: #fff;
+            background: rgba(245, 127, 23, 0.18);
+            border-color: rgba(245, 127, 23, 0.6);
+            box-shadow: 0 0 0 1px rgba(245, 127, 23, 0.16);
+        }
+
         .time-diff-chip {
             margin: 8px 0;
             padding: 6px 8px;
@@ -418,6 +452,15 @@
             font-weight: 600;
             color: var(--accent-color);
             font-size: 11px;
+        }
+
+        .version-diff-chip {
+            background: rgba(245, 127, 23, 0.12);
+            border-left-color: var(--modified);
+        }
+
+        .version-diff-chip .time-diff-value {
+            color: var(--modified);
         }
 
         .section-label {
@@ -1867,6 +1910,10 @@
                             <div class="source-side-label left">Left Source</div>
                             <div id="meta-new-name" class="source-name">-</div>
                             <div id="meta-new-date" class="source-date">-</div>
+                            <div class="source-version-row">
+                                <span class="source-inline-label">File Version</span>
+                                <span id="meta-new-version" class="source-version">-</span>
+                            </div>
                         </div>
 
                         <div id="time-diff-container" class="time-diff-chip" style="display: none;">
@@ -1874,10 +1921,19 @@
                             <div id="time-diff-value" class="time-diff-value">-</div>
                         </div>
 
+                        <div id="version-diff-container" class="time-diff-chip version-diff-chip" style="display: none;">
+                            <div class="time-diff-label">File Version Changed</div>
+                            <div id="version-diff-value" class="time-diff-value">-</div>
+                        </div>
+
                         <div class="analytics-source">
                             <div class="source-side-label right">Right Source</div>
                             <div id="meta-old-name" class="source-name">-</div>
                             <div id="meta-old-date" class="source-date">-</div>
+                            <div class="source-version-row">
+                                <span class="source-inline-label">File Version</span>
+                                <span id="meta-old-version" class="source-version">-</span>
+                            </div>
                         </div>
                     </div>
                 </details>
@@ -3618,9 +3674,68 @@
 
             const leftNameElem = document.getElementById('meta-new-name');
             const leftDateElem = document.getElementById('meta-new-date');
+            const leftVersionElem = document.getElementById('meta-new-version');
             const rightNameElem = document.getElementById('meta-old-name');
             const rightDateElem = document.getElementById('meta-old-date');
+            const rightVersionElem = document.getElementById('meta-old-version');
             const timeDiffContainer = document.getElementById('time-diff-container');
+            const versionDiffContainer = document.getElementById('version-diff-container');
+            const versionDiffValue = document.getElementById('version-diff-value');
+            const getVersionInfo = (graphMeta) => {
+                const fileVersion = graphMeta?.fileVersion || graphMeta?.FileVersion || '';
+                const archiveVersion = graphMeta?.archiveVersion || graphMeta?.ArchiveVersion || '';
+                const compareValue = fileVersion || archiveVersion || '';
+                const displayValue = fileVersion || (archiveVersion ? `Archive ${archiveVersion}` : 'Unknown');
+                const titleParts = [];
+
+                if (fileVersion) {
+                    titleParts.push(`Grasshopper file version: ${fileVersion}`);
+                }
+                if (archiveVersion) {
+                    titleParts.push(`Archive version: ${archiveVersion}`);
+                }
+                if (!titleParts.length) {
+                    titleParts.push('File version unavailable');
+                }
+
+                return {
+                    compareKind: fileVersion ? 'file' : (archiveVersion ? 'archive' : ''),
+                    compareValue,
+                    displayValue,
+                    title: titleParts.join(' • ')
+                };
+            };
+            const oldVersionInfo = getVersionInfo(GRAPH_DATA.oldMeta);
+            const newVersionInfo = getVersionInfo(GRAPH_DATA.newMeta);
+            const versionsDiffer = Boolean(oldVersionInfo.compareKind) &&
+                oldVersionInfo.compareKind === newVersionInfo.compareKind &&
+                Boolean(oldVersionInfo.compareValue) &&
+                Boolean(newVersionInfo.compareValue) &&
+                oldVersionInfo.compareValue !== newVersionInfo.compareValue;
+
+            [leftVersionElem, rightVersionElem].forEach(elem => {
+                if (!elem) return;
+                elem.classList.toggle('version-changed', versionsDiffer);
+            });
+
+            if (leftVersionElem) {
+                leftVersionElem.textContent = newVersionInfo.displayValue;
+                leftVersionElem.title = newVersionInfo.title;
+            }
+
+            if (rightVersionElem) {
+                rightVersionElem.textContent = oldVersionInfo.displayValue;
+                rightVersionElem.title = oldVersionInfo.title;
+            }
+
+            if (versionDiffContainer && versionDiffValue) {
+                if (versionsDiffer) {
+                    versionDiffValue.textContent = `${oldVersionInfo.displayValue} -> ${newVersionInfo.displayValue}`;
+                    versionDiffContainer.style.display = 'block';
+                } else {
+                    versionDiffContainer.style.display = 'none';
+                }
+            }
 
             if (isCommitContext) {
                 const applySourceInfo = (nameElem, dateElem, sourceType, sourcePath, sourceHash) => {

@@ -167,7 +167,9 @@ public partial class GitController : ControllerBase
                     TopRisks = diff.TopRisks,
                     RiskSummary = diff.RiskSummary,
                     StageTimings = stageTimings
-                }
+                },
+                OldMeta = graphOld.Metadata,
+                NewMeta = graphNew.Metadata
             };
 
             return Ok(new { diff_data = diffData });

@@ -27,6 +27,17 @@ public class GhxParserTests
     }
 
     [Fact]
+    public void Parse_ExtractsFileAndArchiveVersions_FromMetadata()
+    {
+        var parser = new GhxParser(NullLogger<GhxParser>.Instance);
+        var path = GetFixturePath("SampleDefinition.ghx");
+        var graph = parser.Parse(path);
+
+        Assert.Equal("1.008", graph.Metadata.FileVersion);
+        Assert.Equal("0.2.2", graph.Metadata.ArchiveVersion);
+    }
+
+    [Fact]
     public void Parse_TracksClusterPreviewDiagnostics_WhenClusterDocumentExists()
     {
         var parser = new GhxParser(NullLogger<GhxParser>.Instance);
