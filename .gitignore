@@ -64,3 +64,4 @@ desktop.ini
 *.p12
 *.pem
 *.key
+_tmp_*.cer
