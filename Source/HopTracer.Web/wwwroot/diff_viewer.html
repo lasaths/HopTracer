@@ -66,6 +66,12 @@
             --scrollbar-thumb: rgba(87, 91, 100, 0.82);
             --scrollbar-thumb-dark: rgba(66, 70, 78, 0.94);
             --scrollbar-thumb-hover: rgba(115, 120, 131, 0.94);
+            --surface-1: color-mix(in oklch, var(--bg-panel) 90%, black 10%);
+            --surface-2: color-mix(in oklch, var(--bg-card) 88%, black 12%);
+            --focus-ring: color-mix(in oklch, var(--accent-color) 62%, white 38%);
+            --interactive-hover: color-mix(in oklch, var(--accent-color) 16%, transparent);
+            --elev-1: 0 12px 32px rgba(0, 0, 0, 0.28);
+            --elev-2: 0 18px 40px rgba(0, 0, 0, 0.36);
         }
 
         .dark {
@@ -114,6 +120,12 @@
             --scrollbar-thumb: rgba(93, 98, 109, 0.86);
             --scrollbar-thumb-dark: rgba(70, 75, 85, 0.96);
             --scrollbar-thumb-hover: rgba(124, 130, 143, 0.96);
+            --surface-1: color-mix(in oklch, var(--bg-panel) 90%, black 10%);
+            --surface-2: color-mix(in oklch, var(--bg-card) 86%, black 14%);
+            --focus-ring: color-mix(in oklch, var(--accent-color) 60%, white 40%);
+            --interactive-hover: color-mix(in oklch, var(--accent-color) 18%, transparent);
+            --elev-1: 0 16px 38px rgba(0, 0, 0, 0.4);
+            --elev-2: 0 22px 52px rgba(0, 0, 0, 0.48);
         }
 
         * {
@@ -155,6 +167,16 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            line-height: 1.45;
+        }
+
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        summary:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 34%, transparent);
         }
 
         @keyframes spin {
@@ -239,19 +261,19 @@
         #sidebar {
             width: 320px;
             min-width: 220px;
-            background-color: var(--bg-panel);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 90%, transparent), color-mix(in oklch, var(--surface-2) 92%, transparent));
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             z-index: 10;
-            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--elev-1);
         }
 
         .sidebar-header {
             padding: 16px;
             border-bottom: 1px solid var(--border-color);
-            background: var(--bg-panel);
+            background: color-mix(in oklch, var(--surface-1) 94%, transparent);
         }
 
         .sidebar-header h1 {
@@ -308,7 +330,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255, 255, 255, 0.04);
+            background: color-mix(in oklch, var(--surface-2) 88%, transparent);
             border: 1px solid var(--border-color);
             border-radius: 999px;
             padding: 4px 8px;
@@ -352,8 +374,9 @@
         .sidebar-card {
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            background: rgba(255, 255, 255, 0.02);
+            background: color-mix(in oklch, var(--surface-2) 88%, transparent);
             padding: 10px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
         }
 
         .sidebar-card-title {
@@ -584,8 +607,16 @@
         }
 
         .spotlight-input:focus {
-            border-color: rgba(122, 158, 255, 0.88);
-            box-shadow: 0 0 0 1px rgba(122, 158, 255, 0.35);
+            border-color: var(--focus-ring);
+            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 28%, transparent);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
         }
 
         .spotlight-hint {
@@ -683,26 +714,30 @@
         }
 
         .filter-btn {
-            background: var(--bg-card);
+            background: color-mix(in oklch, var(--surface-2) 90%, transparent);
             border: 1px solid var(--border);
             color: var(--text-secondary);
-            padding: 5px 10px;
-            border-radius: 12px;
+            padding: 6px 11px;
+            border-radius: 999px;
             font-size: 11px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
             user-select: none;
         }
 
         .filter-btn:hover {
-            border-color: var(--text-secondary);
+            border-color: color-mix(in oklch, var(--accent-color) 56%, var(--border-color));
             color: var(--text-primary);
+            background: color-mix(in oklch, var(--interactive-hover) 52%, var(--surface-2));
+            transform: translateY(-1px);
         }
 
         .filter-btn.active {
-            background: var(--accent-color);
-            border-color: var(--accent-color);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--accent-color) 90%, white 10%), color-mix(in oklch, var(--accent-color) 84%, black 16%));
+            border-color: color-mix(in oklch, var(--accent-color) 78%, white 22%);
             color: white;
+            box-shadow: 0 8px 20px rgba(92, 128, 247, 0.24);
         }
 
         .sidebar-collapsible {
@@ -773,7 +808,7 @@
         .component-results {
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            background: rgba(255, 255, 255, 0.02);
+            background: color-mix(in oklch, var(--surface-2) 88%, transparent);
             padding: 10px;
             display: flex;
             flex-direction: column;
@@ -803,7 +838,7 @@
 
         .component-sort-select {
             min-width: 120px;
-            background: var(--bg-card);
+            background: color-mix(in oklch, var(--surface-2) 90%, transparent);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
             border-radius: 6px;
@@ -822,7 +857,7 @@
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.02);
+            background: color-mix(in oklch, var(--surface-1) 86%, transparent);
         }
 
         .component-results-empty {
@@ -902,12 +937,12 @@
             width: 420px;
             min-width: 300px;
             max-width: 520px;
-            background-color: var(--bg-panel);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 90%, transparent), color-mix(in oklch, var(--surface-2) 92%, transparent));
             border-left: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--elev-1);
             z-index: 10;
         }
 
@@ -1089,7 +1124,7 @@
             height: 28px;
             border-radius: 7px;
             border: 1px solid var(--border-color);
-            background: var(--bg-card);
+            background: color-mix(in oklch, var(--surface-2) 90%, transparent);
             color: var(--text-secondary);
             display: inline-flex;
             align-items: center;
@@ -1103,7 +1138,7 @@
         .panel-icon-btn:hover {
             color: #fff;
             border-color: var(--accent-color);
-            background: rgba(92, 128, 247, 0.2);
+            background: color-mix(in oklch, var(--interactive-hover) 64%, transparent);
         }
 
         .panel-expand-btn {

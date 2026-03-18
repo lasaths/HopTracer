@@ -60,6 +60,11 @@
             --removed: #c62828;
             --modified: #f57f17;
             --same: #424242;
+            --surface-1: color-mix(in oklch, var(--bg-panel) 92%, black 8%);
+            --surface-2: color-mix(in oklch, var(--bg-card) 90%, black 10%);
+            --focus-ring: color-mix(in oklch, var(--accent-color) 58%, white 42%);
+            --elev-1: 0 14px 36px rgba(0, 0, 0, 0.3);
+            --elev-2: 0 18px 44px rgba(0, 0, 0, 0.34);
         }
 
         .dark {
@@ -104,6 +109,11 @@
             --text-secondary: var(--muted-foreground);
             --accent-color: var(--primary);
             --accent-hover: var(--ring);
+            --surface-1: color-mix(in oklch, var(--bg-panel) 92%, black 8%);
+            --surface-2: color-mix(in oklch, var(--bg-card) 88%, black 12%);
+            --focus-ring: color-mix(in oklch, var(--accent-color) 62%, white 38%);
+            --elev-1: 0 16px 42px rgba(0, 0, 0, 0.42);
+            --elev-2: 0 22px 54px rgba(0, 0, 0, 0.5);
         }
 
         * {
@@ -113,7 +123,10 @@
         body {
             margin: 0;
             font-family: "Geist Sans", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-            background-color: var(--bg-app);
+            background:
+                radial-gradient(1200px 620px at 12% -8%, color-mix(in oklch, var(--accent-color) 20%, transparent), transparent 58%),
+                radial-gradient(900px 520px at 85% 104%, color-mix(in oklch, var(--ring) 16%, transparent), transparent 60%),
+                var(--bg-app);
             color: var(--text-primary);
             display: flex;
             flex-direction: column;
@@ -121,6 +134,7 @@
             justify-content: center;
             height: 100vh;
             width: 100%;
+            line-height: 1.45;
         }
 
         @keyframes spin {
@@ -132,11 +146,41 @@
         .container {
             width: min(800px, calc(100vw - 32px));
             text-align: center;
+            padding: clamp(18px, 3vw, 30px);
+            border-radius: 18px;
+            border: 1px solid color-mix(in oklch, var(--border-color) 78%, white 22%);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 90%, transparent), color-mix(in oklch, var(--surface-2) 92%, transparent));
+            box-shadow: var(--elev-1);
         }
 
         h1 {
             margin-bottom: 40px;
             font-weight: 600;
+        }
+
+        .hero {
+            margin-bottom: 34px;
+        }
+
+        .hero-logo {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 16px;
+            filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.3));
+        }
+
+        .hero-title {
+            margin: 0 0 10px;
+            font-size: clamp(30px, 4vw, 36px);
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            line-height: 1.12;
+        }
+
+        .hero-subtitle {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: clamp(15px, 2vw, 17px);
         }
 
         .drop-zone-container {
@@ -148,26 +192,34 @@
         .drop-zone {
             flex: 1;
             height: 200px;
-            background: var(--bg-panel);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 88%, transparent), color-mix(in oklch, var(--surface-2) 92%, transparent));
             border: 2px dashed var(--border-color);
-            border-radius: 12px;
+            border-radius: 14px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
             cursor: pointer;
             position: relative;
             user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
 
         .drop-zone:hover,
         .drop-zone.dragover {
             border-color: var(--accent-color);
-            background: var(--bg-card);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--accent-color) 13%, var(--surface-1)), color-mix(in oklch, var(--accent-color) 7%, var(--surface-2)));
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+        }
+
+        .drop-zone:focus-within {
+            border-color: var(--focus-ring);
+            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 30%, transparent), 0 10px 24px rgba(0, 0, 0, 0.2);
         }
 
         .drop-zone input {
@@ -211,25 +263,36 @@
         }
 
         .btn {
-            background: var(--accent-color);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--accent-color) 92%, white 8%), color-mix(in oklch, var(--accent-color) 86%, black 14%));
             color: var(--primary-foreground);
             border: none;
             padding: 12px 32px;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+            box-shadow: 0 8px 20px rgba(92, 128, 247, 0.28);
         }
 
         .btn:hover {
-            background: var(--accent-hover);
+            transform: translateY(-1px);
+            filter: brightness(1.04);
+            box-shadow: 0 12px 28px rgba(92, 128, 247, 0.34);
+        }
+
+        .btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 34%, transparent), 0 12px 28px rgba(92, 128, 247, 0.34);
         }
 
         .btn:disabled {
             background: var(--border-color);
             cursor: not-allowed;
             color: var(--text-secondary);
+            box-shadow: none;
+            transform: none;
+            filter: none;
         }
 
         /* Git Modal Styles */
@@ -258,7 +321,7 @@
         }
 
         .commit-row:hover {
-            background: rgba(255, 255, 255, 0.03);
+            background: color-mix(in oklch, var(--accent-color) 10%, transparent);
         }
 
         .commit-row.selected {
@@ -340,7 +403,7 @@
         }
 
         .git-modal-card {
-            background: var(--bg-panel);
+            background: linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 90%, transparent), color-mix(in oklch, var(--surface-2) 92%, transparent));
             padding: 0;
             border-radius: 12px;
             width: min(800px, calc(100vw - 24px));
@@ -348,7 +411,22 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid color-mix(in oklch, var(--border-color) 80%, white 20%);
+            box-shadow: var(--elev-2);
+        }
+
+        button:focus-visible,
+        input:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 34%, transparent);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
         }
 
         @keyframes slideIn {
@@ -420,11 +498,10 @@
 
 <body class="dark">
     <div class="container">
-        <div style="margin-bottom: 40px;">
-            <img src="images/HopTrace_Logo.png" alt="HopTracer"
-                style="max-width: 150px; height: auto; margin-bottom: 16px;">
-            <h1 style="margin: 0; font-size: 32px; font-weight: 700; margin-bottom: 8px;">HopTracer</h1>
-            <p style="color: var(--text-secondary); margin: 0; font-size: 16px;">
+        <div class="hero">
+            <img src="images/HopTrace_Logo.png" alt="HopTracer" class="hero-logo">
+            <h1 class="hero-title">HopTracer</h1>
+            <p class="hero-subtitle">
                 Visualize and compare changes in Grasshopper definitions.
             </p>
         </div>
