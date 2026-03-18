@@ -51,17 +51,25 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: 16px;
         }
 
         .container {
-            width: 600px;
+            width: min(600px, calc(100vw - 32px));
+            max-width: 100%;
             text-align: center;
             background: var(--bg-panel);
-            padding: 40px;
+            padding: clamp(24px, 5vw, 40px);
             border-radius: 12px;
             border: 1px solid var(--border);
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
         }
 
         h1 {
@@ -114,8 +122,8 @@
 </head>
 
 <body>
-    <div class="container">
-        <h1>
+    <main class="container" aria-labelledby="error-title">
+        <h1 id="error-title">
             <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
@@ -129,7 +137,7 @@
         </div>
 
         <a href="/" class="btn">Back to Home</a>
-    </div>
+    </main>
 </body>
 
 </html>
