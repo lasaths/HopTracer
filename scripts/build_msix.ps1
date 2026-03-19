@@ -7,6 +7,7 @@ param(
     [switch]$RequireStoreReadiness = $false,
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
+    [string]$IdentityName = "",
     [string]$Version = "",
     [string]$PackageVersion = "",
     [string]$Publisher = "",
@@ -109,7 +110,18 @@ if (-not (Test-Path $readinessScript)) {
     throw "Store readiness script not found: $readinessScript"
 }
 
-& $readinessScript -Strict:$RequireStoreReadiness
+$readinessArgs = @{
+    Strict = $RequireStoreReadiness
+    ExpectedIdentityName = $IdentityName
+    ExpectedPublisher = $Publisher
+    ExpectedDisplayVersion = $Version
+    ExpectedPackageVersion = $PackageVersion
+    RequireSigning = $RequireStoreReadiness
+    CertificatePath = $CertificatePath
+    CertificatePassword = $CertificatePassword
+}
+
+& $readinessScript @readinessArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Store readiness checks failed."
 }

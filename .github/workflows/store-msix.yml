@@ -3,6 +3,11 @@ name: Build Store MSIX
 on:
   workflow_dispatch:
     inputs:
+      identity_name:
+        description: "Partner Center package identity name (example: com.example.hoptracer)"
+        required: true
+        default: "com.hoptracer.app"
+        type: string
       version:
         description: "Optional ApplicationDisplayVersion override (example: 1.2.3)"
         required: false
@@ -14,9 +19,9 @@ on:
         default: ""
         type: string
       publisher:
-        description: "Optional publisher override (example: CN=YourPublisher)"
-        required: false
-        default: ""
+        description: "Partner Center publisher subject (example: CN=YourPublisher)"
+        required: true
+        default: "CN=HopTracer"
         type: string
       sign_package:
         description: "Sign package with certificate secrets"
@@ -67,6 +72,7 @@ jobs:
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
+          -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
           -Publisher "${{ inputs.publisher }}"
@@ -81,6 +87,8 @@ jobs:
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
+          -RequireStoreReadiness `
+          -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
           -Publisher "${{ inputs.publisher }}" `

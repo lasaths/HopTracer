@@ -15,21 +15,38 @@ Required alignment:
 
 - `Identity Name` must match the reserved Store identity.
 - `Identity Publisher` must match the certificate subject used for signing.
-- Version must be incremented for each submission.
+- Display version stays `1.0.0` for the reissue; increment only the fourth package-version component for repeat Store submissions (`1.0.0.1`, `1.0.0.2`, ...).
+
+Validate the checked-in metadata before building:
+
+```powershell
+.\scripts\check_store_readiness.ps1 `
+  -Strict `
+  -ExpectedIdentityName "com.hoptracer.app" `
+  -ExpectedPublisher "CN=HopTracer" `
+  -ExpectedPackageVersion "1.0.0.1" `
+  -CertificatePath "C:\path\store-signing-cert.pfx" `
+  -CertificatePassword "..."
+```
 
 ## 2. Build MSIX Locally
 
 Unsigned package:
 
 ```powershell
-.\scripts\build_msix.ps1
+.\scripts\build_msix.ps1 `
+  -IdentityName "com.hoptracer.app" `
+  -Publisher "CN=HopTracer"
 ```
 
 Signed package:
 
 ```powershell
 .\scripts\build_msix.ps1 `
-  -PackageVersion "1.2.3.0" `
+  -RequireStoreReadiness `
+  -IdentityName "com.hoptracer.app" `
+  -Publisher "CN=HopTracer" `
+  -PackageVersion "1.0.0.1" `
   -CertificatePath "C:\path\store-signing-cert.pfx" `
   -CertificatePassword "..."
 ```
@@ -55,9 +72,10 @@ Workflow: `.github/workflows/store-msix.yml` (manual trigger)
 
 Inputs:
 
+- `identity_name` (required)
 - `version` (optional)
 - `package_version` (optional, `major.minor.patch.revision`)
-- `publisher` (optional)
+- `publisher` (required)
 - `sign_package` (`true` or `false`)
 
 Secrets for signed packages:
@@ -73,8 +91,9 @@ Example to create `MSIX_CERT_BASE64`:
 
 ## 5. Submission Checklist
 
+- [ ] `.\scripts\check_store_readiness.ps1 -Strict ...` passes with the exact identity/publisher/signing inputs used for the build.
 - [ ] Package identity matches Partner Center reservation.
-- [ ] Version incremented.
+- [ ] Display version remains `1.0.0`, with a new `1.0.0.x` package revision if Store already consumed `1.0.0.0`.
 - [ ] Package signed with correct publisher certificate.
 - [ ] App launches on clean Windows 10/11 test machine.
 - [ ] Core flows pass (file pick, compare, diff render, Git history).
