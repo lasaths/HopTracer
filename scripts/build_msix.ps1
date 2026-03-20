@@ -110,19 +110,26 @@ if (-not (Test-Path $readinessScript)) {
     throw "Store readiness script not found: $readinessScript"
 }
 
+$appxSigningEnabled = $false
+$resolvedCertPath = ""
+if (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
+    $resolvedCertPath = Resolve-Path $CertificatePath -ErrorAction Stop | Select-Object -ExpandProperty Path
+    $appxSigningEnabled = $true
+}
+
 $readinessArgs = @{
     Strict = $RequireStoreReadiness
     ExpectedIdentityName = $IdentityName
     ExpectedPublisher = $Publisher
     ExpectedDisplayVersion = $Version
     ExpectedPackageVersion = $PackageVersion
-    RequireSigning = $RequireStoreReadiness
-    CertificatePath = $CertificatePath
+    RequireSigning = $appxSigningEnabled
+    CertificatePath = $resolvedCertPath
     CertificatePassword = $CertificatePassword
 }
 
 & $readinessScript @readinessArgs
-if ($LASTEXITCODE -ne 0) {
+if (-not $?) {
     throw "Store readiness checks failed."
 }
 
@@ -150,13 +157,6 @@ Write-Host "  ✓ Shell extension built: $shellExtensionDll" -ForegroundColor Gr
 Write-Host "`n[6/7] Publishing MSIX package..." -ForegroundColor Yellow
 if (-not (Test-Path $msixOutputDir)) {
     New-Item -ItemType Directory -Path $msixOutputDir -Force | Out-Null
-}
-
-$appxSigningEnabled = $false
-$resolvedCertPath = ""
-if (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
-    $resolvedCertPath = Resolve-Path $CertificatePath -ErrorAction Stop | Select-Object -ExpandProperty Path
-    $appxSigningEnabled = $true
 }
 
 $publishArgs = @(

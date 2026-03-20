@@ -6,7 +6,7 @@ on:
       identity_name:
         description: "Partner Center package identity name (example: com.example.hoptracer)"
         required: true
-        default: "com.hoptracer.app"
+        default: "lasaths.HopTracer"
         type: string
       version:
         description: "Optional ApplicationDisplayVersion override (example: 1.2.3)"
@@ -21,8 +21,13 @@ on:
       publisher:
         description: "Partner Center publisher subject (example: CN=YourPublisher)"
         required: true
-        default: "CN=HopTracer"
+        default: "CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25"
         type: string
+      require_store_readiness:
+        description: "Fail build if Store identity or packaging metadata are not aligned"
+        required: true
+        default: true
+        type: boolean
       sign_package:
         description: "Sign package with certificate secrets"
         required: true
@@ -72,6 +77,7 @@ jobs:
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
+          -RequireStoreReadiness:${{ inputs.require_store_readiness }} `
           -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
@@ -87,7 +93,7 @@ jobs:
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
-          -RequireStoreReadiness `
+          -RequireStoreReadiness:${{ inputs.require_store_readiness }} `
           -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
