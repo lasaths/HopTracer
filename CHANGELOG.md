@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-03-20
+
 ### Changed
 
 - Decoupled `GH_IO.dll` from compile-time references; build/test now work without local Rhino installation.
@@ -15,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added dedicated Microsoft Store packaging workflow and stronger `scripts/build_msix.ps1` output/signing controls.
 - Added GitHub maintenance scaffolding (`Dependabot`, PR template, Store MSIX workflow).
 - Updated contributor/release documentation for .NET 10, CI flow, and Store submission.
+- Fixed cluster nodes so internal cluster diffs remain visibly marked as `modified` in the viewer.
 
 ## [1.0.0] - 2025-11-24
 
