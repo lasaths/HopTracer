@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-03-20
+
+### Changed
+
+- Fixed cluster nodes so internal cluster diffs remain visibly marked as `modified` in the viewer.
+
 ## [1.0.0] - 2026-03-19
 
 ### Changed
