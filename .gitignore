@@ -12,6 +12,11 @@ wheels/
 # Virtual environments
 .venv
 
+# Local build/app state
+.appdata/
+.localappdata/
+.dotnet-home/
+
 # Generated outputs (can be regenerated from source .ghx files)
 /*.html
 !templates/
