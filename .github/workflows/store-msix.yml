@@ -74,10 +74,11 @@ jobs:
       if: ${{ !inputs.sign_package }}
       shell: pwsh
       run: |
+        $requireStoreReadiness = [System.Convert]::ToBoolean('${{ inputs.require_store_readiness }}')
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
-          -RequireStoreReadiness:${{ inputs.require_store_readiness }} `
+          -RequireStoreReadiness:$requireStoreReadiness `
           -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
@@ -90,10 +91,11 @@ jobs:
         if (-not "${{ secrets.MSIX_CERT_PASSWORD }}") {
           throw "sign_package=true but secret MSIX_CERT_PASSWORD is not configured."
         }
+        $requireStoreReadiness = [System.Convert]::ToBoolean('${{ inputs.require_store_readiness }}')
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
-          -RequireStoreReadiness:${{ inputs.require_store_readiness }} `
+          -RequireStoreReadiness:$requireStoreReadiness `
           -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
