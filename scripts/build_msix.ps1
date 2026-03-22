@@ -7,6 +7,7 @@ param(
     [switch]$RequireStoreReadiness = $false,
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
+    [string]$IdentityName = "",
     [string]$Version = "",
     [string]$PackageVersion = "",
     [string]$Publisher = "",
@@ -138,13 +139,6 @@ Write-Host "  ✓ Shell extension built: $shellExtensionDll" -ForegroundColor Gr
 Write-Host "`n[6/7] Publishing MSIX package..." -ForegroundColor Yellow
 if (-not (Test-Path $msixOutputDir)) {
     New-Item -ItemType Directory -Path $msixOutputDir -Force | Out-Null
-}
-
-$appxSigningEnabled = $false
-$resolvedCertPath = ""
-if (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
-    $resolvedCertPath = Resolve-Path $CertificatePath -ErrorAction Stop | Select-Object -ExpandProperty Path
-    $appxSigningEnabled = $true
 }
 
 $publishArgs = @(

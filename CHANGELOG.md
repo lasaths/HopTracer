@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Decoupled `GH_IO.dll` from compile-time references; build/test now work without local Rhino installation.
+- Decoupled `GH_IO.dll` from compile-time references so build/test work without a local Rhino installation.
 - `ConverterService` and cluster preview parsing now probe `GH_IO.dll` at runtime when available.
 - Improved production build gating: `scripts/build.ps1` now fails fast when tests fail.
 - Added dedicated Microsoft Store packaging workflow and stronger `scripts/build_msix.ps1` output/signing controls.

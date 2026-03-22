@@ -175,6 +175,26 @@ Script search locations:
 - Windows 10/11
 - Rhino 7/8 optional (or manual `GH_IO.dll`) for `.gh` conversion support
 
+### Release Preflight
+
+Validate the shared release gate before packaging:
+
+```powershell
+.\scripts\check_store_readiness.ps1
+```
+
+For a Store-ready signed build, pass the reserved identity, publisher, and certificate inputs:
+
+```powershell
+.\scripts\check_store_readiness.ps1 `
+  -Strict `
+  -ExpectedIdentityName "com.hoptracer.app" `
+  -ExpectedPublisher "CN=HopTracer" `
+  -ExpectedPackageVersion "1.0.0.1" `
+  -CertificatePath "C:\path\store-signing-cert.pfx" `
+  -CertificatePassword "..."
+```
+
 ### Local Build
 
 ```powershell
@@ -192,14 +212,24 @@ Outputs:
 ### Microsoft Store / MSIX
 
 ```powershell
-.\scripts\build_msix.ps1
+.\scripts\build_msix.ps1 `
+  -IdentityName "com.hoptracer.app" `
+  -Publisher "CN=HopTracer"
 ```
 
 Optional strict readiness check:
 
 ```powershell
-.\scripts\build_msix.ps1 -RequireStoreReadiness
+.\scripts\build_msix.ps1 `
+  -RequireStoreReadiness `
+  -IdentityName "com.hoptracer.app" `
+  -Publisher "CN=HopTracer" `
+  -PackageVersion "1.0.0.1" `
+  -CertificatePath "C:\path\store-signing-cert.pfx" `
+  -CertificatePassword "..."
 ```
+
+For a `1.0.0` reissue, keep `-Version "1.0.0"` and only increment the fourth `-PackageVersion` component if `1.0.0.0` has already been submitted to Microsoft Store.
 
 Store documentation:
 - [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md)

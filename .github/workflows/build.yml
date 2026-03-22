@@ -17,7 +17,7 @@ env:
 
 jobs:
   build:
-    name: Build and Test (Windows)
+    name: Build and Package (Windows)
     runs-on: windows-latest
     permissions:
       contents: read
@@ -34,12 +34,12 @@ jobs:
     - name: Install MAUI workload
       run: dotnet workload install maui-windows --skip-sign-check
 
-    - name: Build, Test, and Publish Portable Package
-      run: ./scripts/build.ps1
+    - name: Validate Release Readiness
+      run: ./scripts/check_store_readiness.ps1
       shell: pwsh
 
-    - name: Validate Store Manifest Readiness
-      run: ./scripts/check_store_readiness.ps1
+    - name: Build Release ZIP
+      run: ./scripts/build.ps1
       shell: pwsh
 
     - name: Upload Artifact

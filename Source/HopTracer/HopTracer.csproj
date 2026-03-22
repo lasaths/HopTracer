@@ -21,7 +21,7 @@
 		<ApplicationTitle>HopTracer</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.hoptracer.app</ApplicationId>
+		<ApplicationId>lasaths.HopTracer</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.1</ApplicationDisplayVersion>
@@ -68,6 +68,20 @@
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<!-- Keep the source manifest asset paths present in MSIX output for Store validation. -->
+		<Content Include="Resources\AppIcon\hoptrace_logo.png">
+			<Link>Resources\AppIcon\hoptrace_logo.png</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+		<Content Include="Resources\Splash\hoptrace_logo_noshadow.png">
+			<Link>Resources\Splash\hoptrace_logo_noshadow.png</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>

@@ -2,9 +2,15 @@ using HopTracer.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.IO;
 
+if (args.Length < 2)
+{
+    Console.Error.WriteLine("Usage: dotnet run --project scripts/Repro -- <base-ghx> <modified-ghx>");
+    return;
+}
+
 var parser = new GhxParser(NullLogger<GhxParser>.Instance);
-var pathBase = Path.GetFullPath("Tests/data/Cluster_Base.ghx");
-var pathModified = Path.GetFullPath("Tests/data/Cluster_Modified.ghx");
+var pathBase = Path.GetFullPath(args[0]);
+var pathModified = Path.GetFullPath(args[1]);
 
 void PrintClusterProps(string title, string path)
 {
@@ -22,5 +28,5 @@ void PrintClusterProps(string title, string path)
     }
 }
 
-PrintClusterProps("Cluster_Base.ghx", pathBase);
-PrintClusterProps("Cluster_Modified.ghx", pathModified);
+PrintClusterProps(Path.GetFileName(pathBase), pathBase);
+PrintClusterProps(Path.GetFileName(pathModified), pathModified);

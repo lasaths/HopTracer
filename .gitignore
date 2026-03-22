@@ -49,6 +49,10 @@ artifacts/
 *.appxbundle
 *.appxsym
 
+# Grasshopper definition files can contain sensitive project data.
+*.gh
+*.ghx
+
 # IDE
 .vscode/
 .idea/
