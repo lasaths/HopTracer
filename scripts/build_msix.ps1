@@ -1,4 +1,4 @@
-# HopTracer MSIX Build Script
+﻿# HopTracer MSIX Build Script
 # Produces Microsoft Store-ready MSIX artifacts (.msix / .msixupload).
 
 param(
@@ -77,7 +77,7 @@ if (-not $SkipClean) {
         Remove-Item (Join-Path $msixOutputDir "*") -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Host "  ✓ Clean complete" -ForegroundColor Green
+    Write-Host "  OK Clean complete" -ForegroundColor Green
 }
 else {
     Write-Host "[1/7] Clean skipped" -ForegroundColor Gray
@@ -88,7 +88,7 @@ Push-Location $sourceDir
 try {
     dotnet restore HopTracer.sln --verbosity quiet
     if ($LASTEXITCODE -ne 0) { throw "Restore failed" }
-    Write-Host "  ✓ Dependencies restored" -ForegroundColor Green
+    Write-Host "  OK Dependencies restored" -ForegroundColor Green
 }
 finally {
     Pop-Location
@@ -98,7 +98,7 @@ if (-not $SkipTests) {
     Write-Host "`n[3/7] Running tests..." -ForegroundColor Yellow
     dotnet test (Join-Path $rootDir "Tests\HopTracer.UnitTests\HopTracer.UnitTests.csproj") --configuration $Configuration --verbosity quiet --no-restore
     if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
-    Write-Host "  ✓ Tests passed" -ForegroundColor Green
+    Write-Host "  OK Tests passed" -ForegroundColor Green
 }
 else {
     Write-Host "`n[3/7] Tests skipped" -ForegroundColor Gray
@@ -134,7 +134,7 @@ if (-not (Test-Path $shellExtensionDll)) {
     throw "Shell extension DLL was not produced: $shellExtensionDll"
 }
 
-Write-Host "  ✓ Shell extension built: $shellExtensionDll" -ForegroundColor Green
+Write-Host "  OK Shell extension built: $shellExtensionDll" -ForegroundColor Green
 
 Write-Host "`n[6/7] Publishing MSIX package..." -ForegroundColor Yellow
 if (-not (Test-Path $msixOutputDir)) {
@@ -195,13 +195,13 @@ if (-not $msixFiles -and -not $msixUploadFiles) {
 
 if ($msixFiles) {
     foreach ($f in $msixFiles) {
-        Write-Host ("  ✓ MSIX: {0}" -f $f.FullName) -ForegroundColor Green
+        Write-Host ("  OK MSIX: {0}" -f $f.FullName) -ForegroundColor Green
     }
 }
 
 if ($msixUploadFiles) {
     foreach ($f in $msixUploadFiles) {
-        Write-Host ("  ✓ MSIXUPLOAD: {0}" -f $f.FullName) -ForegroundColor Green
+        Write-Host ("  OK MSIXUPLOAD: {0}" -f $f.FullName) -ForegroundColor Green
     }
 }
 else {
@@ -218,7 +218,7 @@ else {
             }
             Compress-Archive -Path $msix.FullName -DestinationPath $fallbackZip -Force
             Move-Item $fallbackZip $fallbackUpload -Force
-            Write-Host ("  ✓ Fallback MSIXUPLOAD: {0}" -f $fallbackUpload) -ForegroundColor Green
+            Write-Host ("  OK Fallback MSIXUPLOAD: {0}" -f $fallbackUpload) -ForegroundColor Green
         }
     }
     else {
