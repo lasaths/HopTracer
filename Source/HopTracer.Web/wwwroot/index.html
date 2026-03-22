@@ -137,6 +137,13 @@
             line-height: 1.45;
         }
 
+        .no-glow,
+        .no-glow * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+
         .hidden-file-input {
             display: none;
         }
@@ -213,7 +220,7 @@
             max-width: 150px;
             height: auto;
             margin-bottom: 16px;
-            filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.3));
+            filter: none;
         }
 
         .hero-title {
@@ -599,7 +606,7 @@
     </style>
 </head>
 
-<body class="dark">
+<body class="dark no-glow">
     <main class="container" id="mainContent" aria-labelledby="app-title">
         <header class="hero">
             <img src="images/HopTrace_Logo.png" alt="HopTracer" class="hero-logo">

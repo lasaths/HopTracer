@@ -34,39 +34,12 @@ jobs:
     - name: Install MAUI workload
       run: dotnet workload install maui-windows --skip-sign-check
 
-    - name: Restore dependencies
-      run: dotnet restore Source/HopTracer.sln
-
-    - name: Build
-      run: dotnet build Source/HopTracer/HopTracer.csproj --configuration Release --no-restore -warnaserror
-
-    - name: Run Tests
-      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj --configuration Release --no-restore -warnaserror
+    - name: Build, Test, and Publish Portable Package
+      run: ./scripts/build.ps1
+      shell: pwsh
 
     - name: Validate Store Manifest Readiness
       run: ./scripts/check_store_readiness.ps1
-      shell: pwsh
-
-    - name: Publish Portable Package
-      run: |
-        dotnet publish Source/HopTracer/HopTracer.csproj `
-          -f net10.0-windows10.0.19041.0 `
-          -c Release `
-          -r win-x64 `
-          -p:WindowsPackageType=None `
-          -p:WindowsAppSDKSelfContained=true `
-          -p:SelfContained=true `
-          -p:PublishSingleFile=false `
-          -o ./Release/HopTracer_Portable
-      shell: pwsh
-
-    - name: Add Explorer menu scripts
-      run: |
-        Copy-Item ./scripts/Install-ExplorerMenu.ps1 ./Release/HopTracer_Portable/Install-ExplorerMenu.ps1 -Force
-        Copy-Item ./scripts/Uninstall-ExplorerMenu.ps1 ./Release/HopTracer_Portable/Uninstall-ExplorerMenu.ps1 -Force
-      shell: pwsh
-    - name: Create Release Archive
-      run: Compress-Archive -Path ./Release/HopTracer_Portable/* -DestinationPath ./Release/HopTracer-Windows-x64.zip -Force
       shell: pwsh
 
     - name: Upload Artifact
