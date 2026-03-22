@@ -1,519 +1,200 @@
-# Shared release preflight for portable ZIP and MSIX packaging.
+# HopTracer Store Readiness Check
+# Validates MSIX manifest fields and highlights Store submission risks.
 
 param(
-    [switch]$Strict = $false,
-    [string]$ExpectedIdentityName = "",
-    [string]$ExpectedPublisher = "",
-    [string]$ExpectedDisplayVersion = "",
-    [string]$ExpectedPackageVersion = "",
-    [switch]$RequireSigning = $false,
-    [string]$CertificatePath = "",
-    [string]$CertificatePassword = ""
+    [switch]$Strict = $false
 )
 
 $ErrorActionPreference = "Stop"
-
 $rootDir = $PSScriptRoot | Split-Path -Parent
-$appProjectDir = Join-Path $rootDir "Source\HopTracer"
-$csprojPath = Join-Path $appProjectDir "HopTracer.csproj"
-$manifestPath = Join-Path $appProjectDir "Platforms\Windows\Package.appxmanifest"
-$shellExtensionProject = Join-Path $rootDir "Source\HopTracer.ShellExtension\HopTracer.ShellExtension.vcxproj"
-$buildWorkflowPath = Join-Path $rootDir ".github\workflows\build.yml"
-$storeWorkflowPath = Join-Path $rootDir ".github\workflows\store-msix.yml"
-$readmePath = Join-Path $rootDir "README.md"
-$releaseGuidePath = Join-Path $rootDir "docs\BUILD_AND_RELEASE.md"
-$storeGuidePath = Join-Path $rootDir "docs\MICROSOFT_STORE.md"
+$manifestPath = Join-Path $rootDir "Source\HopTracer\Platforms\Windows\Package.appxmanifest"
 
-$errors = [System.Collections.Generic.List[string]]::new()
-$warnings = [System.Collections.Generic.List[string]]::new()
-
-function Add-Error {
-    param([string]$Message)
-    $script:errors.Add($Message) | Out-Null
+if (-not (Test-Path $manifestPath)) {
+    throw "Manifest not found: $manifestPath"
 }
 
-function Add-Warning {
-    param([string]$Message)
-    $script:warnings.Add($Message) | Out-Null
-}
+[xml]$manifest = Get-Content -Raw -Path $manifestPath
+$ns = New-Object System.Xml.XmlNamespaceManager($manifest.NameTable)
+$ns.AddNamespace("f", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
+$ns.AddNamespace("rescap", "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities")
+$ns.AddNamespace("uap", "http://schemas.microsoft.com/appx/manifest/uap/windows10")
 
-function Test-VersionFormat {
+$errors = New-Object System.Collections.Generic.List[string]
+$warnings = New-Object System.Collections.Generic.List[string]
+
+function Get-GitOutput {
     param(
-        [string]$Value,
-        [ValidateSet("Display", "Package")] [string]$Kind
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
     )
 
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $false
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($null -eq $git) {
+        return [pscustomobject]@{
+            Available = $false
+            ExitCode = 127
+            Output = @()
+        }
     }
 
-    switch ($Kind) {
-        "Display" { return $Value -match '^\d+\.\d+\.\d+$' }
-        "Package" { return $Value -match '^\d+\.\d+\.\d+\.\d+$' }
+    $output = & $git.Source -C $rootDir @Arguments 2>$null
+    return [pscustomobject]@{
+        Available = $true
+        ExitCode = $LASTEXITCODE
+        Output = @($output)
     }
-
-    return $false
 }
 
-function Get-VersionPrefix {
-    param([string]$Value)
-
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return ""
-    }
-
-    $parts = $Value.Split(".")
-    if ($parts.Length -lt 3) {
-        return ""
-    }
-
-    return ($parts[0..2] -join ".")
+$identity = $manifest.SelectSingleNode("/f:Package/f:Identity", $ns)
+if ($null -eq $identity) {
+    $errors.Add("Missing Identity node in Package.appxmanifest.")
 }
 
-function Assert-FileExists {
-    param(
-        [string]$Path,
-        [string]$Description
+$identityName = ""
+$identityPublisher = ""
+$identityVersion = ""
+$publisherDisplayName = ""
+if ($null -ne $identity) {
+    $nameAttr = $identity.Attributes["Name"]
+    $publisherAttr = $identity.Attributes["Publisher"]
+    $versionAttr = $identity.Attributes["Version"]
+    if ($null -ne $nameAttr) { $identityName = $nameAttr.Value }
+    if ($null -ne $publisherAttr) { $identityPublisher = $publisherAttr.Value }
+    if ($null -ne $versionAttr) { $identityVersion = $versionAttr.Value }
+}
+
+$propertiesNode = $manifest.SelectSingleNode("/f:Package/f:Properties", $ns)
+if ($null -ne $propertiesNode) {
+    $publisherDisplayNameNode = $propertiesNode.SelectSingleNode("f:PublisherDisplayName", $ns)
+    if ($null -ne $publisherDisplayNameNode) {
+        $publisherDisplayName = $publisherDisplayNameNode.InnerText
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($identityName)) {
+    $errors.Add("Identity Name is missing.")
+}
+if ([string]::IsNullOrWhiteSpace($identityPublisher)) {
+    $errors.Add("Identity Publisher is missing.")
+}
+if ([string]::IsNullOrWhiteSpace($identityVersion)) {
+    $errors.Add("Identity Version is missing.")
+}
+elseif ($identityVersion -notmatch "^\d+\.\d+\.\d+\.\d+$") {
+    $errors.Add("Identity Version must be in major.minor.build.revision format (for example: 1.2.3.0).")
+}
+if ([string]::IsNullOrWhiteSpace($publisherDisplayName)) {
+    $errors.Add("PublisherDisplayName is missing.")
+}
+
+if ($Strict) {
+    if ($identityName -eq "com.hoptracer.app") {
+        $errors.Add("Identity Name is still default ('com.hoptracer.app'). Replace with Partner Center reserved identity.")
+    }
+    if ($identityPublisher -eq "CN=HopTracer") {
+        $errors.Add("Identity Publisher is still default ('CN=HopTracer'). Replace with Store-aligned publisher.")
+    }
+    if ($publisherDisplayName -eq "HopTracer") {
+        $errors.Add("PublisherDisplayName is still default ('HopTracer'). Replace with the Partner Center publisher display name.")
+    }
+}
+else {
+    if ($identityName -eq "com.hoptracer.app") {
+        $warnings.Add("Identity Name is default ('com.hoptracer.app'). For Store submission, use Partner Center reserved identity.")
+    }
+    if ($identityPublisher -eq "CN=HopTracer") {
+        $warnings.Add("Identity Publisher is default ('CN=HopTracer'). For Store submission, it must match signing certificate subject.")
+    }
+    if ($publisherDisplayName -eq "HopTracer") {
+        $warnings.Add("PublisherDisplayName is default ('HopTracer'). For Store submission, use the Partner Center publisher display name.")
+    }
+}
+
+$runFullTrust = $manifest.SelectSingleNode("/f:Package/f:Capabilities/rescap:Capability[@Name='runFullTrust']", $ns)
+if ($null -ne $runFullTrust) {
+    $warnings.Add("Manifest declares restricted capability 'runFullTrust'. Ensure Partner Center submission includes explicit justification.")
+}
+
+$gitFiles = Get-GitOutput -Arguments @("ls-files")
+if (-not $gitFiles.Available) {
+    $warnings.Add("Git is not available; skipped tracked-file secret scan.")
+}
+elseif ($gitFiles.ExitCode -ne 0) {
+    $warnings.Add("git ls-files failed; skipped tracked-file secret scan.")
+}
+else {
+    $trackedFiles = @($gitFiles.Output)
+
+    $trackedSecretFiles = @(
+        $trackedFiles | Where-Object {
+            $_ -match '(?i)(^|/)\.env($|\.)' -or
+            $_ -match '(?i)\.(pfx|p12|pem|key|snk)$' -or
+            $_ -match '(?i)(^|/)id_(rsa|ed25519)(\.pub)?$'
+        }
     )
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        Add-Error("$Description not found: $Path")
-        return $false
+    foreach ($file in $trackedSecretFiles) {
+        $errors.Add("Tracked secret-bearing file detected: $file")
     }
 
-    return $true
-}
-
-function Get-ProjectPropertyValue {
-    param(
-        [xml]$ProjectXml,
-        [string]$PropertyName
+    $trackedConfigCandidates = @(
+        $trackedFiles | Where-Object { $_ -match '(?i)(^|/)appsettings\.[^.]+\.json$' }
     )
+    foreach ($file in $trackedConfigCandidates) {
+        $warnings.Add("Tracked environment-specific config file detected: $file")
+    }
 
-    $propertyGroups = @($ProjectXml.Project.PropertyGroup)
-    foreach ($group in $propertyGroups) {
-        $value = $group.$PropertyName
-        if ($null -eq $value) {
-            continue
-        }
-
-        $first = @($value | Where-Object { $null -ne $_ }) | Select-Object -First 1
-        if ($null -ne $first) {
-            return [string]$first
+    $highSignalSecretPattern = '(-----BEGIN [A-Z ]*PRIVATE KEY-----|AccountKey=|SharedAccessSignature=|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|Bearer [A-Za-z0-9._-]{20,}|x-api-key\s*[:=]\s*[''""]?[A-Za-z0-9._-]{16,}|client_secret\s*[:=]\s*[''""]?[A-Za-z0-9._-]{16,}|access_token\s*[:=]\s*[''""]?[A-Za-z0-9._-]{16,})'
+    $secretHits = Get-GitOutput -Arguments @("grep", "-nI", "-E", $highSignalSecretPattern, "--", ".")
+    if ($secretHits.Available -and $secretHits.ExitCode -eq 0) {
+        foreach ($hit in $secretHits.Output) {
+            $errors.Add("High-signal secret pattern detected in tracked content: $hit")
         }
     }
-
-    return ""
-}
-
-function Add-RelativePathIfPresent {
-    param(
-        [System.Collections.Generic.HashSet[string]]$Paths,
-        [string]$PathValue
-    )
-
-    if ([string]::IsNullOrWhiteSpace($PathValue)) {
-        return
-    }
-
-    $trimmed = $PathValue.Trim()
-    if ([string]::IsNullOrWhiteSpace($trimmed)) {
-        return
-    }
-
-    $normalized = $trimmed -replace '/', '\'
-    $paths.Add($normalized) | Out-Null
-}
-
-Write-Host "=== HopTracer Release Readiness ===" -ForegroundColor Cyan
-Write-Host ""
-
-$requiredFiles = @(
-    @{ Path = $csprojPath; Description = "MAUI app project" },
-    @{ Path = $manifestPath; Description = "Windows package manifest" },
-    @{ Path = $shellExtensionProject; Description = "Explorer shell extension project" },
-    @{ Path = $buildWorkflowPath; Description = "GitHub build workflow" },
-    @{ Path = $storeWorkflowPath; Description = "GitHub Store workflow" },
-    @{ Path = $readmePath; Description = "README" },
-    @{ Path = $releaseGuidePath; Description = "Build/release guide" },
-    @{ Path = $storeGuidePath; Description = "Store packaging guide" }
-)
-
-foreach ($item in $requiredFiles) {
-    Assert-FileExists -Path $item.Path -Description $item.Description | Out-Null
-}
-
-$projectXml = $null
-$manifestXml = $null
-$manifestNamespace = $null
-
-if (Test-Path -LiteralPath $csprojPath) {
-    try {
-        [xml]$projectXml = Get-Content -LiteralPath $csprojPath -Raw
-    }
-    catch {
-        Add-Error("Unable to parse project file XML: $csprojPath")
+    elseif ($secretHits.Available -and $secretHits.ExitCode -gt 1) {
+        $warnings.Add("git grep failed while scanning tracked content for secrets.")
     }
 }
 
-if (Test-Path -LiteralPath $manifestPath) {
-    try {
-        [xml]$manifestXml = Get-Content -LiteralPath $manifestPath -Raw
-        $manifestNamespace = [System.Xml.XmlNamespaceManager]::new($manifestXml.NameTable)
-        $manifestNamespace.AddNamespace("appx", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
-        $manifestNamespace.AddNamespace("uap", "http://schemas.microsoft.com/appx/manifest/uap/windows10")
-    }
-    catch {
-        Add-Error("Unable to parse Windows package manifest XML: $manifestPath")
-    }
+$localCertArtifacts = @(Get-ChildItem -Path $rootDir -Force -File -ErrorAction SilentlyContinue | Where-Object {
+    $_.Name -match '(?i)\.(pfx|p12|pem|key)$' -or $_.Name -match '(?i)^_tmp_.*\.cer$'
+})
+if ($localCertArtifacts.Count -gt 0) {
+    $artifactNames = ($localCertArtifacts | ForEach-Object { $_.Name }) -join ", "
+    $warnings.Add("Local certificate/key files exist in the repo root: $artifactNames")
 }
 
-$applicationId = ""
-$displayVersion = ""
-$applicationVersion = ""
-$applicationIcon = ""
-
-if ($null -ne $projectXml) {
-    $applicationId = Get-ProjectPropertyValue -ProjectXml $projectXml -PropertyName "ApplicationId"
-    $displayVersion = Get-ProjectPropertyValue -ProjectXml $projectXml -PropertyName "ApplicationDisplayVersion"
-    $applicationVersion = Get-ProjectPropertyValue -ProjectXml $projectXml -PropertyName "ApplicationVersion"
-    $applicationIcon = Get-ProjectPropertyValue -ProjectXml $projectXml -PropertyName "ApplicationIcon"
-
-    if ([string]::IsNullOrWhiteSpace($applicationId)) {
-        Add-Error("HopTracer.csproj is missing <ApplicationId>.")
-    }
-
-    if ([string]::IsNullOrWhiteSpace($displayVersion)) {
-        Add-Error("HopTracer.csproj is missing <ApplicationDisplayVersion>.")
-    }
-    elseif (-not (Test-VersionFormat -Value $displayVersion -Kind Display)) {
-        Add-Error("HopTracer.csproj ApplicationDisplayVersion must use major.minor.patch format. Current value: $displayVersion")
-    }
-
-    if ([string]::IsNullOrWhiteSpace($applicationVersion)) {
-        Add-Error("HopTracer.csproj is missing <ApplicationVersion>.")
-    }
-    elseif ($applicationVersion -notmatch '^\d+$') {
-        Add-Error("HopTracer.csproj ApplicationVersion must be an integer. Current value: $applicationVersion")
-    }
-
-    if ([string]::IsNullOrWhiteSpace($applicationIcon)) {
-        Add-Error("HopTracer.csproj is missing <ApplicationIcon>.")
-    }
+$localStateDirs = @(".appdata", ".localappdata", ".dotnet-home") | Where-Object {
+    Test-Path (Join-Path $rootDir $_)
+}
+if ($localStateDirs.Count -gt 0) {
+    $warnings.Add("Local machine state directories exist in the repo root: $($localStateDirs -join ', ')")
 }
 
-$manifestIdentityName = ""
-$manifestPublisher = ""
-$manifestPackageVersion = ""
-$manifestLogo = ""
-$manifestDisplayName = ""
-$visualElementsNode = $null
-$defaultTileNode = $null
-
-if ($null -ne $manifestXml -and $null -ne $manifestNamespace) {
-    $identityNode = $manifestXml.SelectSingleNode("/appx:Package/appx:Identity", $manifestNamespace)
-    if ($null -eq $identityNode) {
-        Add-Error("Package.appxmanifest is missing the <Identity> element.")
-    }
-    else {
-        $manifestIdentityName = [string]$identityNode.Attributes["Name"].Value
-        $manifestPublisher = [string]$identityNode.Attributes["Publisher"].Value
-        $manifestPackageVersion = [string]$identityNode.Attributes["Version"].Value
-    }
-
-    $propertiesNode = $manifestXml.SelectSingleNode("/appx:Package/appx:Properties", $manifestNamespace)
-    if ($null -eq $propertiesNode) {
-        Add-Error("Package.appxmanifest is missing the <Properties> section.")
-    }
-    else {
-        $displayNameNode = $propertiesNode.SelectSingleNode("appx:DisplayName", $manifestNamespace)
-        $logoNode = $propertiesNode.SelectSingleNode("appx:Logo", $manifestNamespace)
-
-        $manifestDisplayName = if ($null -ne $displayNameNode) { [string]$displayNameNode.InnerText } else { "" }
-        $manifestLogo = if ($null -ne $logoNode) { [string]$logoNode.InnerText } else { "" }
-
-        if ([string]::IsNullOrWhiteSpace($manifestDisplayName)) {
-            Add-Error("Package.appxmanifest is missing <Properties><DisplayName>.")
-        }
-
-        if ([string]::IsNullOrWhiteSpace($manifestLogo)) {
-            Add-Error("Package.appxmanifest is missing <Properties><Logo>.")
-        }
-    }
-
-    if ([string]::IsNullOrWhiteSpace($manifestIdentityName)) {
-        Add-Error("Package.appxmanifest identity name is missing.")
-    }
-
-    if ([string]::IsNullOrWhiteSpace($manifestPublisher)) {
-        Add-Error("Package.appxmanifest publisher is missing.")
-    }
-
-    if ([string]::IsNullOrWhiteSpace($manifestPackageVersion)) {
-        Add-Error("Package.appxmanifest package version is missing.")
-    }
-    elseif (-not (Test-VersionFormat -Value $manifestPackageVersion -Kind Package)) {
-        Add-Error("Package.appxmanifest identity version must use major.minor.patch.revision format. Current value: $manifestPackageVersion")
-    }
-
-    $visualElementsNode = $manifestXml.SelectSingleNode("/appx:Package/appx:Applications/appx:Application/uap:VisualElements", $manifestNamespace)
-    if ($null -eq $visualElementsNode) {
-        Add-Error("Package.appxmanifest is missing <uap:VisualElements>.")
-    }
-
-    if ($null -ne $visualElementsNode) {
-        $defaultTileNode = $visualElementsNode.SelectSingleNode("uap:DefaultTile", $manifestNamespace)
-        if ($null -eq $defaultTileNode) {
-            Add-Error("Package.appxmanifest is missing <uap:DefaultTile>.")
-        }
-    }
-}
-
-if (-not [string]::IsNullOrWhiteSpace($displayVersion) -and -not [string]::IsNullOrWhiteSpace($manifestPackageVersion)) {
-    if ((Get-VersionPrefix -Value $manifestPackageVersion) -ne $displayVersion) {
-        Add-Error("Manifest package version prefix ($manifestPackageVersion) does not align with ApplicationDisplayVersion ($displayVersion).")
-    }
-}
-
-$assetRelativePaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-Add-RelativePathIfPresent -Paths $assetRelativePaths -PathValue $applicationIcon
-Add-RelativePathIfPresent -Paths $assetRelativePaths -PathValue $manifestLogo
-
-if ($null -ne $visualElementsNode) {
-    foreach ($attrName in @("Square150x150Logo", "Square44x44Logo")) {
-        $attribute = $visualElementsNode.Attributes[$attrName]
-        if ($null -eq $attribute -or [string]::IsNullOrWhiteSpace($attribute.Value)) {
-            Add-Error("Package.appxmanifest VisualElements is missing the '$attrName' asset.")
-        }
-        else {
-            Add-RelativePathIfPresent -Paths $assetRelativePaths -PathValue $attribute.Value
-        }
-    }
-
-    $splashNode = $visualElementsNode.SelectSingleNode("uap:SplashScreen", $manifestNamespace)
-    if ($null -eq $splashNode -or $null -eq $splashNode.Attributes["Image"] -or [string]::IsNullOrWhiteSpace($splashNode.Attributes["Image"].Value)) {
-        Add-Error("Package.appxmanifest is missing the splash screen asset path.")
-    }
-    else {
-        Add-RelativePathIfPresent -Paths $assetRelativePaths -PathValue $splashNode.Attributes["Image"].Value
-    }
-}
-
-if ($null -ne $defaultTileNode) {
-    foreach ($attrName in @("Square71x71Logo", "Wide310x150Logo", "Square310x310Logo")) {
-        $attribute = $defaultTileNode.Attributes[$attrName]
-        if ($null -eq $attribute -or [string]::IsNullOrWhiteSpace($attribute.Value)) {
-            Add-Error("Package.appxmanifest DefaultTile is missing the '$attrName' asset.")
-        }
-        else {
-            Add-RelativePathIfPresent -Paths $assetRelativePaths -PathValue $attribute.Value
-        }
-    }
-}
-
-foreach ($relativePath in $assetRelativePaths) {
-    $absolutePath = Join-Path $appProjectDir $relativePath
-    if (-not (Test-Path -LiteralPath $absolutePath)) {
-        Add-Error("Packaging asset not found: $relativePath")
-    }
-}
-
-if (-not [string]::IsNullOrWhiteSpace($applicationId) -and -not [string]::IsNullOrWhiteSpace($manifestIdentityName) -and $applicationId -ne $manifestIdentityName) {
-    Add-Error("HopTracer.csproj ApplicationId ($applicationId) does not match Package.appxmanifest identity name ($manifestIdentityName).")
-}
-
-if (-not [string]::IsNullOrWhiteSpace($ExpectedDisplayVersion)) {
-    if (-not (Test-VersionFormat -Value $ExpectedDisplayVersion -Kind Display)) {
-        Add-Error("ExpectedDisplayVersion must use major.minor.patch format. Current value: $ExpectedDisplayVersion")
-    }
-    elseif (-not [string]::IsNullOrWhiteSpace($displayVersion) -and $displayVersion -ne $ExpectedDisplayVersion) {
-        Add-Error("ApplicationDisplayVersion ($displayVersion) does not match ExpectedDisplayVersion ($ExpectedDisplayVersion).")
-    }
-}
-
-if (-not [string]::IsNullOrWhiteSpace($ExpectedPackageVersion)) {
-    if (-not (Test-VersionFormat -Value $ExpectedPackageVersion -Kind Package)) {
-        Add-Error("ExpectedPackageVersion must use major.minor.patch.revision format. Current value: $ExpectedPackageVersion")
-    }
-    else {
-        if (-not [string]::IsNullOrWhiteSpace($displayVersion) -and (Get-VersionPrefix -Value $ExpectedPackageVersion) -ne $displayVersion) {
-            Add-Error("ExpectedPackageVersion ($ExpectedPackageVersion) does not align with ApplicationDisplayVersion ($displayVersion).")
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($manifestPackageVersion) -and (Get-VersionPrefix -Value $ExpectedPackageVersion) -ne (Get-VersionPrefix -Value $manifestPackageVersion)) {
-            Add-Error("ExpectedPackageVersion ($ExpectedPackageVersion) does not align with the manifest package version prefix ($manifestPackageVersion).")
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($manifestPackageVersion) -and $manifestPackageVersion -ne $ExpectedPackageVersion) {
-            Add-Warning("Manifest package version is $manifestPackageVersion; packaging can override it to $ExpectedPackageVersion for this build.")
-        }
-    }
-}
-
-if ($Strict -and [string]::IsNullOrWhiteSpace($ExpectedIdentityName)) {
-    Add-Error("Strict readiness requires -ExpectedIdentityName.")
-}
-
-if ($Strict -and [string]::IsNullOrWhiteSpace($ExpectedPublisher)) {
-    Add-Error("Strict readiness requires -ExpectedPublisher.")
-}
-
-if (-not [string]::IsNullOrWhiteSpace($ExpectedIdentityName)) {
-    if (-not [string]::IsNullOrWhiteSpace($applicationId) -and $applicationId -ne $ExpectedIdentityName) {
-        Add-Error("ApplicationId ($applicationId) does not match ExpectedIdentityName ($ExpectedIdentityName).")
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($manifestIdentityName) -and $manifestIdentityName -ne $ExpectedIdentityName) {
-        Add-Error("Manifest identity name ($manifestIdentityName) does not match ExpectedIdentityName ($ExpectedIdentityName).")
-    }
-}
-elseif (($applicationId -eq "com.hoptracer.app") -or ($manifestIdentityName -eq "com.hoptracer.app")) {
-    Add-Warning("Checked-in package identity still uses the repository default 'com.hoptracer.app'. Verify it matches the Partner Center reservation before a signed Store submission.")
-}
-
-if (-not [string]::IsNullOrWhiteSpace($ExpectedPublisher)) {
-    if (-not [string]::IsNullOrWhiteSpace($manifestPublisher) -and $manifestPublisher -ne $ExpectedPublisher) {
-        Add-Error("Manifest publisher ($manifestPublisher) does not match ExpectedPublisher ($ExpectedPublisher).")
-    }
-}
-elseif ($manifestPublisher -eq "CN=HopTracer") {
-    Add-Warning("Checked-in package publisher still uses the repository default 'CN=HopTracer'. Verify it matches the signing certificate subject before a signed Store submission.")
-}
-
-if (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
-    if (-not (Test-Path -LiteralPath $CertificatePath)) {
-        Add-Error("CertificatePath does not exist: $CertificatePath")
-    }
-    elseif ([System.IO.Path]::GetExtension($CertificatePath) -notin @(".pfx", ".PFX")) {
-        Add-Error("CertificatePath must point to a .pfx file. Current value: $CertificatePath")
-    }
-}
-elseif ($RequireSigning) {
-    Add-Error("RequireSigning was set, but no -CertificatePath was provided.")
-}
-
-if ($RequireSigning -and [string]::IsNullOrWhiteSpace($CertificatePassword)) {
-    Add-Error("RequireSigning was set, but no -CertificatePassword was provided.")
-}
-
-$buildWorkflowText = ""
-$storeWorkflowText = ""
-$readmeText = ""
-$releaseGuideText = ""
-$storeGuideText = ""
-
-if (Test-Path -LiteralPath $buildWorkflowPath) {
-    $buildWorkflowText = Get-Content -LiteralPath $buildWorkflowPath -Raw
-    if ($buildWorkflowText -notmatch [regex]::Escape("./scripts/check_store_readiness.ps1")) {
-        Add-Error("build.yml does not run scripts/check_store_readiness.ps1.")
-    }
-
-    if ($buildWorkflowText -notmatch [regex]::Escape("./scripts/build.ps1")) {
-        Add-Error("build.yml does not run scripts/build.ps1.")
-    }
-
-    $readinessIndex = $buildWorkflowText.IndexOf("./scripts/check_store_readiness.ps1", [System.StringComparison]::Ordinal)
-    $buildIndex = $buildWorkflowText.IndexOf("./scripts/build.ps1", [System.StringComparison]::Ordinal)
-    if ($readinessIndex -ge 0 -and $buildIndex -ge 0 -and $readinessIndex -gt $buildIndex) {
-        Add-Error("build.yml runs scripts/build.ps1 before scripts/check_store_readiness.ps1.")
-    }
-}
-
-if (Test-Path -LiteralPath $storeWorkflowPath) {
-    $storeWorkflowText = Get-Content -LiteralPath $storeWorkflowPath -Raw
-    foreach ($requiredToken in @(
-        "identity_name:",
-        "publisher:",
-        "./scripts/build_msix.ps1",
-        "-RequireStoreReadiness",
-        "MSIX_CERT_BASE64",
-        "MSIX_CERT_PASSWORD"
-    )) {
-        if ($storeWorkflowText -notmatch [regex]::Escape($requiredToken)) {
-            Add-Error("store-msix.yml is missing expected release reference '$requiredToken'.")
-        }
-    }
-}
-
-if (Test-Path -LiteralPath $readmePath) {
-    $readmeText = Get-Content -LiteralPath $readmePath -Raw
-    foreach ($requiredToken in @(
-        ".\scripts\check_store_readiness.ps1",
-        ".\scripts\build_msix.ps1",
-        "PackageVersion ""1.0.0.1""",
-        'For a `1.0.0` reissue'
-    )) {
-        if ($readmeText -notmatch [regex]::Escape($requiredToken)) {
-            Add-Error("README.md is missing expected release guidance '$requiredToken'.")
-        }
-    }
-}
-
-if (Test-Path -LiteralPath $releaseGuidePath) {
-    $releaseGuideText = Get-Content -LiteralPath $releaseGuidePath -Raw
-    foreach ($requiredToken in @(
-        ".\scripts\check_store_readiness.ps1",
-        ".\scripts\build.ps1",
-        ".\scripts\build_msix.ps1",
-        "git tag v1.0.0"
-    )) {
-        if ($releaseGuideText -notmatch [regex]::Escape($requiredToken)) {
-            Add-Error("docs/BUILD_AND_RELEASE.md is missing expected release guidance '$requiredToken'.")
-        }
-    }
-}
-
-if (Test-Path -LiteralPath $storeGuidePath) {
-    $storeGuideText = Get-Content -LiteralPath $storeGuidePath -Raw
-    foreach ($requiredToken in @(
-        ".\scripts\check_store_readiness.ps1",
-        ".\scripts\build_msix.ps1",
-        "MSIX_CERT_BASE64",
-        "MSIX_CERT_PASSWORD",
-        "1.0.0.1"
-    )) {
-        if ($storeGuideText -notmatch [regex]::Escape($requiredToken)) {
-            Add-Error("docs/MICROSOFT_STORE.md is missing expected Store packaging guidance '$requiredToken'.")
-        }
-    }
-}
-
-Write-Host "Discovered metadata:" -ForegroundColor Yellow
-if (-not [string]::IsNullOrWhiteSpace($applicationId)) {
-    Write-Host "  ApplicationId: $applicationId"
-}
-if (-not [string]::IsNullOrWhiteSpace($displayVersion)) {
-    Write-Host "  ApplicationDisplayVersion: $displayVersion"
-}
-if (-not [string]::IsNullOrWhiteSpace($applicationVersion)) {
-    Write-Host "  ApplicationVersion: $applicationVersion"
-}
-if (-not [string]::IsNullOrWhiteSpace($manifestIdentityName)) {
-    Write-Host "  Manifest Identity Name: $manifestIdentityName"
-}
-if (-not [string]::IsNullOrWhiteSpace($manifestPublisher)) {
-    Write-Host "  Manifest Publisher: $manifestPublisher"
-}
-if (-not [string]::IsNullOrWhiteSpace($manifestPackageVersion)) {
-    Write-Host "  Manifest Package Version: $manifestPackageVersion"
-}
-Write-Host ""
+Write-Host "=== Store Readiness Check ===" -ForegroundColor Cyan
+Write-Host "Manifest: $manifestPath"
+Write-Host "Identity Name: $identityName"
+Write-Host "Identity Publisher: $identityPublisher"
+Write-Host "Publisher Display Name: $publisherDisplayName"
+Write-Host "Identity Version: $identityVersion"
+Write-Host "Strict mode: $Strict"
 
 if ($warnings.Count -gt 0) {
+    Write-Host ""
     Write-Host "Warnings:" -ForegroundColor Yellow
     foreach ($warning in $warnings) {
-        Write-Host "  - $warning" -ForegroundColor Yellow
+        Write-Host " - $warning" -ForegroundColor Yellow
     }
-    Write-Host ""
 }
 
 if ($errors.Count -gt 0) {
-    Write-Host "Errors:" -ForegroundColor Red
-    foreach ($errorMessage in $errors) {
-        Write-Host "  - $errorMessage" -ForegroundColor Red
-    }
     Write-Host ""
-    throw "Release readiness checks failed."
+    Write-Host "Errors:" -ForegroundColor Red
+    foreach ($error in $errors) {
+        Write-Host " - $error" -ForegroundColor Red
+    }
+    throw "Store readiness checks failed."
 }
 
-Write-Host "Release readiness checks passed." -ForegroundColor Green
+Write-Host ""
+Write-Host "Store readiness check passed." -ForegroundColor Green
+$global:LASTEXITCODE = 0

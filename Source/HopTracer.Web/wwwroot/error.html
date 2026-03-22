@@ -56,6 +56,13 @@
             padding: 16px;
         }
 
+        .no-glow,
+        .no-glow * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+
         .container {
             width: min(600px, calc(100vw - 32px));
             max-width: 100%;
@@ -121,7 +128,7 @@
     </style>
 </head>
 
-<body>
+<body class="no-glow">
     <main class="container" aria-labelledby="error-title">
         <h1 id="error-title">
             <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">

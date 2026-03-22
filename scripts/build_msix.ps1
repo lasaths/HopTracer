@@ -110,25 +110,7 @@ if (-not (Test-Path $readinessScript)) {
     throw "Store readiness script not found: $readinessScript"
 }
 
-$appxSigningEnabled = $false
-$resolvedCertPath = ""
-if (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
-    $resolvedCertPath = Resolve-Path $CertificatePath -ErrorAction Stop | Select-Object -ExpandProperty Path
-    $appxSigningEnabled = $true
-}
-
-$readinessArgs = @{
-    Strict = $RequireStoreReadiness
-    ExpectedIdentityName = $IdentityName
-    ExpectedPublisher = $Publisher
-    ExpectedDisplayVersion = $Version
-    ExpectedPackageVersion = $PackageVersion
-    RequireSigning = $appxSigningEnabled
-    CertificatePath = $resolvedCertPath
-    CertificatePassword = $CertificatePassword
-}
-
-& $readinessScript @readinessArgs
+& $readinessScript -Strict:$RequireStoreReadiness
 if (-not $?) {
     throw "Store readiness checks failed."
 }

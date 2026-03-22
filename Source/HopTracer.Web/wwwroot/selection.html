@@ -28,6 +28,13 @@
             height: 100vh;
         }
 
+        .no-glow,
+        .no-glow * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+
         .container {
             width: 800px;
             text-align: center;
@@ -127,7 +134,7 @@
     </style>
 </head>
 
-<body>
+<body class="no-glow">
 
     <div class="container">
         <h1>Grasshopper Diff Tool</h1>

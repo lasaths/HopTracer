@@ -170,13 +170,21 @@
             line-height: 1.45;
         }
 
+        .no-glow,
+        .no-glow * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+
         button:focus-visible,
         a:focus-visible,
         input:focus-visible,
         select:focus-visible,
         summary:focus-visible {
-            outline: none;
-            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 34%, transparent);
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+            box-shadow: none;
         }
 
         @keyframes spin {
@@ -1914,7 +1922,7 @@
     </style>
 </head>
 
-<body class="dark">
+<body class="dark no-glow">
 
     <div id="tooltip" class="tooltip"></div>
 
@@ -4245,11 +4253,34 @@
             return hasValueLevelPropertyDifferences(node) || hasValueLevelPortDifferences(node);
         }
 
+        function hasExplicitClusterInternalsChange(preview) {
+            if (!preview?.isCluster) return false;
+
+            const statusText = String(preview.status || '').toLowerCase();
+            if (statusText.includes('unchanged') || statusText.includes('same') || statusText.includes('identical')) {
+                return false;
+            }
+            if (statusText.includes('modified') || statusText.includes('changed') || statusText.includes('diff')) {
+                return true;
+            }
+
+            const oldHash = String(preview.oldHash || '').trim();
+            const newHash = String(preview.newHash || '').trim();
+            if (oldHash && newHash) {
+                return oldHash !== newHash;
+            }
+
+            return false;
+        }
+
         function computeEffectiveNodeStatus(node, includeHighLevel = showHighLevelModificationDetails()) {
             const originalStatus = getNodeOriginalStatus(node);
             if (originalStatus !== 'modified') return originalStatus;
             if (includeHighLevel) return 'modified';
-            return hasValueLevelModification(node) ? 'modified' : 'same';
+            if (hasValueLevelModification(node)) return 'modified';
+
+            // Cluster internals are a user-visible diff, not just a high-level heuristic.
+            return hasExplicitClusterInternalsChange(getClusterPreviewData(node)) ? 'modified' : 'same';
         }
 
         function applyModificationStatusToNodes(nodes, includeHighLevel = showHighLevelModificationDetails()) {
@@ -5640,8 +5671,7 @@
                 if (state.selected === n.id) {
                     ctx.strokeStyle = CONFIG.colors.selection;
                     ctx.lineWidth = 2 / state.view.scale;
-                    ctx.shadowColor = CONFIG.colors.selection;
-                    ctx.shadowBlur = 10;
+                    ctx.shadowBlur = 0;
                 } else if (state.selected && connectedIds.has(n.id)) {
                     ctx.strokeStyle = CONFIG.colors.text; // Highlight connected nodes slightly
                     ctx.lineWidth = 1.5 / state.view.scale;
@@ -6355,19 +6385,7 @@
             const nodeStatus = String(node?.status || '').toLowerCase();
             if (nodeStatus === 'added' || nodeStatus === 'removed') return true;
 
-            const statusText = String(preview?.status || '').toLowerCase();
-            if (statusText.includes('unchanged') || statusText.includes('same') || statusText.includes('identical')) {
-                return false;
-            }
-            if (statusText.includes('modified') || statusText.includes('changed') || statusText.includes('diff')) {
-                return true;
-            }
-
-            const oldHash = String(preview?.oldHash || '').trim();
-            const newHash = String(preview?.newHash || '').trim();
-            if (oldHash && newHash) {
-                return oldHash !== newHash;
-            }
+            if (hasExplicitClusterInternalsChange(preview)) return true;
 
             return nodeStatus === 'modified';
         }

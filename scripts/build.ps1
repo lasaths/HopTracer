@@ -14,16 +14,25 @@ $appProject = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
 $testProject = Join-Path $rootDir "Tests\HopTracer.UnitTests\HopTracer.UnitTests.csproj"
 
 # Keep dotnet's first-run state inside the repository so the build does not touch
-# machine-specific profile paths during automation.
+# a sandbox-specific profile path.
 $dotnetHome = Join-Path $rootDir ".dotnet-home"
 $dotnetAppData = Join-Path $dotnetHome "AppData"
+$localPackages = Join-Path $env:USERPROFILE ".nuget\packages"
+$nugetSource = "https://api.nuget.org/v3/index.json"
 
 $env:DOTNET_CLI_HOME = $dotnetHome
 $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = "1"
 $env:DOTNET_NOLOGO = "1"
 $env:APPDATA = Join-Path $dotnetAppData "Roaming"
 $env:LOCALAPPDATA = Join-Path $dotnetAppData "Local"
+$env:RestoreSources = "$localPackages;$nugetSource"
+$env:RestoreIgnoreFailedSources = "true"
 $env:NuGetAudit = "false"
+
+$restoreSourceArgs = @("--source", $nugetSource)
+if (Test-Path $localPackages) {
+    $restoreSourceArgs = @("--source", $localPackages) + $restoreSourceArgs
+}
 
 if (-not (Test-Path $dotnetHome)) {
     New-Item -ItemType Directory -Path $dotnetHome | Out-Null
@@ -38,6 +47,8 @@ Write-Host "=== HopTracer Production Build ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  dotnet home: $env:DOTNET_CLI_HOME" -ForegroundColor DarkGray
 Write-Host "  user profile: $env:USERPROFILE" -ForegroundColor DarkGray
+Write-Host "  package cache: $localPackages" -ForegroundColor DarkGray
+Write-Host "  package feed: $nugetSource" -ForegroundColor DarkGray
 
 # Step 1: Clean build outputs
 if (-not $SkipClean) {
@@ -57,9 +68,9 @@ if (-not $SkipClean) {
 
 # Step 2: Restore
 Write-Host "`n[2/5] Restoring dependencies..." -ForegroundColor Yellow
-dotnet restore $appProject --verbosity normal -p:NuGetAudit=false -p:BuildInParallel=false
+dotnet restore $appProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
 if ($LASTEXITCODE -ne 0) { throw "App restore failed" }
-dotnet restore $testProject --verbosity normal -p:NuGetAudit=false -p:BuildInParallel=false
+dotnet restore $testProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
 if ($LASTEXITCODE -ne 0) { throw "Test restore failed" }
 Write-Host "  OK Dependencies restored" -ForegroundColor Green
 
@@ -101,8 +112,10 @@ dotnet publish $appProject `
     -p:PublishSingleFile=false `
     -o $outputDir `
     --verbosity quiet `
+    --ignore-failed-sources `
     -p:NuGetAudit=false `
-    -p:BuildInParallel=false
+    -p:BuildInParallel=false `
+    @restoreSourceArgs
 
 if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
