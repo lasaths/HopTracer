@@ -144,7 +144,8 @@ else {
     }
 
     $highSignalSecretPattern = '(-----BEGIN [A-Z ]*PRIVATE KEY-----|AccountKey=|SharedAccessSignature=|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|Bearer [A-Za-z0-9._-]{20,}|x-api-key\s*[:=]\s*[''""]?[A-Za-z0-9._-]{16,}|client_secret\s*[:=]\s*[''""]?[A-Za-z0-9._-]{16,}|access_token\s*[:=]\s*[''""]?[A-Za-z0-9._-]{16,})'
-    $secretHits = Get-GitOutput -Arguments @("grep", "-nI", "-E", $highSignalSecretPattern, "--", ".")
+    $selfRelPath = "scripts/check_store_readiness.ps1"
+    $secretHits = Get-GitOutput -Arguments @("grep", "-nI", "-E", $highSignalSecretPattern, "--", ".", ":(exclude)$selfRelPath")
     if ($secretHits.Available -and $secretHits.ExitCode -eq 0) {
         foreach ($hit in $secretHits.Output) {
             $errors.Add("High-signal secret pattern detected in tracked content: $hit")
