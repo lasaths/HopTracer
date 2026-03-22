@@ -13,6 +13,10 @@
 HopTracer is a Windows desktop diff tool for Grasshopper definitions (`.gh`, `.ghx`).
 It compares two versions, renders an interactive graph diff, and surfaces risk-focused change diagnostics for review.
 
+<p align="center">
+  <img src="Assets/HopTracer_App_Screenshot.png" alt="HopTracer desktop app screenshot" width="960"/>
+</p>
+
 ## What Works Today
 
 ### Input and Compare Flows

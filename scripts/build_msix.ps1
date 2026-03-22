@@ -110,7 +110,7 @@ if (-not (Test-Path $readinessScript)) {
 }
 
 & $readinessScript -Strict:$RequireStoreReadiness
-if ($LASTEXITCODE -ne 0) {
+if (-not $?) {
     throw "Store readiness checks failed."
 }
 
