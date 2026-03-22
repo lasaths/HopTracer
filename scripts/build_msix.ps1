@@ -65,6 +65,28 @@ function Resolve-MSBuildPath {
     return $null
 }
 
+function Resolve-SigntoolPath {
+    $candidates = @(Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match 'x64' } |
+        Sort-Object FullName -Descending)
+    if ($candidates.Count -gt 0) { return $candidates[0].FullName }
+    $fromPath = Get-Command signtool -ErrorAction SilentlyContinue
+    if ($null -ne $fromPath) { return $fromPath.Source }
+    return $null
+}
+
+function Get-ManifestPublisher {
+    param([string]$ManifestPath)
+    [xml]$manifest = Get-Content -Raw -Path $ManifestPath
+    $ns = New-Object System.Xml.XmlNamespaceManager($manifest.NameTable)
+    $ns.AddNamespace("f", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
+    $identity = $manifest.SelectSingleNode("/f:Package/f:Identity", $ns)
+    if ($null -eq $identity) { return "" }
+    $attr = $identity.Attributes["Publisher"]
+    if ($null -eq $attr) { return "" }
+    return $attr.Value
+}
+
 Write-Host "=== HopTracer MSIX Build ===" -ForegroundColor Cyan
 Write-Host ""
 
@@ -152,7 +174,7 @@ $publishArgs = @(
     "-p:AppxBundle=Never",
     "-p:UapAppxPackageBuildMode=StoreUpload",
     "-p:AppxPackageDir=$msixOutputDir\\",
-    "-p:AppxPackageSigningEnabled=$appxSigningEnabled",
+    "-p:AppxPackageSigningEnabled=false",
     "-p:ShellExtensionDllPath=$shellExtensionDll"
 )
 
@@ -166,14 +188,6 @@ if (-not [string]::IsNullOrWhiteSpace($PackageVersion)) {
 
 if (-not [string]::IsNullOrWhiteSpace($Publisher)) {
     $publishArgs += "-p:Publisher=$Publisher"
-    $publishArgs += "-p:PackageCertificateSubjectName=$Publisher"
-}
-
-if ($appxSigningEnabled) {
-    $publishArgs += "-p:PackageCertificateKeyFile=$resolvedCertPath"
-    if (-not [string]::IsNullOrWhiteSpace($CertificatePassword)) {
-        $publishArgs += "-p:PackageCertificatePassword=$CertificatePassword"
-    }
 }
 
 Push-Location $sourceDir
@@ -185,45 +199,84 @@ finally {
     Pop-Location
 }
 
-Write-Host "`n[7/7] Collecting artifacts..." -ForegroundColor Yellow
-$msixFiles = Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msix -ErrorAction SilentlyContinue
-$msixUploadFiles = Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msixupload -ErrorAction SilentlyContinue
+Write-Host "`n[7/7] Signing and packaging artifacts..." -ForegroundColor Yellow
+$msixFiles = @(Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msix -ErrorAction SilentlyContinue)
 
-if (-not $msixFiles -and -not $msixUploadFiles) {
+if (-not $msixFiles) {
     throw "No MSIX artifacts were generated in $msixOutputDir."
 }
 
-if ($msixFiles) {
-    foreach ($f in $msixFiles) {
-        Write-Host ("  OK MSIX: {0}" -f $f.FullName) -ForegroundColor Green
+# Resolve signtool
+$signtool = Resolve-SigntoolPath
+if ([string]::IsNullOrWhiteSpace($signtool)) {
+    Write-Host "  ! signtool.exe not found - package will not be signed. Install Windows SDK." -ForegroundColor Yellow
+}
+else {
+    # Resolve signing certificate
+    $resolvedCertPath = ""
+    $tempPfxPath = ""
+
+    if (-not [string]::IsNullOrWhiteSpace($CertificatePath) -and (Test-Path $CertificatePath)) {
+        $resolvedCertPath = $CertificatePath
+        Write-Host "  Using provided certificate: $resolvedCertPath" -ForegroundColor DarkGray
+    }
+    else {
+        # Auto-generate a self-signed cert matching the manifest Publisher
+        $manifestPath = Join-Path $sourceDir "HopTracer\Platforms\Windows\Package.appxmanifest"
+        $publisherSubject = if (-not [string]::IsNullOrWhiteSpace($Publisher)) { $Publisher } else { Get-ManifestPublisher $manifestPath }
+
+        if (-not [string]::IsNullOrWhiteSpace($publisherSubject)) {
+            Write-Host "  Auto-generating self-signed cert for: $publisherSubject" -ForegroundColor DarkGray
+            $tempPfxPath = Join-Path $msixOutputDir "_temp-signing.pfx"
+            $tempPass = "HopTracerTempSign!"
+            $cert = New-SelfSignedCertificate `
+                -Type Custom `
+                -Subject $publisherSubject `
+                -KeyUsage DigitalSignature `
+                -FriendlyName "HopTracer Store Signing (temp)" `
+                -CertStoreLocation "Cert:\CurrentUser\My" `
+                -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+            $secPass = ConvertTo-SecureString -String $tempPass -Force -AsPlainText
+            Export-PfxCertificate -Cert $cert -FilePath $tempPfxPath -Password $secPass | Out-Null
+            $resolvedCertPath = $tempPfxPath
+            $CertificatePassword = $tempPass
+        }
+        else {
+            Write-Host "  ! Could not determine Publisher subject - skipping signing." -ForegroundColor Yellow
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($resolvedCertPath)) {
+        foreach ($msix in $msixFiles) {
+            & $signtool sign /fd SHA256 /a /p "$CertificatePassword" /f "$resolvedCertPath" "$($msix.FullName)" | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                throw "signtool failed for: $($msix.FullName)"
+            }
+            Write-Host ("  OK Signed: {0}" -f $msix.Name) -ForegroundColor Green
+        }
+
+        # Clean up temp cert
+        if (-not [string]::IsNullOrWhiteSpace($tempPfxPath) -and (Test-Path $tempPfxPath)) {
+            Remove-Item $tempPfxPath -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
-if ($msixUploadFiles) {
-    foreach ($f in $msixUploadFiles) {
-        Write-Host ("  OK MSIXUPLOAD: {0}" -f $f.FullName) -ForegroundColor Green
-    }
+foreach ($f in $msixFiles) {
+    Write-Host ("  OK MSIX: {0}" -f $f.FullName) -ForegroundColor Green
 }
-else {
-    if ($msixFiles) {
-        Write-Host "  ! No .msixupload generated by SDK. Creating fallback .msixupload from .msix package..." -ForegroundColor Yellow
-        foreach ($msix in $msixFiles) {
-            $fallbackZip = "$($msix.FullName).zip"
-            $fallbackUpload = [System.IO.Path]::ChangeExtension($msix.FullName, ".msixupload")
-            if (Test-Path $fallbackZip) {
-                Remove-Item $fallbackZip -Force
-            }
-            if (Test-Path $fallbackUpload) {
-                Remove-Item $fallbackUpload -Force
-            }
-            Compress-Archive -Path $msix.FullName -DestinationPath $fallbackZip -Force
-            Move-Item $fallbackZip $fallbackUpload -Force
-            Write-Host ("  OK Fallback MSIXUPLOAD: {0}" -f $fallbackUpload) -ForegroundColor Green
-        }
-    }
-    else {
-        Write-Host "  ! No .msixupload file found. Microsoft Store submissions typically use .msixupload." -ForegroundColor Yellow
-    }
+
+# Always produce a .msixupload from the (now signed) .msix
+$msixUploadFiles = @(Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msixupload -ErrorAction SilentlyContinue)
+foreach ($existing in $msixUploadFiles) { Remove-Item $existing.FullName -Force }
+
+foreach ($msix in $msixFiles) {
+    $uploadPath = [System.IO.Path]::ChangeExtension($msix.FullName, ".msixupload")
+    $tmpZip     = "$uploadPath.zip"
+    if (Test-Path $tmpZip) { Remove-Item $tmpZip -Force }
+    Compress-Archive -Path $msix.FullName -DestinationPath $tmpZip -Force
+    Move-Item $tmpZip $uploadPath -Force
+    Write-Host ("  OK MSIXUPLOAD: {0}" -f $uploadPath) -ForegroundColor Green
 }
 
 Write-Host "`n=== MSIX Build Complete ===" -ForegroundColor Green
