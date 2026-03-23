@@ -91,3 +91,7 @@ If this policy changes in a meaningful way, the "Last updated" date above will b
 
 For privacy questions, open an issue at:  
 https://github.com/lasaths/HopTracer/issues
+
+---
+
+*This privacy policy was drafted with the assistance of AI (GitHub Copilot).*

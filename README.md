@@ -302,5 +302,5 @@ MIT License. See [LICENSE](LICENSE).
 
 - Built with [.NET MAUI](https://dotnet.microsoft.com/apps/maui) and [ASP.NET Core](https://dotnet.microsoft.com/apps/aspnet)
 - GH/GHX conversion approach based on [GhToGhx](https://bitbucket.org/rilgh/ghtoghx/wiki/Home)
-- Development and documentation include AI-assisted workflows with maintainer review
+- Development, documentation, and Store assets were created with the assistance of AI (GitHub Copilot), with maintainer review
 
