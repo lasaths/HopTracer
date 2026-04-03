@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-04-03
+
+### Fixed
+
+- MSIX package is now signed before creating the `.msixupload` archive for Store submission.
+- Excluded the build script itself from secret-pattern scanning to eliminate false positives.
+- Non-ASCII checkmark character replaced in `build_msix.ps1` for cross-locale compatibility.
+- Removed the `GhConverter` project from the solution build to fix CI restore errors.
+- Skipped CodeQL result upload step when code scanning is not enabled on the repository.
+
+### Added
+
+- Microsoft Store publishing workflow (`Codex/publish-store-hoptracer`) for automated MSIX upload.
+- Comprehensive script-based CI build with quality gates and readiness checks.
+- AI disclosure note and privacy policy added to README and project documentation.
+- Store logos included in the repository for submission and marketing assets.
+
 ## [1.0.1] - 2026-03-20
 
 ### Changed
