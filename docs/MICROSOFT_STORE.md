@@ -91,10 +91,30 @@ Example to create `MSIX_CERT_BASE64`:
 
 ## 5. Submission Checklist
 
-- [ ] `.\scripts\check_store_readiness.ps1 -Strict ...` passes with the exact identity/publisher/signing inputs used for the build.
-- [ ] Package identity matches Partner Center reservation.
-- [ ] Display version remains `1.0.0`, with a new `1.0.0.x` package revision if Store already consumed `1.0.0.0`.
-- [ ] Package signed with correct publisher certificate.
-- [ ] App launches on clean Windows 10/11 test machine.
-- [ ] Core flows pass (file pick, compare, diff render, Git history).
-- [ ] Upload `.msixupload` (or `.msix` if required by current portal flow).
+### ✅ Already done
+- [x] Logo assets present (`hoptrace_logo.png`, `hoptrace_logo_noshadow.png`)
+- [x] `Package.appxmanifest` structure valid
+- [x] Version `1.1.0.0` set in manifest and `.csproj`
+- [x] Privacy policy and AI disclosure in `docs/privacy.md` and `README.md`
+- [x] `store-msix.yml` workflow ready for manual trigger
+- [x] `check_store_readiness.ps1` passes (non-strict)
+- [x] Build and all tests pass
+
+### ⚠️ Required before submitting
+
+- [ ] **Align identity with Partner Center reservation.**
+  Run strict validation with your actual Partner Center identity:
+  ```powershell
+  .\scripts\check_store_readiness.ps1 -Strict `
+    -ExpectedIdentityName "YOUR_PARTNER_CENTER_NAME" `
+    -ExpectedPublisher "CN=YOUR_PUBLISHER" `
+    -ExpectedPackageVersion "1.1.0.0"
+  ```
+- [ ] **Configure GitHub secrets** (only needed if signing locally/in CI):
+  - `MSIX_CERT_BASE64` — PFX base64: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx"))`
+  - `MSIX_CERT_PASSWORD`
+  - _Note: if using Microsoft's Store signing flow, these are not required._
+- [ ] **Partner Center `runFullTrust` justification.** The manifest declares this restricted capability. During submission, provide justification: the app uses a COM shell extension to register a `.gh` right-click context menu, which requires full trust.
+- [ ] **Trigger `store-msix.yml`** via Actions → Build Store MSIX with your Partner Center identity and publisher values.
+- [ ] **Test on a clean Windows 10/11 machine** — launch, file pick, compare, diff render, Git history.
+- [ ] **Upload `.msixupload`** artifact from the Actions run to Partner Center.

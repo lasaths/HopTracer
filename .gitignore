@@ -16,6 +16,7 @@ wheels/
 .appdata/
 .localappdata/
 .dotnet-home/
+.nuget-packages/
 
 # Generated outputs (can be regenerated from source .ghx files)
 /*.html
