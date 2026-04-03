@@ -103,12 +103,16 @@ public class ConverterService : IConverterService
             return resolved;
         }
 
-        var candidatePaths = new[]
+        var candidatePaths = new List<string>
         {
             Path.Combine(AppContext.BaseDirectory, "GH_IO.dll"),
             Path.Combine(AppContext.BaseDirectory, "tools", "GH_IO.dll"),
             Path.Combine(AppContext.BaseDirectory, "HopTracer.Web", "tools", "GH_IO.dll"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Source", "HopTracer.Web", "tools", "GH_IO.dll"))
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Source", "HopTracer.Web", "tools", "GH_IO.dll")),
+            // Add standard Rhino installation paths
+            @"C:\Program Files\Rhino 8\Plug-ins\Grasshopper\GH_IO.dll",
+            @"C:\Program Files\Rhino 7\Plug-ins\Grasshopper\GH_IO.dll",
+            @"C:\Program Files\Rhino 6\Plug-ins\Grasshopper\GH_IO.dll"
         };
 
         foreach (var path in candidatePaths)

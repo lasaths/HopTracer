@@ -185,6 +185,134 @@ public class DifferTests
     }
 
     [Fact]
+    public void Diff_DetectsInputOptionChanges()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new Node
+                {
+                    Id = "A",
+                    Name = "Panel",
+                    Inputs = new List<Port>
+                    {
+                        new()
+                        {
+                            Id = "A:in:0",
+                            Name = "Input",
+                            Kind = "input",
+                            Options = new Dictionary<string, string>
+                            {
+                                ["Flatten"] = "true"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new Node
+                {
+                    Id = "A",
+                    Name = "Panel",
+                    Inputs = new List<Port>
+                    {
+                        new()
+                        {
+                            Id = "A:in:0",
+                            Name = "Input",
+                            Kind = "input",
+                            Options = new Dictionary<string, string>
+                            {
+                                ["Reverse"] = "true"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var node = detailed.Nodes.Single(n => n.Id == "A");
+        var input = Assert.Single(node.Inputs);
+
+        Assert.Equal("modified", node.Status);
+        Assert.Equal("modified", input.Status);
+        Assert.True(input.OptionsChanged);
+        Assert.Equal("true", input.Options["Reverse"]);
+        Assert.Equal("true", input.OptionsOld?["Flatten"]);
+        Assert.Equal("false", input.OptionsNew?["Flatten"]);
+        Assert.Equal("false", input.OptionsOld?["Reverse"]);
+        Assert.Equal("true", input.OptionsNew?["Reverse"]);
+    }
+
+    [Fact]
+    public void Diff_DoesNotFlagMissingAndExplicitFalseInputOptionsAsChanges()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new Node
+                {
+                    Id = "A",
+                    Name = "Panel",
+                    Inputs = new List<Port>
+                    {
+                        new()
+                        {
+                            Id = "A:in:0",
+                            Name = "Input",
+                            Kind = "input",
+                            Options = new Dictionary<string, string>()
+                        }
+                    }
+                }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new Node
+                {
+                    Id = "A",
+                    Name = "Panel",
+                    Inputs = new List<Port>
+                    {
+                        new()
+                        {
+                            Id = "A:in:0",
+                            Name = "Input",
+                            Kind = "input",
+                            Options = new Dictionary<string, string>
+                            {
+                                ["Flatten"] = "false"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var node = detailed.Nodes.Single(n => n.Id == "A");
+        var input = Assert.Single(node.Inputs);
+
+        Assert.Equal("same", node.Status);
+        Assert.Equal("same", input.Status);
+        Assert.False(input.OptionsChanged);
+        Assert.Null(input.OptionsOld);
+        Assert.Null(input.OptionsNew);
+    }
+
+    [Fact]
     public void DiffDetailed_MatchesStableComponentsWhenIdsChange()
     {
         var oldGraph = new Graph

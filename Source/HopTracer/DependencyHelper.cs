@@ -55,9 +55,16 @@ public static class DependencyHelper
             Path.Combine(appDir, "GhConverter", "publish")
         };
 
-        foreach (var targetDir in targets)
+        // If we're in a read-only MSIX package directory, we skip copying and rely on external paths.
+        // We check this by seeing if we can create a dummy file in appDir or by common MSIX directory patterns.
+        bool isReadOnlyDir = appDir.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase);
+
+        if (!isReadOnlyDir)
         {
-            CopyIfNewer(sourcePath, targetDir);
+            foreach (var targetDir in targets)
+            {
+                CopyIfNewer(sourcePath, targetDir);
+            }
         }
 
         errorMessage = null;

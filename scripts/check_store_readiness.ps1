@@ -171,6 +171,24 @@ if ($localStateDirs.Count -gt 0) {
     $warnings.Add("Local machine state directories exist in the repo root: $($localStateDirs -join ', ')")
 }
 
+# GH_IO.dll availability check (non-blocking for Store readiness)
+$ghIoCandidatePaths = @(
+    (Join-Path $rootDir "Source\HopTracer.Web\tools\GH_IO.dll"),
+    (Join-Path $rootDir "Release\HopTracer_Portable\GH_IO.dll"),
+    (Join-Path $rootDir "Release\HopTracer_Portable\tools\GH_IO.dll"),
+    "C:\Program Files\Rhino 8\Plug-ins\Grasshopper\GH_IO.dll",
+    "C:\Program Files\Rhino 7\Plug-ins\Grasshopper\GH_IO.dll",
+    "C:\Program Files\Rhino 6\Plug-ins\Grasshopper\GH_IO.dll"
+)
+$resolvedGhIoPath = $ghIoCandidatePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if ([string]::IsNullOrWhiteSpace($resolvedGhIoPath)) {
+    $warnings.Add(
+        "GH_IO.dll was not detected in the supported local or Rhino paths. " +
+        ".gh conversion and some cluster archive decoding will be unavailable until you run .\scripts\setup_dependencies.ps1 or install Rhino 8/7/6."
+    )
+}
+
 Write-Host "=== Store Readiness Check ===" -ForegroundColor Cyan
 Write-Host "Manifest: $manifestPath"
 Write-Host "Identity Name: $identityName"
@@ -178,6 +196,7 @@ Write-Host "Identity Publisher: $identityPublisher"
 Write-Host "Publisher Display Name: $publisherDisplayName"
 Write-Host "Identity Version: $identityVersion"
 Write-Host "Strict mode: $Strict"
+Write-Host "GH_IO path: $([string]::IsNullOrWhiteSpace($resolvedGhIoPath) ? 'not detected' : $resolvedGhIoPath)"
 
 if ($warnings.Count -gt 0) {
     Write-Host ""

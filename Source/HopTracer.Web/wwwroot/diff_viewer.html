@@ -126,6 +126,8 @@
             --interactive-hover: color-mix(in oklch, var(--accent-color) 18%, transparent);
             --elev-1: 0 16px 38px rgba(0, 0, 0, 0.4);
             --elev-2: 0 22px 52px rgba(0, 0, 0, 0.48);
+            --radius-button: 8px;
+            --radius-button-compact: 6px;
         }
 
         * {
@@ -532,9 +534,9 @@
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            background: linear-gradient(180deg, rgba(92, 128, 247, 0.14), rgba(92, 128, 247, 0.06));
+            background: rgba(92, 128, 247, 0.1);
             border: 1px solid rgba(92, 128, 247, 0.45);
-            border-radius: 10px;
+            border-radius: var(--radius-button);
             padding: 10px 12px;
             color: var(--text-primary);
             cursor: pointer;
@@ -544,7 +546,7 @@
 
         .search-launcher:hover {
             border-color: rgba(92, 128, 247, 0.72);
-            background: linear-gradient(180deg, rgba(92, 128, 247, 0.22), rgba(92, 128, 247, 0.08));
+            background: rgba(92, 128, 247, 0.16);
             transform: translateY(-1px);
         }
 
@@ -678,7 +680,7 @@
         .spotlight-item {
             width: 100%;
             border: 0;
-            border-radius: 9px;
+            border-radius: var(--radius-button);
             background: transparent;
             color: inherit;
             text-align: left;
@@ -750,7 +752,7 @@
             border: 1px solid var(--border);
             color: var(--text-secondary);
             padding: 6px 11px;
-            border-radius: 999px;
+            border-radius: var(--radius-button);
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
@@ -766,7 +768,7 @@
         }
 
         .filter-btn.active {
-            background: linear-gradient(180deg, color-mix(in oklch, var(--accent-color) 90%, white 10%), color-mix(in oklch, var(--accent-color) 84%, black 16%));
+            background: color-mix(in oklch, var(--accent-color) 82%, black 18%);
             border-color: color-mix(in oklch, var(--accent-color) 78%, white 22%);
             color: white;
             box-shadow: 0 8px 20px rgba(92, 128, 247, 0.24);
@@ -1142,7 +1144,7 @@
             border: none;
             color: var(--text-secondary);
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: var(--radius-button-compact);
             transition: all 0.2s;
         }
 
@@ -1154,7 +1156,7 @@
         .panel-icon-btn {
             width: 28px;
             height: 28px;
-            border-radius: 7px;
+            border-radius: var(--radius-button-compact);
             border: 1px solid var(--border-color);
             background: color-mix(in oklch, var(--surface-2) 90%, transparent);
             color: var(--text-secondary);
@@ -1179,7 +1181,7 @@
             transform: translateY(-50%);
             width: 28px;
             height: 48px;
-            border-radius: 8px;
+            border-radius: var(--radius-button);
             border: 1px solid var(--border-color);
             background: rgba(20, 22, 28, 0.9);
             color: var(--text-secondary);
@@ -1263,7 +1265,7 @@
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
             padding: 7px 11px;
-            border-radius: 10px;
+            border-radius: var(--radius-button);
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
@@ -1272,7 +1274,7 @@
         .source-mode-btn.active {
             color: #fff;
             border-color: var(--accent-color);
-            background: linear-gradient(135deg, var(--accent-color), var(--ring));
+            background: var(--accent-color);
         }
 
         .source-mode-btn:disabled {
@@ -1450,6 +1452,36 @@
             gap: 8px;
         }
 
+        .script-diff-modal {
+            width: min(1440px, calc(100vw - 48px));
+            height: min(90vh, calc(100vh - 48px));
+            max-height: none;
+        }
+
+        .script-modal-header-copy {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .script-modal-subtitle {
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .script-modal-body {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
         /* Minimap */
         #minimap-container {
             position: absolute;
@@ -1566,7 +1598,7 @@
             min-width: var(--top-tool-size);
             height: var(--top-tool-size);
             padding: 0;
-            border-radius: 8px;
+            border-radius: var(--radius-button);
             justify-content: center;
             background: var(--bg-panel);
             border-color: var(--border-color);
@@ -1714,7 +1746,7 @@
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
             padding: 6px 10px;
-            border-radius: 8px;
+            border-radius: var(--radius-button);
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
@@ -1764,7 +1796,7 @@
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
             padding: 6px 10px;
-            border-radius: 10px;
+            border-radius: var(--radius-button);
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
@@ -1775,7 +1807,7 @@
         .graph-tab-btn.active {
             color: #fff;
             border-color: var(--accent-color);
-            background: linear-gradient(135deg, var(--accent-color), var(--ring));
+            background: var(--accent-color);
         }
 
         .graph-tab-btn:hover {
@@ -1796,7 +1828,7 @@
             cursor: pointer;
             width: 16px;
             height: 16px;
-            border-radius: 50%;
+            border-radius: var(--radius-button-compact);
             padding: 0;
             line-height: 1;
             font-size: 12px;
@@ -1849,14 +1881,64 @@
             line-height: 1.5;
         }
 
+        .script-pane-shell,
+        .script-modal-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 100%;
+        }
+
+        .script-pane-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .script-expand-btn {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-button);
+            border: 1px solid var(--border-color);
+            background: color-mix(in oklch, var(--bg-card) 88%, transparent);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .script-expand-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+
+        .script-expand-btn:focus-visible {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
         .diff-container {
             border: 1px solid #30363d;
             border-radius: 8px;
             overflow: auto;
-            background: #0d1117;
+            background: #1e1e1e;
             font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
             font-size: 12px;
             max-height: 480px;
+        }
+
+        .script-pane-shell .diff-container {
+            max-height: none;
+            min-height: clamp(320px, 62vh, 820px);
+        }
+
+        .script-modal-shell .diff-container {
+            flex: 1;
+            max-height: none;
+            min-height: 0;
         }
 
         .diff-table {
@@ -1875,29 +1957,77 @@
             flex-shrink: 0;
             text-align: right;
             padding: 4px 8px;
-            color: #6e7681;
+            color: #858585;
             user-select: none;
-            border-right: 1px solid #30363d;
-            background: #0d1117;
+            border-right: 1px solid #333333;
+            background: #252526;
         }
 
         .diff-code {
             flex: 1;
             padding: 4px 8px;
             white-space: pre-wrap;
-            word-break: break-all;
-            color: #c9d1d9;
+            word-break: normal;
+            overflow-wrap: anywhere;
+            color: #d4d4d4;
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            tab-size: 4;
+            background: #1e1e1e;
         }
 
-        /* Diff Colors (GitHub Dark Style) */
+        .diff-code-sign {
+            flex: 0 0 auto;
+            color: #858585;
+            user-select: none;
+        }
+
+        .diff-code-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .syntax-comment {
+            color: #6a9955;
+        }
+
+        .syntax-keyword {
+            color: #569cd6;
+        }
+
+        .syntax-string {
+            color: #ce9178;
+        }
+
+        .syntax-number {
+            color: #b5cea8;
+        }
+
+        .syntax-type {
+            color: #4ec9b0;
+        }
+
+        .syntax-preprocessor {
+            color: #c586c0;
+        }
+
+        /* Diff Colors (GitHub Dark) */
         .diff-added {
             background-color: rgba(46, 160, 67, 0.15);
         }
 
         .diff-added .diff-num {
             background-color: rgba(46, 160, 67, 0.15);
-            /* Match row, clearer */
             border-color: rgba(46, 160, 67, 0.4);
+        }
+
+        .diff-added .diff-code-sign {
+            color: #3fb950;
+        }
+
+        .diff-added .diff-code {
+            background-color: rgba(46, 160, 67, 0.15);
         }
 
         .diff-removed {
@@ -1906,8 +2036,15 @@
 
         .diff-removed .diff-num {
             background-color: rgba(248, 81, 73, 0.15);
-            /* Match row */
             border-color: rgba(248, 81, 73, 0.4);
+        }
+
+        .diff-removed .diff-code-sign {
+            color: #f85149;
+        }
+
+        .diff-removed .diff-code {
+            background-color: rgba(248, 81, 73, 0.15);
         }
 
         .diff-header-row {
@@ -2229,6 +2366,19 @@
         </div>
     </div>
 
+    <div id="script-modal" class="source-modal-backdrop">
+        <div class="source-modal script-diff-modal" role="dialog" aria-modal="true" aria-labelledby="script-modal-title">
+            <div class="source-modal-header">
+                <div class="script-modal-header-copy">
+                    <div class="source-modal-title" id="script-modal-title">Script Diff</div>
+                    <div id="script-modal-subtitle" class="script-modal-subtitle"></div>
+                </div>
+                <button type="button" id="btn-script-modal-close" class="panel-icon-btn" title="Close">✕</button>
+            </div>
+            <div id="script-modal-body" class="source-modal-body script-modal-body"></div>
+        </div>
+    </div>
+
     <div id="spotlight-backdrop" class="spotlight-backdrop" aria-hidden="true">
         <div class="spotlight-panel" role="dialog" aria-modal="true" aria-label="Search components and script code">
             <div class="spotlight-input-row">
@@ -2357,8 +2507,12 @@
         const btnDetailsCollapse = document.getElementById('btn-details-collapse');
         const btnDetailsExpand = document.getElementById('btn-details-expand');
         const sourceModal = document.getElementById('source-modal');
+        const scriptModal = document.getElementById('script-modal');
         const sourceModalTitle = document.getElementById('source-modal-title');
         const sourceModalStatus = document.getElementById('source-modal-status');
+        const scriptModalTitle = document.getElementById('script-modal-title');
+        const scriptModalSubtitle = document.getElementById('script-modal-subtitle');
+        const scriptModalBody = document.getElementById('script-modal-body');
         const sourceModeFileBtn = document.getElementById('source-mode-file');
         const sourceModeCommitBtn = document.getElementById('source-mode-commit');
         const sourcePaneFile = document.getElementById('source-pane-file');
@@ -2374,6 +2528,7 @@
         const btnSourceApply = document.getElementById('btn-source-apply');
         const btnSourceCancel = document.getElementById('btn-source-cancel');
         const btnSourceModalClose = document.getElementById('btn-source-modal-close');
+        const btnScriptModalClose = document.getElementById('btn-script-modal-close');
         const searchLauncher = document.getElementById('search-launcher');
         const searchLauncherTitle = document.getElementById('search-launcher-title');
         const searchLauncherMeta = document.getElementById('search-launcher-meta');
@@ -2393,6 +2548,7 @@
         let loadingProgressTimer = null;
         let loadingProgressValue = 0;
         let spotlightReturnFocus = null;
+        let scriptModalReturnFocus = null;
 
         async function ensureSessionToken() {
             if (sessionToken) return sessionToken;
@@ -2515,6 +2671,76 @@
             return 'Other';
         }
 
+        const PYTHON_SYNTAX_PATTERN = /(@[A-Za-z_][\w.]*)|(#.*$)|((?:[rRuUbBfF]|rb|br|fr|rf)?(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'))|(\b(?:False|None|True|and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|match|nonlocal|not|or|pass|raise|return|try|while|with|yield)\b)|(\b\d+(?:\.\d+)?\b)/gm;
+        const CSHARP_SYNTAX_PATTERN = /(\/\/.*$)|(@"(?:[^"]|"")*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(^\s*#\s*\w+.*$)|(\b(?:abstract|as|async|await|base|bool|break|byte|case|catch|char|checked|class|const|continue|decimal|default|delegate|do|double|else|enum|event|explicit|extern|false|finally|fixed|float|for|foreach|goto|if|implicit|in|int|interface|internal|is|lock|long|namespace|new|null|object|operator|out|override|params|private|protected|public|readonly|record|ref|return|sbyte|sealed|short|sizeof|stackalloc|static|string|struct|switch|this|throw|true|try|typeof|uint|ulong|unchecked|unsafe|ushort|using|var|virtual|void|volatile|while)\b)|(\b(?:Action|CancellationToken|DateTime|Dictionary|Func|Guid|HashSet|ICollection|IDictionary|IEnumerable|IList|IReadOnlyDictionary|IReadOnlyList|List|Task|TimeSpan)\b)|(\b\d+(?:\.\d+)?(?:[fFdDmMuUlL])?\b)/gm;
+
+        function normalizeSyntaxLanguage(language) {
+            const label = String(language || '').trim().toLowerCase();
+            if (label === 'python') return 'python';
+            if (label === 'c#' || label === 'csharp' || label === 'csharpcode') return 'csharp';
+            return 'plain';
+        }
+
+        function getSyntaxPattern(language) {
+            switch (normalizeSyntaxLanguage(language)) {
+                case 'python':
+                    PYTHON_SYNTAX_PATTERN.lastIndex = 0;
+                    return PYTHON_SYNTAX_PATTERN;
+                case 'csharp':
+                    CSHARP_SYNTAX_PATTERN.lastIndex = 0;
+                    return CSHARP_SYNTAX_PATTERN;
+                default:
+                    return null;
+            }
+        }
+
+        function highlightCodeLine(line, language) {
+            const source = String(line ?? '');
+            const pattern = getSyntaxPattern(language);
+            if (!pattern || !source) return escapeHtml(source);
+
+            let html = '';
+            let lastIndex = 0;
+            let match;
+
+            while ((match = pattern.exec(source)) !== null) {
+                const token = match[0];
+                const tokenIndex = match.index;
+                if (tokenIndex > lastIndex) {
+                    html += escapeHtml(source.slice(lastIndex, tokenIndex));
+                }
+
+                let className = '';
+                if (normalizeSyntaxLanguage(language) === 'python') {
+                    if (match[1]) className = 'syntax-preprocessor';
+                    else if (match[2]) className = 'syntax-comment';
+                    else if (match[3]) className = 'syntax-string';
+                    else if (match[4]) className = 'syntax-keyword';
+                    else if (match[5]) className = 'syntax-number';
+                } else if (normalizeSyntaxLanguage(language) === 'csharp') {
+                    if (match[1]) className = 'syntax-comment';
+                    else if (match[2]) className = 'syntax-string';
+                    else if (match[3]) className = 'syntax-preprocessor';
+                    else if (match[4]) className = 'syntax-keyword';
+                    else if (match[5]) className = 'syntax-type';
+                    else if (match[6]) className = 'syntax-number';
+                }
+
+                const safeToken = escapeHtml(token);
+                html += className ? `<span class="${className}">${safeToken}</span>` : safeToken;
+                lastIndex = pattern.lastIndex;
+                if (token.length === 0) {
+                    pattern.lastIndex += 1;
+                }
+            }
+
+            if (lastIndex < source.length) {
+                html += escapeHtml(source.slice(lastIndex));
+            }
+
+            return html;
+        }
+
         function summarizeScriptSnippet(sourceText, query) {
             const compact = normalizeSearchText(sourceText, 2200);
             if (!compact) return '';
@@ -2573,10 +2799,11 @@
                 if (!isScriptComponent(node)) return;
                 const scriptEntries = getScriptPropertyEntries(node);
                 scriptEntries.forEach(entry => {
+                    if (!entry?.isChanged) return;
                     const rawScript = String(entry?.newValue || entry?.oldValue || '');
                     if (!rawScript.trim()) return;
 
-                    const language = detectScriptLanguage(node, entry.key, rawScript);
+                    const language = entry.language || detectScriptLanguage(node, entry.key, rawScript);
                     if (language !== 'C#' && language !== 'Python') return;
 
                     const scriptText = normalizeSearchText(rawScript, 12000);
@@ -3054,6 +3281,7 @@
         }
 
         function renderEmptyScriptPane(message = 'Select a script component to view code diff') {
+            closeExpandedScriptDiff({ restoreFocus: false });
             detailsPaneScript.innerHTML = `<div class="script-empty">${message}</div>`;
         }
 
@@ -4381,6 +4609,57 @@
             return { ...props };
         }
 
+        const BOOLEAN_PORT_OPTION_CANONICAL_KEYS = ['Optional', 'Flatten', 'Graft', 'Simplify', 'Reverse'];
+
+        function normalizePortOptionMap(options) {
+            if (!options || typeof options !== 'object') return {};
+
+            const normalized = {};
+            Object.keys(options)
+                .sort((a, b) => a.localeCompare(b))
+                .forEach(key => {
+                    const value = options[key];
+                    if (value === null || value === undefined) return;
+                    normalized[String(key)] = String(value).trim();
+                });
+
+            return normalized;
+        }
+
+        function normalizeBooleanPortOptionValue(value) {
+            const normalizedValue = String(value ?? '').trim().toLowerCase();
+            if (!normalizedValue) return 'false';
+            if (normalizedValue === 'true' || normalizedValue === '1' || normalizedValue === 'yes' || normalizedValue === 'on') return 'true';
+            if (normalizedValue === 'false' || normalizedValue === '0' || normalizedValue === 'no' || normalizedValue === 'off') return 'false';
+            return normalizedValue;
+        }
+
+        function normalizePortOptionSignatureMap(options) {
+            const normalized = normalizePortOptionMap(options);
+            const signature = {};
+            const seenBooleanKeys = new Set();
+
+            Object.keys(normalized)
+                .sort((a, b) => a.localeCompare(b))
+                .forEach(key => {
+                    if (isBooleanPortOptionKey(key)) {
+                        signature[key] = normalizeBooleanPortOptionValue(normalized[key]);
+                        seenBooleanKeys.add(normalizePropertyKeyName(key));
+                        return;
+                    }
+
+                    signature[key] = normalized[key];
+                });
+
+            BOOLEAN_PORT_OPTION_CANONICAL_KEYS.forEach(key => {
+                if (!seenBooleanKeys.has(normalizePropertyKeyName(key))) {
+                    signature[key] = 'false';
+                }
+            });
+
+            return signature;
+        }
+
         function extractGroupMemberIds(nodeOrProps) {
             const props = nodeOrProps && nodeOrProps.properties ? nodeOrProps.properties : (nodeOrProps || {});
             const rawList = props.groupMemberIds || props.GroupMemberIds || '';
@@ -4729,6 +5008,9 @@
 
             return ports.map((p, index) => {
                 const id = p?.id || p?.Id || `${nodeId}:${kind}:${index}`;
+                const options = normalizePortOptionMap(p?.options ?? p?.Options);
+                const optionsOld = normalizePortOptionMap(p?.optionsOld ?? p?.OptionsOld);
+                const optionsNew = normalizePortOptionMap(p?.optionsNew ?? p?.OptionsNew);
                 return {
                     ...p,
                     id,
@@ -4736,6 +5018,10 @@
                     nickname: p?.nickname || p?.Nickname || '',
                     kind: p?.kind || p?.Kind || kind,
                     status: p?.status || p?.Status || 'same',
+                    options,
+                    optionsOld,
+                    optionsNew,
+                    optionsChanged: !!(p?.optionsChanged ?? p?.OptionsChanged) || Object.keys(optionsOld).length > 0 || Object.keys(optionsNew).length > 0,
                     wireDisplay: parseWireDisplayMode(p?.wireDisplay ?? p?.WireDisplay ?? p?.wireDisplayMode ?? p?.WireDisplayMode)
                 };
             });
@@ -5025,6 +5311,14 @@
                     !!e.target?.isContentEditable;
                 const isSpotlightShortcut = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && key === 'k';
 
+                if (isScriptModalOpen()) {
+                    if (key === 'escape') {
+                        e.preventDefault();
+                        closeExpandedScriptDiff();
+                    }
+                    return;
+                }
+
                 if (isSpotlightShortcut) {
                     e.preventDefault();
                     toggleSpotlight();
@@ -5312,6 +5606,18 @@
                 sourceModal.addEventListener('click', (e) => {
                     if (e.target === sourceModal) {
                         closeSourceModal();
+                    }
+                });
+            }
+
+            if (btnScriptModalClose) {
+                btnScriptModalClose.addEventListener('click', () => closeExpandedScriptDiff());
+            }
+
+            if (scriptModal) {
+                scriptModal.addEventListener('click', (e) => {
+                    if (e.target === scriptModal) {
+                        closeExpandedScriptDiff();
                     }
                 });
             }
@@ -6143,20 +6449,21 @@
 
             const scriptEntries = getScriptPropertyEntries(node);
             const scriptComponent = isScriptComponent(node);
-            const showScriptTab = scriptEntries.length > 0 || scriptComponent;
-            setScriptTabVisibility(showScriptTab, scriptEntries.length);
+            const changedScriptEntries = scriptEntries.filter(entry => entry.isChanged);
+            const showScriptTab = changedScriptEntries.length > 0;
+            setScriptTabVisibility(showScriptTab, changedScriptEntries.length);
 
-            if (scriptEntries.length === 0) {
+            if (changedScriptEntries.length === 0) {
                 state.scriptContext = null;
                 renderEmptyScriptPane(scriptComponent
-                    ? 'Script component detected, but no extractable code was found in this file.'
+                    ? 'No changed script was found for this component.'
                     : 'No script source found for this component');
             } else {
                 const selectedScriptKey = state.scriptContext && state.scriptContext.nodeId === node.id
                     ? state.scriptContext.key
-                    : scriptEntries[0].key;
+                    : changedScriptEntries[0].key;
 
-                renderScriptPane(node, scriptEntries, selectedScriptKey);
+                renderScriptPane(node, changedScriptEntries, selectedScriptKey);
             }
         }
 
@@ -6238,7 +6545,7 @@
                 const rawOldValue = hasOld ? String(oldProps[key] ?? '') : '';
 
                 const includeKey = !isScriptNoiseKey(key) &&
-                    (isExplicitScriptKey(key) ||
+                    (isLikelyScriptPropertyKey(key) ||
                         looksLikeScriptContent(rawNewValue) ||
                         looksLikeScriptContent(rawOldValue));
                 if (!includeKey) return;
@@ -6256,6 +6563,10 @@
                         oldValue = rawNewValue;
                         newValue = '';
                         isChanged = true;
+                    } else if (nodeStatus === 'modified') {
+                        oldValue = '';
+                        newValue = rawNewValue;
+                        isChanged = true;
                     } else {
                         oldValue = rawNewValue;
                         isChanged = false;
@@ -6268,7 +6579,8 @@
                     key,
                     oldValue,
                     newValue,
-                    isChanged
+                    isChanged,
+                    language: detectScriptLanguage(node, key, newValue || oldValue)
                 });
             });
 
@@ -6294,48 +6606,141 @@
             return SCRIPT_NOISE_KEYS.has(normalizeScriptKey(key));
         }
 
+        function getChangedScriptEntries(entries) {
+            return Array.isArray(entries) ? entries.filter(entry => entry?.isChanged) : [];
+        }
+
+        function getRequestedScriptEntry(entries, requestedKey) {
+            const changedEntries = getChangedScriptEntries(entries);
+            if (changedEntries.length === 0) return null;
+            if (!requestedKey || requestedKey === '*') return changedEntries[0];
+            return changedEntries.find(entry => entry.key === requestedKey) || changedEntries[0];
+        }
+
+        function isScriptModalOpen() {
+            return !!scriptModal && scriptModal.classList.contains('open');
+        }
+
+        function renderExpandedScriptDiff(node, entry) {
+            if (!scriptModalTitle || !scriptModalSubtitle || !scriptModalBody || !node || !entry) return;
+
+            const nodeName = String(node.nickname || node.name || node.id || 'Script Diff');
+            const language = entry.language || detectScriptLanguage(node, entry.key, entry.newValue || entry.oldValue);
+
+            scriptModalTitle.textContent = nodeName;
+            scriptModalSubtitle.textContent = `${entry.key} · ${language} · Full inline diff`;
+            scriptModalBody.innerHTML = `
+                <div class="script-modal-shell">
+                    <div class="diff-container">
+                        ${computeDiff(entry.oldValue, entry.newValue, {
+                            language,
+                            mode: SCRIPT_DIFF_RENDER_MODE.FULL_INLINE
+                        })}
+                    </div>
+                </div>
+            `;
+        }
+
+        function openExpandedScriptDiff() {
+            if (!scriptModal) return;
+
+            const selectedNode = state.nodes.find(n => n.id === state.selected);
+            if (!selectedNode) return;
+
+            const scriptEntries = getChangedScriptEntries(getScriptPropertyEntries(selectedNode));
+            const requestedKey = state.scriptContext && state.scriptContext.nodeId === selectedNode.id
+                ? state.scriptContext.key
+                : null;
+            const selectedEntry = getRequestedScriptEntry(scriptEntries, requestedKey);
+            if (!selectedEntry) return;
+
+            const currentFocus = document.activeElement;
+            scriptModalReturnFocus = currentFocus instanceof HTMLElement ? currentFocus : null;
+            renderExpandedScriptDiff(selectedNode, selectedEntry);
+            if (mainContainer) mainContainer.setAttribute('inert', '');
+            scriptModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            window.setTimeout(() => {
+                if (btnScriptModalClose) btnScriptModalClose.focus();
+            }, 0);
+        }
+
+        function closeExpandedScriptDiff(options = {}) {
+            if (!scriptModal) return;
+
+            const { restoreFocus = true } = options;
+            const wasOpen = scriptModal.classList.contains('open');
+            scriptModal.classList.remove('open');
+            if (scriptModalBody) {
+                scriptModalBody.innerHTML = '';
+            }
+            if (mainContainer) {
+                mainContainer.removeAttribute('inert');
+            }
+            document.body.style.overflow = state.spotlightOpen ? 'hidden' : '';
+
+            const returnTarget = scriptModalReturnFocus;
+            scriptModalReturnFocus = null;
+            if (!restoreFocus || !wasOpen) return;
+
+            if (returnTarget instanceof HTMLElement && returnTarget.isConnected) {
+                returnTarget.focus();
+            } else if (detailsTabScript && detailsTabScript.offsetParent !== null) {
+                detailsTabScript.focus();
+            }
+        }
+
         function renderScriptPane(node, entries, requestedKey) {
-            if (!entries || entries.length === 0) {
-                renderEmptyScriptPane('No script source found for this component');
+            const changedEntries = getChangedScriptEntries(entries);
+            if (!changedEntries.length) {
+                renderEmptyScriptPane('No changed script was found for this component');
                 return;
             }
 
-            const orderedEntries = requestedKey
-                ? [
-                    ...entries.filter(e => e.key === requestedKey),
-                    ...entries.filter(e => e.key !== requestedKey)
-                ]
-                : [...entries];
+            const selectedEntry = getRequestedScriptEntry(changedEntries, requestedKey);
+            if (!selectedEntry) {
+                renderEmptyScriptPane('No changed script was found for this component');
+                return;
+            }
+
+            const language = selectedEntry.language || detectScriptLanguage(node, selectedEntry.key, selectedEntry.newValue || selectedEntry.oldValue);
 
             state.scriptContext = {
                 nodeId: node.id,
-                key: requestedKey || '*'
+                key: selectedEntry.key
             };
 
-            const safeNodeName = escapeHtml(node.nickname || node.name || node.id);
-            const changedCount = orderedEntries.filter(e => e.isChanged).length;
-            const summary = `${orderedEntries.length} code block(s) · ${changedCount} modified`;
-            const sectionsHtml = orderedEntries.map(entry => {
-                const safeKey = escapeHtml(entry.key);
-                const diffState = entry.isChanged ? 'Modified in diff' : 'No script changes between versions';
-                return `
-                    <div class="script-panel-header" style="margin-top: 10px; margin-bottom: 8px;">
-                        <div class="script-panel-title">${safeKey}</div>
-                        <div class="script-panel-meta">${diffState}</div>
+            detailsPaneScript.innerHTML = `
+                <div class="script-pane-shell">
+                    <div class="script-pane-toolbar">
+                        <button type="button" class="script-expand-btn" data-script-expand title="Expand code diff" aria-label="Expand code diff">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M15 3h6v6"></path>
+                                <path d="M9 21H3v-6"></path>
+                                <path d="M21 3l-7 7"></path>
+                                <path d="M3 21l7-7"></path>
+                            </svg>
+                            <span class="visually-hidden">Expand code diff</span>
+                        </button>
                     </div>
                     <div class="diff-container">
-                        ${computeDiff(entry.oldValue, entry.newValue, !entry.isChanged)}
+                        ${computeDiff(selectedEntry.oldValue, selectedEntry.newValue, {
+                            language,
+                            mode: SCRIPT_DIFF_RENDER_MODE.SIDEBAR_CHANGED_ONLY
+                        })}
                     </div>
-                `;
-            }).join('');
-
-            detailsPaneScript.innerHTML = `
-                <div class="script-panel-header">
-                    <div class="script-panel-title">${safeNodeName} · Script Diff</div>
-                    <div class="script-panel-meta">${summary}</div>
                 </div>
-                ${sectionsHtml}
             `;
+
+            const expandButton = detailsPaneScript.querySelector('[data-script-expand]');
+            if (expandButton) {
+                expandButton.addEventListener('click', () => openExpandedScriptDiff());
+            }
+
+            if (isScriptModalOpen()) {
+                renderExpandedScriptDiff(node, selectedEntry);
+            }
         }
 
         function isClusterLikeNode(node) {
@@ -6418,6 +6823,10 @@
             return JSON.stringify(normalized);
         }
 
+        function stablePortOptionSignature(options) {
+            return stableClusterPreviewObjectSignature(normalizePortOptionSignatureMap(options));
+        }
+
         function stableClusterPreviewPortSignature(port, fallbackKind = '') {
             const wireDisplayRaw = port?.wireDisplay ?? port?.WireDisplay ?? 0;
             const wireDisplay = parseWireDisplayMode(wireDisplayRaw);
@@ -6428,6 +6837,7 @@
                 kind: normalizedClusterPreviewValue(port?.kind ?? port?.Kind, fallbackKind),
                 type: normalizedClusterPreviewValue(port?.type ?? port?.Type),
                 value: normalizedClusterPreviewValue(port?.value ?? port?.Value),
+                options: stablePortOptionSignature(port?.options ?? port?.Options),
                 wireDisplay
             });
         }
@@ -6483,9 +6893,10 @@
                 const kind = normalizedClusterPreviewValue(p?.kind ?? p?.Kind, defaultKind);
                 const type = normalizedClusterPreviewValue(p?.type ?? p?.Type);
                 const value = normalizedClusterPreviewValue(p?.value ?? p?.Value);
+                const options = normalizePortOptionMap(p?.options ?? p?.Options);
                 const wireDisplay = parseWireDisplayMode(p?.wireDisplay ?? p?.WireDisplay ?? p?.wireDisplayMode ?? p?.WireDisplayMode ?? 0);
                 const key = id ? `id:${canonicalizeId(id)}` : `idx:${index}`;
-                return { id, name, nickname, kind, type, value, wireDisplay, key };
+                return { id, name, nickname, kind, type, value, options, wireDisplay, key };
             });
         }
 
@@ -6515,11 +6926,13 @@
                 const n = newMap.get(key);
                 if (o && n) {
                     const valueChanged = o.value !== n.value;
+                    const optionsChanged = stablePortOptionSignature(o.options) !== stablePortOptionSignature(n.options);
                     const changed = valueChanged ||
                         o.name !== n.name ||
                         o.nickname !== n.nickname ||
                         o.kind !== n.kind ||
                         o.type !== n.type ||
+                        optionsChanged ||
                         o.wireDisplay !== n.wireDisplay;
                     return {
                         id: n.id || o.id || '',
@@ -6531,6 +6944,10 @@
                         valueOld: o.value || '',
                         valueNew: n.value || '',
                         valueChanged,
+                        options: n.options || {},
+                        optionsChanged,
+                        optionsOld: optionsChanged ? o.options : {},
+                        optionsNew: optionsChanged ? n.options : {},
                         status: changed ? 'modified' : 'same',
                         wireDisplay: n.wireDisplay
                     };
@@ -6544,6 +6961,8 @@
                         kind: n.kind || defaultKind,
                         type: n.type || '',
                         value: n.value || '',
+                        options: n.options || {},
+                        optionsChanged: false,
                         status: 'added',
                         wireDisplay: n.wireDisplay
                     };
@@ -6556,6 +6975,8 @@
                     kind: o?.kind || defaultKind,
                     type: o?.type || '',
                     value: o?.value || '',
+                    options: o?.options || {},
+                    optionsChanged: false,
                     status: 'removed',
                     wireDisplay: o?.wireDisplay ?? 0
                 };
@@ -6809,6 +7230,56 @@
 
         function normalizePropertyKeyName(key) {
             return String(key || '').trim().toLowerCase();
+        }
+
+        function isBooleanPortOptionKey(key) {
+            const normalized = normalizePropertyKeyName(key);
+            return BOOLEAN_PORT_OPTION_CANONICAL_KEYS.some(candidate => normalizePropertyKeyName(candidate) === normalized);
+        }
+
+        function formatPortOptionToken(key, value, showDefault = false) {
+            const label = String(key || '').trim();
+            if (!label) return '';
+
+            const normalizedValue = String(value ?? '').trim();
+            if (!normalizedValue) return showDefault ? `${label}: default` : '';
+            if (normalizedValue === 'true') return label;
+            if (normalizedValue === 'false') return `${label}: false`;
+            return `${label}: ${normalizedValue}`;
+        }
+
+        function getPortOptionDisplayValue(optionMap, key) {
+            if (Object.prototype.hasOwnProperty.call(optionMap, key)) {
+                return optionMap[key];
+            }
+
+            return isBooleanPortOptionKey(key) ? 'false' : '';
+        }
+
+        function renderPortOptionText(options) {
+            const normalized = normalizePortOptionMap(options);
+            const keys = Object.keys(normalized).sort((a, b) => a.localeCompare(b));
+            return keys
+                .map(key => formatPortOptionToken(key, normalized[key], false))
+                .filter(Boolean)
+                .join(', ');
+        }
+
+        function renderPortOptionDiffText(oldOptions, newOptions) {
+            const oldMap = normalizePortOptionMap(oldOptions);
+            const newMap = normalizePortOptionMap(newOptions);
+            const keys = Array.from(new Set([...Object.keys(oldMap), ...Object.keys(newMap)]))
+                .sort((a, b) => a.localeCompare(b));
+
+            return keys
+                .map(key => {
+                    const oldValue = getPortOptionDisplayValue(oldMap, key);
+                    const newValue = getPortOptionDisplayValue(newMap, key);
+                    if (oldValue === newValue) return '';
+                    return `${formatPortOptionToken(key, oldValue, true)} → ${formatPortOptionToken(key, newValue, true)}`;
+                })
+                .filter(Boolean)
+                .join(', ');
         }
 
         const PANEL_VALUE_PROPERTY_KEYS = new Set([
@@ -7181,6 +7652,16 @@
                         ? normalizeScriptForCompare(oldValue) !== normalizeScriptForCompare(newValue)
                         : newValue.length > 0;
                     if (showOnlyChangedValues && !scriptChanged) continue;
+                    const openButton = scriptChanged ? `
+                            <button class="script-diff-open" data-script-key="${encodeURIComponent(key)}"
+                                style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--accent-color); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Open Changed Script Diff
+                            </button>
+                    ` : '';
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 8px; align-items: flex-start; padding-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -7189,14 +7670,7 @@
                                     ${scriptChanged ? 'MODIFIED' : 'UNCHANGED'}
                                 </span>
                             </div>
-                            <button class="script-diff-open" data-script-key="${encodeURIComponent(key)}"
-                                style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--accent-color); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                </svg>
-                                Open in Script Diff Tab
-                            </button>
+                            ${openButton}
                         </div>
                     `;
                 } else if (hasValueDelta) {
@@ -7261,12 +7735,17 @@
                 const rawValueOld = p.valueOld ?? p.ValueOld;
                 const rawValueNew = p.valueNew ?? p.ValueNew;
                 const hasValue = rawValue !== null && rawValue !== undefined && String(rawValue).length > 0;
+                const optionText = renderPortOptionText(p.options ?? p.Options);
+                const optionDiffText = renderPortOptionDiffText(p.optionsOld ?? p.OptionsOld, p.optionsNew ?? p.OptionsNew);
                 const portName = escapeHtml(p.nickname || p.name || p.id || '');
                 const portId = escapeHtml(String(p.id || ''));
                 const portStatus = escapeHtml(String(p.status || 'same'));
                 const wireDisplayLine = isInput
                     ? `<div class="port-value">Wire: ${wireDisplayModeLabel(p.wireDisplay ?? p.WireDisplay)}</div>`
                     : '';
+                const optionLine = optionDiffText
+                    ? `<div class="port-value">Options: ${escapeHtml(optionDiffText)}</div>`
+                    : (optionText ? `<div class="port-value">Options: ${escapeHtml(optionText)}</div>` : '');
                 const valueLine = p.valueChanged
                     ? `<div class="port-value">Δ ${escapeHtml(String(rawValueOld ?? ''))} → ${escapeHtml(String(rawValueNew ?? ''))}</div>`
                     : (hasValue ? `<div class="port-value">${escapeHtml(String(rawValue))}</div>` : '');
@@ -7276,6 +7755,7 @@
                         <div class="port-meta">
                             <div class="port-name">${portName}</div>
                             ${valueLine || ''}
+                            ${optionLine || ''}
                             ${wireDisplayLine}
                             <div class="port-value" style="opacity:0.7;">${portId}</div>
                         </div>
@@ -7320,13 +7800,10 @@
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             if (!selectedNode) return;
 
-            const scriptEntries = getScriptPropertyEntries(selectedNode);
-            const scriptComponent = isScriptComponent(selectedNode);
+            const scriptEntries = getChangedScriptEntries(getScriptPropertyEntries(selectedNode));
             if (scriptEntries.length === 0) {
-                setScriptTabVisibility(scriptComponent, 0);
-                renderEmptyScriptPane(scriptComponent
-                    ? 'Script component detected, but no extractable code was found in this file.'
-                    : 'No script source found for this component');
+                setScriptTabVisibility(false, 0);
+                renderEmptyScriptPane('No changed script was found for this component.');
                 return;
             }
 
@@ -7342,13 +7819,26 @@
             openScriptDiff(key, true);
         }
 
+        const SCRIPT_DIFF_RENDER_MODE = Object.freeze({
+            SIDEBAR_CHANGED_ONLY: 'sidebar-changed-only',
+            FULL_INLINE: 'full-inline',
+            VIEW_ONLY: 'view-only'
+        });
+
         // Simple line-based diff (Myers algorithm simplified or just line comparison)
-        function computeDiff(oldText, newText, isViewOnly = false) {
+        function computeDiff(oldText, newText, options = {}) {
+            const {
+                language = 'Other',
+                mode = SCRIPT_DIFF_RENDER_MODE.FULL_INLINE
+            } = options;
+
+            const isViewOnly = mode === SCRIPT_DIFF_RENDER_MODE.VIEW_ONLY;
+            const showChangedOnly = mode === SCRIPT_DIFF_RENDER_MODE.SIDEBAR_CHANGED_ONLY;
             const oldLines = String(oldText ?? '').split(/\r?\n/);
             const newLines = String(newText ?? '').split(/\r?\n/);
 
             if (isViewOnly) {
-                return renderUnifiedDiff(newLines.map(l => ({ type: 'same', content: l })), 1);
+                return renderUnifiedDiff(newLines.map(l => ({ type: 'same', content: l })), 1, language, showChangedOnly);
             }
 
             // Simple LCS-based diff implementation
@@ -7383,13 +7873,14 @@
                 }
             }
 
-            return renderUnifiedDiff(changes);
+            return renderUnifiedDiff(changes, 1, language, showChangedOnly);
         }
 
-        function renderUnifiedDiff(changes, startLine = 1) {
+        function renderUnifiedDiff(changes, startLine = 1, language = 'Other', showChangedOnly = false) {
             let html = '<div class="diff-table">';
             let oldLineNum = startLine;
             let newLineNum = startLine;
+            let renderedCount = 0;
 
             changes.forEach(change => {
                 let oldNumStr = '';
@@ -7412,14 +7903,35 @@
                     symbol = '-';
                 }
 
+                if (showChangedOnly && change.type === 'same') {
+                    return;
+                }
+
+                const highlightedLine = highlightCodeLine(change.content, language);
+                renderedCount += 1;
                 html += `
                     <div class="diff-line ${className}">
                         <div class="diff-num">${oldNumStr}</div>
                         <div class="diff-num">${newNumStr}</div>
-                        <div class="diff-code">${escapeHtml(symbol + ' ' + change.content)}</div>
+                        <div class="diff-code">
+                            <span class="diff-code-sign">${escapeHtml(symbol + ' ')}</span>
+                            <span class="diff-code-content">${highlightedLine}</span>
+                        </div>
                     </div>
                 `;
             });
+
+            if (renderedCount === 0) {
+                html += `
+                    <div class="diff-line">
+                        <div class="diff-num"></div>
+                        <div class="diff-num"></div>
+                        <div class="diff-code">
+                            <span class="diff-code-content">No changed lines.</span>
+                        </div>
+                    </div>
+                `;
+            }
 
             html += '</div>';
             return html;

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-03
+
+### Added
+
+- **Port options tracking**: HopTracer now detects and displays per-port configuration changes across diff commits. Supported options: Flatten, Graft, Simplify, Reverse, Optional, Access (item/list/tree), DataMapping, AtLeast, and AtMost.
+- **GhxParser**: New `ParseInputOptions()` method extracts all port options from `.ghx` files, with alias resolution and value normalization for robust cross-version comparison.
+- **Expandable script diff modal**: Script diffs now have an expand button that opens a full-width modal (1440px) for easier reading of large scripts. The modal includes keyboard support, focus management, and backdrop-click-to-close.
+- GH_IO.dll resolution now probes standard Rhino 6, 7, and 8 installation paths automatically so conversion works out-of-the-box without manual configuration.
+
+### Changed
+
+- `diff_viewer.html`: Refactored CSS to use `--radius-button` variable; updated editor color scheme for better contrast; improved code diff layout with flex-based sign/content separation.
+- `build_msix.ps1`: Certificate provider availability is now checked before attempting self-signed cert generation, enabling graceful handling of sandboxed/non-Windows CI environments.
+- `check_store_readiness.ps1`: Added non-blocking GH_IO.dll detection check with helpful path diagnostics.
+
 ## [1.0.2] - 2026-04-03
 
 ### Fixed

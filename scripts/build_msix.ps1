@@ -226,20 +226,34 @@ else {
         $publisherSubject = if (-not [string]::IsNullOrWhiteSpace($Publisher)) { $Publisher } else { Get-ManifestPublisher $manifestPath }
 
         if (-not [string]::IsNullOrWhiteSpace($publisherSubject)) {
-            Write-Host "  Auto-generating self-signed cert for: $publisherSubject" -ForegroundColor DarkGray
-            $tempPfxPath = Join-Path $msixOutputDir "_temp-signing.pfx"
-            $tempPass = "HopTracerTempSign!"
-            $cert = New-SelfSignedCertificate `
-                -Type Custom `
-                -Subject $publisherSubject `
-                -KeyUsage DigitalSignature `
-                -FriendlyName "HopTracer Store Signing (temp)" `
-                -CertStoreLocation "Cert:\CurrentUser\My" `
-                -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
-            $secPass = ConvertTo-SecureString -String $tempPass -Force -AsPlainText
-            Export-PfxCertificate -Cert $cert -FilePath $tempPfxPath -Password $secPass | Out-Null
-            $resolvedCertPath = $tempPfxPath
-            $CertificatePassword = $tempPass
+            Write-Host "  Checking for certificate support..." -ForegroundColor DarkGray
+            
+            # Check if Certificate provider exists
+            if (Get-PSProvider Certificate -ErrorAction SilentlyContinue) {
+                Write-Host "  Auto-generating self-signed cert for: $publisherSubject" -ForegroundColor DarkGray
+                
+                # Ensure Cert: drive is available
+                if (-not (Get-PSDrive Cert -ErrorAction SilentlyContinue)) {
+                    New-PSDrive -Name Cert -PSProvider Certificate -Root \ | Out-Null
+                }
+
+                $tempPfxPath = Join-Path $msixOutputDir "_temp-signing.pfx"
+                $tempPass = "HopTracerTempSign!"
+                $cert = New-SelfSignedCertificate `
+                    -Type Custom `
+                    -Subject $publisherSubject `
+                    -KeyUsage DigitalSignature `
+                    -FriendlyName "HopTracer Store Signing (temp)" `
+                    -CertStoreLocation "Cert:\CurrentUser\My" `
+                    -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+                $secPass = ConvertTo-SecureString -String $tempPass -Force -AsPlainText
+                Export-PfxCertificate -Cert $cert -FilePath $tempPfxPath -Password $secPass | Out-Null
+                $resolvedCertPath = $tempPfxPath
+                $CertificatePassword = $tempPass
+            }
+            else {
+                Write-Host "  ! Certificate provider not available. Skipping auto-signing." -ForegroundColor Yellow
+            }
         }
         else {
             Write-Host "  ! Could not determine Publisher subject - skipping signing." -ForegroundColor Yellow

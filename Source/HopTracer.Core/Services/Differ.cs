@@ -24,6 +24,14 @@ public class Differ : IDiffer
         "ClusterPreviewMessage", "clusterPreviewMessage",
         "ClusterPreviewGraph", "clusterPreviewGraph"
     };
+    private static readonly HashSet<string> BooleanPortOptionKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Optional",
+        "Flatten",
+        "Graft",
+        "Simplify",
+        "Reverse"
+    };
 
     public Differ(ILogger<Differ> logger)
     {
@@ -309,6 +317,10 @@ public class Differ : IDiffer
             ValueChanged = src.ValueChanged,
             ValueOld = src.ValueOld,
             ValueNew = src.ValueNew,
+            Options = new Dictionary<string, string>(src.Options, StringComparer.Ordinal),
+            OptionsChanged = src.OptionsChanged,
+            OptionsOld = src.OptionsOld == null ? null : new Dictionary<string, string>(src.OptionsOld, StringComparer.Ordinal),
+            OptionsNew = src.OptionsNew == null ? null : new Dictionary<string, string>(src.OptionsNew, StringComparer.Ordinal),
             WireDisplay = src.WireDisplay
         };
     }
@@ -423,8 +435,8 @@ public class Differ : IDiffer
             var hasNew = TryResolveValue(newProps, newScriptKeys, key, out var newResolvedKey, out var newVal);
 
             var displayKey = hasNew ? newResolvedKey : (oldScriptKeys.TryGetValue(key, out var oldResolvedKey) ? oldResolvedKey : key);
-            var normalizedOld = hasOld ? oldVal : string.Empty;
-            var normalizedNew = hasNew ? newVal : string.Empty;
+            var normalizedOld = NormalizeScriptSource(hasOld ? oldVal : string.Empty);
+            var normalizedNew = NormalizeScriptSource(hasNew ? newVal : string.Empty);
 
             mergedProps[displayKey] = normalizedNew;
             oldValuesOut[displayKey] = normalizedOld;
@@ -534,9 +546,11 @@ public class Differ : IDiffer
             if (inOld != null && inNew != null)
             {
                 var valueChanged = (inOld.Value ?? string.Empty) != (inNew.Value ?? string.Empty);
+                var optionComparison = ComparePortOptions(inOld.Options, inNew.Options);
                 var status = valueChanged ||
                     inOld.Name != inNew.Name ||
                     inOld.Nickname != inNew.Nickname ||
+                    optionComparison.Changed ||
                     inOld.WireDisplay != inNew.WireDisplay
                     ? "modified"
                     : "same";
@@ -552,6 +566,10 @@ public class Differ : IDiffer
                     ValueOld = inOld.Value,
                     ValueNew = inNew.Value,
                     ValueChanged = valueChanged,
+                    Options = optionComparison.Current,
+                    OptionsChanged = optionComparison.Changed,
+                    OptionsOld = optionComparison.Old,
+                    OptionsNew = optionComparison.New,
                     Status = status,
                     WireDisplay = inNew.WireDisplay
                 });
@@ -571,6 +589,86 @@ public class Differ : IDiffer
         }
 
         return result.OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+    }
+
+    private static PortOptionComparison ComparePortOptions(
+        Dictionary<string, string>? oldOptions,
+        Dictionary<string, string>? newOptions)
+    {
+        var oldMap = oldOptions ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        var newMap = newOptions ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        var changedOld = new Dictionary<string, string>(StringComparer.Ordinal);
+        var changedNew = new Dictionary<string, string>(StringComparer.Ordinal);
+        var current = new Dictionary<string, string>(newMap, StringComparer.Ordinal);
+
+        var allKeys = new HashSet<string>(oldMap.Keys, StringComparer.OrdinalIgnoreCase);
+        allKeys.UnionWith(newMap.Keys);
+        allKeys.UnionWith(BooleanPortOptionKeys);
+
+        foreach (var key in allKeys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+        {
+            var hasOld = TryGetPortOptionValue(oldMap, key, out var oldResolvedKey, out var oldValue);
+            var hasNew = TryGetPortOptionValue(newMap, key, out var newResolvedKey, out var newValue);
+            var displayKey = hasNew ? newResolvedKey : (hasOld ? oldResolvedKey : key);
+            var normalizedOld = NormalizePortOptionComparisonValue(key, hasOld ? oldValue : null);
+            var normalizedNew = NormalizePortOptionComparisonValue(key, hasNew ? newValue : null);
+
+            if (!string.Equals(normalizedOld, normalizedNew, StringComparison.Ordinal))
+            {
+                changedOld[displayKey] = normalizedOld;
+                changedNew[displayKey] = normalizedNew;
+            }
+        }
+
+        return new PortOptionComparison
+        {
+            Current = current,
+            Changed = changedOld.Count > 0,
+            Old = changedOld.Count > 0 ? changedOld : null,
+            New = changedNew.Count > 0 ? changedNew : null
+        };
+    }
+
+    private static bool TryGetPortOptionValue(
+        Dictionary<string, string> options,
+        string key,
+        out string resolvedKey,
+        out string resolvedValue)
+    {
+        foreach (var kv in options)
+        {
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                resolvedKey = kv.Key;
+                resolvedValue = kv.Value ?? string.Empty;
+                return true;
+            }
+        }
+
+        resolvedKey = key;
+        resolvedValue = string.Empty;
+        return false;
+    }
+
+    private static string NormalizePortOptionComparisonValue(string key, string? raw)
+    {
+        if (BooleanPortOptionKeys.Contains(key))
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return "false";
+            }
+
+            var normalizedBoolean = raw.Trim().ToLowerInvariant();
+            return normalizedBoolean switch
+            {
+                "true" or "1" or "yes" or "on" => "true",
+                "false" or "0" or "no" or "off" => "false",
+                _ => normalizedBoolean
+            };
+        }
+
+        return raw?.Trim() ?? string.Empty;
     }
 
     private static void UpdateStats(
@@ -684,7 +782,8 @@ public class Differ : IDiffer
         {
             var oldVal = GetProp(oldProps, key);
             var newVal = GetProp(newProps, key);
-            if (oldVal != null && newVal != null && oldVal != newVal)
+            if (oldVal != null && newVal != null &&
+                !string.Equals(NormalizeScriptSource(oldVal), NormalizeScriptSource(newVal), StringComparison.Ordinal))
             {
                 return true;
             }
@@ -695,13 +794,38 @@ public class Differ : IDiffer
         {
             oldProps.TryGetValue(key, out var oldVal);
             newProps.TryGetValue(key, out var newVal);
-            if (!string.Equals(oldVal, newVal, StringComparison.Ordinal))
+            if (!string.Equals(NormalizeScriptSource(oldVal ?? string.Empty), NormalizeScriptSource(newVal ?? string.Empty), StringComparison.Ordinal))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Normalizes a script source string for comparison by aligning line endings and
+    /// removing insignificant trailing whitespace, matching the frontend's normalizeScriptForCompare logic.
+    /// </summary>
+    private static string NormalizeScriptSource(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        // Normalize CRLF → LF, then strip trailing whitespace on each line, then trim end.
+        // This matches what the frontend normalizeScriptForCompare() does.
+        var normalized = value.Replace("\r\n", "\n", StringComparison.Ordinal)
+                               .Replace("\r", "\n", StringComparison.Ordinal);
+
+        var lines = normalized.Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            lines[i] = lines[i].TrimEnd();
+        }
+
+        return string.Join('\n', lines).TrimEnd();
     }
 
     private static bool IsScriptLikeKey(string key)
@@ -849,6 +973,14 @@ public class Differ : IDiffer
     {
         public Dictionary<string, string> OldToNew { get; set; } = new(StringComparer.Ordinal);
         public int FallbackMatchedCount { get; set; }
+    }
+
+    private sealed class PortOptionComparison
+    {
+        public Dictionary<string, string> Current { get; set; } = new(StringComparer.Ordinal);
+        public bool Changed { get; set; }
+        public Dictionary<string, string>? Old { get; set; }
+        public Dictionary<string, string>? New { get; set; }
     }
 }
 

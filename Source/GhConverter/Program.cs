@@ -56,7 +56,11 @@ class Program
         {
             baseDir,
             Path.GetFullPath(Path.Combine(baseDir, "..")),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "publish"))
+            Path.GetFullPath(Path.Combine(baseDir, "..", "publish")),
+            // Standard Rhino installation paths
+            @"C:\Program Files\Rhino 8\Plug-ins\Grasshopper",
+            @"C:\Program Files\Rhino 7\Plug-ins\Grasshopper",
+            @"C:\Program Files\Rhino 6\Plug-ins\Grasshopper"
         }
         .Where(Directory.Exists)
         .Distinct()

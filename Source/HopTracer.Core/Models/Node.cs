@@ -60,6 +60,10 @@ public class Port
     public bool ValueChanged { get; set; } = false;
     public string? ValueOld { get; set; }
     public string? ValueNew { get; set; }
+    public Dictionary<string, string> Options { get; set; } = new();
+    public bool OptionsChanged { get; set; } = false;
+    public Dictionary<string, string>? OptionsOld { get; set; }
+    public Dictionary<string, string>? OptionsNew { get; set; }
 
     /// <summary>
     /// Grasshopper wire display mode for this parameter input.

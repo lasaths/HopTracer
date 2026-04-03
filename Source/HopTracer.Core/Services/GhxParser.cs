@@ -19,6 +19,20 @@ public class GhxParser : IGhxParser
     private const int MaxClusterPreviewDepth = 3;
     // Align cluster preview caps with viewer large-model thresholds to reduce dropped internals.
     private const int MaxClusterPreviewNodes = 4000;
+    private static readonly (string CanonicalKey, string[] Aliases)[] InputBooleanOptionAliases =
+    {
+        ("Optional", new[] { "Optional" }),
+        ("Flatten", new[] { "Flatten", "Flattened" }),
+        ("Graft", new[] { "Graft", "Grafted" }),
+        ("Simplify", new[] { "Simplify", "Simplified" }),
+        ("Reverse", new[] { "Reverse", "Reversed" })
+    };
+    private static readonly (string CanonicalKey, string[] Aliases)[] InputValueOptionAliases =
+    {
+        ("DataMapping", new[] { "DataMapping" }),
+        ("AtLeast", new[] { "AtLeast" }),
+        ("AtMost", new[] { "AtMost" })
+    };
 
     public GhxParser(ILogger<GhxParser> logger)
     {
@@ -290,6 +304,9 @@ public class GhxParser : IGhxParser
             for (int i = 0; i < count; i++)
             {
                 var inChunk = i < inputChunks.Count ? inputChunks[i] : null;
+                var options = inChunk != null
+                    ? ParseInputOptions(inChunk)
+                    : new Dictionary<string, string>(StringComparer.Ordinal);
 
                 var id = (i < inputIds.Count ? inputIds[i] : null)
                          ?? (inChunk != null ? (GetDirectValue(inChunk, "InstanceGuid") ?? GetValue(inChunk, "InstanceGuid")) : null);
@@ -308,6 +325,7 @@ public class GhxParser : IGhxParser
                     Nickname = nick,
                     Kind = "input",
                     Status = "same",
+                    Options = options,
                     WireDisplay = ParseWireDisplayMode(inChunk)
                 }, sources));
             }
@@ -320,6 +338,7 @@ public class GhxParser : IGhxParser
 
         foreach (var inChunk in legacyInputChunks)
         {
+            var options = ParseInputOptions(inChunk);
             var id = GetDirectValue(inChunk, "InstanceGuid")
                      ?? GetValue(inChunk, "InstanceGuid")
                      ?? $"{nodeId}:input:{results.Count}";
@@ -334,6 +353,7 @@ public class GhxParser : IGhxParser
                 Nickname = nick,
                 Kind = "input",
                 Status = "same",
+                Options = options,
                 WireDisplay = ParseWireDisplayMode(inChunk)
             }, sources));
         }
@@ -351,6 +371,7 @@ public class GhxParser : IGhxParser
                     Nickname = "",
                     Kind = "input",
                     Status = "same",
+                    Options = new Dictionary<string, string>(StringComparer.Ordinal),
                     WireDisplay = 0
                 }, directSources));
             }
@@ -402,6 +423,190 @@ public class GhxParser : IGhxParser
         if (normalized.Contains("faint")) return 1;
         if (normalized.Contains("hidden")) return 2;
         return 0;
+    }
+
+    private Dictionary<string, string> ParseInputOptions(XElement? paramChunk)
+    {
+        var options = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (paramChunk == null)
+        {
+            return options;
+        }
+
+        foreach (var (canonicalKey, aliases) in InputBooleanOptionAliases)
+        {
+            var raw = GetFirstOptionValue(paramChunk, aliases);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                continue;
+            }
+
+            if (TryParseBooleanOptionValue(raw, out var enabled))
+            {
+                if (enabled)
+                {
+                    options[canonicalKey] = "true";
+                }
+
+                continue;
+            }
+
+            options[canonicalKey] = raw.Trim();
+        }
+
+        var access = ResolveInputAccess(paramChunk);
+        if (!string.IsNullOrWhiteSpace(access))
+        {
+            options["Access"] = access;
+        }
+
+        foreach (var (canonicalKey, aliases) in InputValueOptionAliases)
+        {
+            var raw = GetFirstOptionValue(paramChunk, aliases);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                continue;
+            }
+
+            options[canonicalKey] = NormalizeInputOptionValue(canonicalKey, raw);
+        }
+
+        return options;
+    }
+
+    private string? ResolveInputAccess(XElement paramChunk)
+    {
+        var raw = GetFirstOptionValue(paramChunk, "Access", "ParameterAccess");
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            return NormalizeAccessValue(raw);
+        }
+
+        if (OptionEnabled(paramChunk, "ItemAccess"))
+        {
+            return "item";
+        }
+
+        if (OptionEnabled(paramChunk, "ListAccess"))
+        {
+            return "list";
+        }
+
+        if (OptionEnabled(paramChunk, "TreeAccess"))
+        {
+            return "tree";
+        }
+
+        return null;
+    }
+
+    private bool OptionEnabled(XElement paramChunk, string name)
+    {
+        var raw = GetDirectValue(paramChunk, name) ?? GetValue(paramChunk, name);
+        return TryParseBooleanOptionValue(raw, out var enabled) && enabled;
+    }
+
+    private string? GetFirstOptionValue(XElement paramChunk, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            var raw = GetDirectValue(paramChunk, name) ?? GetValue(paramChunk, name);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                return raw;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryParseBooleanOptionValue(string? raw, out bool value)
+    {
+        value = false;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        var normalized = raw.Trim().ToLowerInvariant();
+        switch (normalized)
+        {
+            case "true":
+            case "1":
+            case "yes":
+            case "on":
+                value = true;
+                return true;
+            case "false":
+            case "0":
+            case "no":
+            case "off":
+                value = false;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static string NormalizeInputOptionValue(string key, string raw)
+    {
+        var trimmed = raw.Trim();
+        if (string.Equals(key, "DataMapping", StringComparison.OrdinalIgnoreCase))
+        {
+            return NormalizeDataMappingValue(trimmed);
+        }
+
+        return trimmed;
+    }
+
+    private static string NormalizeAccessValue(string raw)
+    {
+        var normalized = raw.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "0" => "item",
+            "1" => "list",
+            "2" => "tree",
+            "item" => "item",
+            "list" => "list",
+            "tree" => "tree",
+            _ when normalized.Contains("item", StringComparison.Ordinal) => "item",
+            _ when normalized.Contains("list", StringComparison.Ordinal) => "list",
+            _ when normalized.Contains("tree", StringComparison.Ordinal) => "tree",
+            _ => normalized
+        };
+    }
+
+    private static string NormalizeDataMappingValue(string raw)
+    {
+        var normalized = raw.Trim().ToLowerInvariant();
+        if (normalized.Contains("flatten", StringComparison.Ordinal))
+        {
+            return "flatten";
+        }
+
+        if (normalized.Contains("graft", StringComparison.Ordinal))
+        {
+            return "graft";
+        }
+
+        if (normalized.Contains("simplify", StringComparison.Ordinal))
+        {
+            return "simplify";
+        }
+
+        if (normalized.Contains("reverse", StringComparison.Ordinal))
+        {
+            return "reverse";
+        }
+
+        if (normalized.Contains("none", StringComparison.Ordinal) ||
+            normalized.Contains("default", StringComparison.Ordinal))
+        {
+            return "default";
+        }
+
+        return normalized;
     }
 
     private string? GetObjectInstanceGuid(XElement objectChunk)
@@ -867,12 +1072,16 @@ public class GhxParser : IGhxParser
             return resolved;
         }
 
-        var candidatePaths = new[]
+        var candidatePaths = new List<string>
         {
             Path.Combine(AppContext.BaseDirectory, "GH_IO.dll"),
             Path.Combine(AppContext.BaseDirectory, "tools", "GH_IO.dll"),
             Path.Combine(AppContext.BaseDirectory, "HopTracer.Web", "tools", "GH_IO.dll"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Source", "HopTracer.Web", "tools", "GH_IO.dll"))
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Source", "HopTracer.Web", "tools", "GH_IO.dll")),
+            // Add standard Rhino installation paths
+            @"C:\Program Files\Rhino 8\Plug-ins\Grasshopper\GH_IO.dll",
+            @"C:\Program Files\Rhino 7\Plug-ins\Grasshopper\GH_IO.dll",
+            @"C:\Program Files\Rhino 6\Plug-ins\Grasshopper\GH_IO.dll"
         };
 
         foreach (var path in candidatePaths)
@@ -945,6 +1154,7 @@ public class GhxParser : IGhxParser
             Kind = p.Kind,
             Type = p.Type,
             Value = p.Value,
+            Options = new Dictionary<string, string>(p.Options, StringComparer.Ordinal),
             WireDisplay = p.WireDisplay
         }).ToList();
     }
@@ -1228,6 +1438,7 @@ public class GhxParser : IGhxParser
         public string Kind { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
         public string? Value { get; set; }
+        public Dictionary<string, string> Options { get; set; } = new();
         public int WireDisplay { get; set; }
     }
 

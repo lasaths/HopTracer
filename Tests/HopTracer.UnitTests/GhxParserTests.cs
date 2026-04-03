@@ -236,6 +236,70 @@ public class GhxParserTests
     }
 
     [Fact]
+    public void Parse_ExtractsInputOptions_FromParamInputChunks()
+    {
+        var xml = """
+            <Archive>
+              <chunks>
+                <chunk name="Object">
+                  <chunks>
+                    <chunk name="Container">
+                      <items>
+                        <item name="InstanceGuid">consumer-node</item>
+                        <item name="Name">Consumer</item>
+                        <item name="NickName">C</item>
+                      </items>
+                      <chunks>
+                        <chunk name="ParameterData">
+                          <chunks>
+                            <chunk name="param_input">
+                              <items>
+                                <item name="InstanceGuid">consumer-in-0</item>
+                                <item name="Name">Input</item>
+                                <item name="NickName">I</item>
+                                <item name="Optional">true</item>
+                                <item name="Flattened">true</item>
+                                <item name="Reversed">true</item>
+                                <item name="ListAccess">true</item>
+                                <item name="DataMapping">Flatten</item>
+                              </items>
+                            </chunk>
+                          </chunks>
+                        </chunk>
+                      </chunks>
+                    </chunk>
+                  </chunks>
+                </chunk>
+              </chunks>
+            </Archive>
+            """;
+
+        var parser = new GhxParser(NullLogger<GhxParser>.Instance);
+        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ghx");
+
+        try
+        {
+            File.WriteAllText(tempPath, xml);
+            var graph = parser.Parse(tempPath);
+            var node = Assert.Single(graph.Nodes.Values);
+            var input = Assert.Single(node.Inputs);
+
+            Assert.Equal("true", input.Options["Optional"]);
+            Assert.Equal("true", input.Options["Flatten"]);
+            Assert.Equal("true", input.Options["Reverse"]);
+            Assert.Equal("list", input.Options["Access"]);
+            Assert.Equal("flatten", input.Options["DataMapping"]);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Fact]
     public void Parse_ExtractsScriptSource_FromScriptChunkText()
     {
         var parser = new GhxParser(NullLogger<GhxParser>.Instance);
