@@ -196,7 +196,8 @@ Write-Host "Identity Publisher: $identityPublisher"
 Write-Host "Publisher Display Name: $publisherDisplayName"
 Write-Host "Identity Version: $identityVersion"
 Write-Host "Strict mode: $Strict"
-Write-Host "GH_IO path: $([string]::IsNullOrWhiteSpace($resolvedGhIoPath) ? 'not detected' : $resolvedGhIoPath)"
+$ghIoPathDisplay = if ([string]::IsNullOrWhiteSpace($resolvedGhIoPath)) { "not detected" } else { $resolvedGhIoPath }
+Write-Host "GH_IO path: $ghIoPathDisplay"
 
 if ($warnings.Count -gt 0) {
     Write-Host ""

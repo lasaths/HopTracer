@@ -25,11 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Script components now keep their code accessible in the details panel even when the source is unchanged. Changed scripts still render as diffs, while unchanged C# and Python scripts open in source view.
 - App-managed `.gh` to `.ghx` conversions used for compare, review, and Git flows now write temporary `.ghx` files into HopTracer's app-data storage instead of next to the original Grasshopper file.
+- Diff viewer search: the component catalog and spotlight show labeled excerpts when matches land inside component inputs or script bodies, with longer snippets and better multi-word matching.
 
 ### Fixed
 
 - Disabled embedded WebView inspect entry points by turning off the default right-click context menu, DevTools shortcuts, and related browser accelerator keys in the desktop app.
 - Windows-generated toolbar and tile icons now preserve transparent backgrounds instead of rendering a blue plate behind the HopTracer mark.
+- `check_store_readiness.ps1` runs on Windows PowerShell 5.1 (removed PowerShell 7-only syntax).
 
 ## [1.1.0] - 2026-04-03
 

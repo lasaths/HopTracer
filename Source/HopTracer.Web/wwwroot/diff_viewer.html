@@ -741,6 +741,14 @@
             font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
         }
 
+        .spotlight-item-preview-meta {
+            font-size: 9px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 2px;
+            letter-spacing: 0.02em;
+        }
+
         .filter-group {
             display: flex;
             gap: 6px;
@@ -951,6 +959,23 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .component-result-preview {
+            margin-top: 5px;
+            font-size: 10px;
+            line-height: 1.4;
+            color: rgba(231, 237, 255, 0.82);
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .component-result-preview-label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-right: 6px;
         }
 
         .component-result-status {
@@ -2765,18 +2790,91 @@
         }
 
         function summarizeScriptSnippet(sourceText, query) {
-            const compact = normalizeSearchText(sourceText, 2200);
+            const compact = normalizeSearchText(sourceText, 8000);
             if (!compact) return '';
-            const needle = String(query || '').trim().toLowerCase();
-            if (!needle) return compact.slice(0, 140);
+            const rawNeedle = String(query || '').trim();
+            const needle = rawNeedle.toLowerCase();
+            if (!needle) return compact.slice(0, 200);
 
-            const idx = compact.toLowerCase().indexOf(needle);
-            if (idx < 0) return compact.slice(0, 140);
-            const start = Math.max(0, idx - 50);
-            const end = Math.min(compact.length, idx + Math.max(needle.length, 70));
-            const prefix = start > 0 ? '...' : '';
-            const suffix = end < compact.length ? '...' : '';
+            const lower = compact.toLowerCase();
+            let idx = lower.indexOf(needle);
+            if (idx < 0 && rawNeedle.includes(' ')) {
+                const firstWord = needle.split(/\s+/).find(w => w.length > 1);
+                if (firstWord) idx = lower.indexOf(firstWord);
+            }
+            if (idx < 0) {
+                const words = needle.split(/\s+/).filter(w => w.length > 1);
+                for (let i = 0; i < words.length; i++) {
+                    idx = lower.indexOf(words[i]);
+                    if (idx >= 0) break;
+                }
+            }
+            if (idx < 0) return compact.slice(0, 200);
+
+            const start = Math.max(0, idx - 80);
+            const end = Math.min(compact.length, idx + Math.max(needle.length, 110));
+            const prefix = start > 0 ? '…' : '';
+            const suffix = end < compact.length ? '…' : '';
             return `${prefix}${compact.slice(start, end)}${suffix}`;
+        }
+
+        function buildInternalSearchTextForNode(node) {
+            if (!node) return '';
+            const parts = [];
+            try {
+                getUserInputEntries(node).forEach(e => {
+                    if (e.newValue) parts.push(String(e.newValue));
+                    if (e.oldValue) parts.push(String(e.oldValue));
+                });
+            } catch (e) {
+                /* ignore */
+            }
+            if (isScriptComponent(node)) {
+                getScriptPropertyEntries(node).forEach(e => {
+                    if (e.newValue) parts.push(String(e.newValue));
+                    if (e.oldValue) parts.push(String(e.oldValue));
+                });
+            }
+            return normalizeSearchText(parts.join('\n'), 24000);
+        }
+
+        function getInternalSearchPreview(node, query) {
+            if (!node) return null;
+            const needle = String(query || '').trim().toLowerCase();
+            if (!needle) return null;
+
+            const tryMatch = (label, text) => {
+                const t = String(text || '');
+                if (!t.trim()) return null;
+                if (!t.toLowerCase().includes(needle)) return null;
+                return { label, snippet: summarizeScriptSnippet(t, query) };
+            };
+
+            try {
+                const userEntries = getUserInputEntries(node);
+                for (let i = 0; i < userEntries.length; i++) {
+                    const e = userEntries[i];
+                    const keyLabel = String(e.key || 'Field');
+                    let hit = tryMatch(keyLabel, e.newValue);
+                    if (!hit) hit = tryMatch(`${keyLabel} (old)`, e.oldValue);
+                    if (hit) return hit;
+                }
+            } catch (e) {
+                /* ignore */
+            }
+
+            if (isScriptComponent(node)) {
+                const scriptEntries = getScriptPropertyEntries(node);
+                for (let i = 0; i < scriptEntries.length; i++) {
+                    const e = scriptEntries[i];
+                    const keyLabel = String(e.key || 'Script');
+                    let hit = tryMatch(keyLabel, e.newValue);
+                    if (!hit) hit = tryMatch(`${keyLabel} (old)`, e.oldValue);
+                    if (hit) return hit;
+                }
+            }
+
+            return null;
         }
 
         function nodeMatchesSearch(node) {
@@ -2805,6 +2903,7 @@
                 const subtitle = String(node.name || '');
                 const status = String(node.status || 'same').toLowerCase();
                 const idText = String(node.id || '');
+                const internalBlob = buildInternalSearchTextForNode(node);
 
                 catalog.push({
                     id: `component:${nodeId}`,
@@ -2816,13 +2915,12 @@
                     subtitle: subtitle || 'Component',
                     preview: '',
                     status,
-                    searchText: normalizeSearchText(`${title} ${subtitle} ${idText}`, 1000)
+                    searchText: normalizeSearchText(`${title} ${subtitle} ${idText} ${internalBlob}`, 26000)
                 });
 
                 if (!isScriptComponent(node)) return;
                 const scriptEntries = getScriptPropertyEntries(node);
                 scriptEntries.forEach(entry => {
-                    if (!entry?.isChanged) return;
                     const rawScript = String(entry?.newValue || entry?.oldValue || '');
                     if (!rawScript.trim()) return;
 
@@ -2943,9 +3041,20 @@
             const active = Math.max(0, Math.min(state.spotlightActiveIndex, visible.length - 1));
             state.spotlightActiveIndex = active;
             spotlightResults.innerHTML = visible.map((entry, index) => {
-                const preview = entry.type === 'script'
-                    ? `<div class="spotlight-item-preview">${escapeHtml(summarizeScriptSnippet(entry.preview, query))}</div>`
-                    : '';
+                let previewBlock = '';
+                if (entry.type === 'script' && entry.preview) {
+                    previewBlock = `<div class="spotlight-item-preview">${escapeHtml(summarizeScriptSnippet(entry.preview, query))}</div>`;
+                } else if (entry.type === 'component') {
+                    const node = state.nodes.find(n => String(n.id) === String(entry.nodeId));
+                    const internal = node ? getInternalSearchPreview(node, query) : null;
+                    if (internal && internal.snippet) {
+                        previewBlock = `
+                            <div>
+                                <div class="spotlight-item-preview-meta">${escapeHtml(internal.label)}</div>
+                                <div class="spotlight-item-preview">${escapeHtml(internal.snippet)}</div>
+                            </div>`;
+                    }
+                }
 
                 return `
                     <button type="button" class="spotlight-item ${index === active ? 'active' : ''}" data-spotlight-index="${index}">
@@ -2956,7 +3065,7 @@
                             </span>
                         </div>
                         <div class="spotlight-item-subtitle">${escapeHtml(entry.subtitle || 'Component')}</div>
-                        ${preview}
+                        ${previewBlock}
                     </button>
                 `;
             }).join('');
@@ -3231,6 +3340,8 @@
 
             const fragment = document.createDocumentFragment();
 
+            const searchQuery = String(state.search || '').trim();
+
             visible.forEach(node => {
                 const item = document.createElement('button');
                 item.type = 'button';
@@ -3249,13 +3360,31 @@
                 subtitle.className = 'component-result-subtitle';
                 subtitle.textContent = String(node.name || '');
 
+                main.appendChild(title);
+                main.appendChild(subtitle);
+
+                if (searchQuery) {
+                    const internal = getInternalSearchPreview(node, searchQuery);
+                    if (internal && internal.snippet) {
+                        const preview = document.createElement('div');
+                        preview.className = 'component-result-preview';
+                        preview.title = internal.snippet;
+
+                        const label = document.createElement('span');
+                        label.className = 'component-result-preview-label';
+                        label.textContent = `${internal.label} ·`;
+
+                        preview.appendChild(label);
+                        preview.appendChild(document.createTextNode(internal.snippet));
+                        main.appendChild(preview);
+                    }
+                }
+
                 const status = document.createElement('span');
                 status.className = 'component-result-status';
                 status.style.background = CONFIG.colors[node.status] || CONFIG.colors.same;
                 status.textContent = String(node.status || 'same');
 
-                main.appendChild(title);
-                main.appendChild(subtitle);
                 item.appendChild(main);
                 item.appendChild(status);
                 fragment.appendChild(item);
