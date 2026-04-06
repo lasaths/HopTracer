@@ -8,7 +8,7 @@
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   IgnorableNamespaces="uap rescap desktop4 com">
 
-  <Identity Name="lasaths.HopTracer" Publisher="CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" Version="1.1.0.0" />
+  <Identity Name="lasaths.HopTracer" Publisher="CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" Version="1.1.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="C334DDAE-E204-40B4-BE32-DBD884E9E463" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

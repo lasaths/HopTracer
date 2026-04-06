@@ -151,7 +151,7 @@ public class GhConvertBatchRunnerTests : IDisposable
         public HashSet<string> ThrowOn { get; } = new(StringComparer.OrdinalIgnoreCase);
         public int ConvertCalls { get; private set; }
 
-        public string ConvertGhToGhx(string inputPath)
+        public string ConvertGhToGhx(string inputPath, string? outputPath = null)
         {
             ConvertCalls++;
             if (ThrowOn.Contains(inputPath))
@@ -159,7 +159,7 @@ public class GhConvertBatchRunnerTests : IDisposable
                 throw new InvalidOperationException("Simulated conversion failure.");
             }
 
-            var outputPath = Path.ChangeExtension(inputPath, ".ghx");
+            outputPath ??= Path.ChangeExtension(inputPath, ".ghx");
             File.WriteAllText(outputPath, "converted");
             return outputPath;
         }

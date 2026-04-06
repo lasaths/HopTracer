@@ -734,7 +734,8 @@ public class GhxParser : IGhxParser
         // 1. Direct value items 
         var directValues = new[] { 
             "Value", "Number", "Text", "String", "Expression", "Code", "Script",
-            "ScriptSource", "SourceCode", "CodeInput", "CodeOutput",
+            "ScriptSource", "SourceCode", "UsingSource", "AdditionalSource",
+            "CodeInput", "CodeOutput",
             "PythonScript", "PythonCode", "CSharpCode", "VBCode", "ScriptBody",
             "UserText", "PanelContent",
             "Minimum", "Maximum", "Count", "Factor", "Length", "Width", "Height",
@@ -1175,6 +1176,12 @@ public class GhxParser : IGhxParser
         if (string.IsNullOrWhiteSpace(key)) return false;
 
         var lower = key.ToLowerInvariant();
+        // Rhino 7 C# script: UsingSource / AdditionalSource do not contain "script" or "code" in the name.
+        if (lower is "usingsource" or "additionalsource")
+        {
+            return true;
+        }
+
         return lower.Contains("script") ||
                lower.Contains("code") ||
                lower.Contains("python") ||

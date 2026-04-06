@@ -1889,6 +1889,29 @@
             min-height: 100%;
         }
 
+        .script-modal-shell--multi {
+            gap: 0;
+        }
+
+        .script-modal-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .script-modal-section + .script-modal-section {
+            margin-top: 12px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .script-modal-section-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+
         .script-pane-toolbar {
             display: flex;
             justify-content: flex-end;
@@ -2292,7 +2315,7 @@
             <div class="details-tabs">
                 <button type="button" id="btn-details-collapse" class="panel-icon-btn" title="Hide right panel" style="margin-right:4px;">▶</button>
                 <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
-                <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script Diff</button>
+                <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script</button>
             </div>
             <div id="details-pane-inspector" class="details-pane active">
                 <div class="empty-state">
@@ -2370,7 +2393,7 @@
         <div class="source-modal script-diff-modal" role="dialog" aria-modal="true" aria-labelledby="script-modal-title">
             <div class="source-modal-header">
                 <div class="script-modal-header-copy">
-                    <div class="source-modal-title" id="script-modal-title">Script Diff</div>
+                    <div class="source-modal-title" id="script-modal-title">Script</div>
                     <div id="script-modal-subtitle" class="script-modal-subtitle"></div>
                 </div>
                 <button type="button" id="btn-script-modal-close" class="panel-icon-btn" title="Close">✕</button>
@@ -2439,7 +2462,7 @@
             lastPos: { x: 0, y: 0 },
             selected: null,
             hovered: null,
-            filterMode: 'custom',
+            filterMode: 'all',
             filterStatuses: new Set(CHANGED_STATUS_FILTERS),
             search: '',
             searchMatches: new Set(),
@@ -2603,7 +2626,7 @@
         const SCRIPT_PROPERTY_KEYS = new Set([
             'scriptsource', 'code', 'script', 'expression',
             'codeinput', 'codeoutput', 'pythonscript', 'pythoncode',
-            'csharpcode', 'vbcode', 'sourcecode'
+            'csharpcode', 'vbcode', 'sourcecode', 'additionalsource', 'usingsource'
         ]);
         const SCRIPT_NOISE_KEYS = new Set([
             'scriptparamaccess', 'editorposition', 'editorlocation', 'editorbounds',
@@ -3273,14 +3296,14 @@
 
         function setScriptTabVisibility(visible, count = 0) {
             detailsTabScript.style.display = visible ? '' : 'none';
-            detailsTabScript.textContent = count > 1 ? `Script Diff (${count})` : 'Script Diff';
+            detailsTabScript.textContent = count > 1 ? `Script (${count})` : 'Script';
 
             if (!visible && state.activeDetailsTab === 'script') {
                 setDetailsTab('inspector');
             }
         }
 
-        function renderEmptyScriptPane(message = 'Select a script component to view code diff') {
+        function renderEmptyScriptPane(message = 'Select a script component to view source') {
             closeExpandedScriptDiff({ restoreFocus: false });
             detailsPaneScript.innerHTML = `<div class="script-empty">${message}</div>`;
         }
@@ -6215,10 +6238,34 @@
             ctx.closePath();
         }
 
-        function getNodeAtCanvasPoint(clientX, clientY) {
+        /**
+         * Map pointer position to canvas backing-store pixels. Required when CSS-scaled size
+         * differs from canvas.width/height (WebView/DPI/layout), or clicks miss drawn nodes.
+         */
+        function canvasClientToBitmap(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            const mx = (clientX - rect.left - state.view.x) / state.view.scale;
-            const my = (clientY - rect.top - state.view.y) / state.view.scale;
+            const rw = rect.width || 1;
+            const rh = rect.height || 1;
+            return {
+                x: (clientX - rect.left) * (canvas.width / rw),
+                y: (clientY - rect.top) * (canvas.height / rh)
+            };
+        }
+
+        function minimapClientToBitmap(clientX, clientY) {
+            const rect = minimap.getBoundingClientRect();
+            const rw = rect.width || 1;
+            const rh = rect.height || 1;
+            return {
+                x: (clientX - rect.left) * (minimap.width / rw),
+                y: (clientY - rect.top) * (minimap.height / rh)
+            };
+        }
+
+        function getNodeAtCanvasPoint(clientX, clientY) {
+            const { x: px, y: py } = canvasClientToBitmap(clientX, clientY);
+            const mx = (px - state.view.x) / state.view.scale;
+            const my = (py - state.view.y) / state.view.scale;
             const mix = state.versionMix;
 
             for (let i = state.nodes.length - 1; i >= 0; i--) {
@@ -6244,8 +6291,11 @@
 
         function onMouseMove(e) {
             if (state.dragging) {
-                const dx = e.clientX - state.lastPos.x;
-                const dy = e.clientY - state.lastPos.y;
+                const rect = canvas.getBoundingClientRect();
+                const sx = canvas.width / (rect.width || 1);
+                const sy = canvas.height / (rect.height || 1);
+                const dx = (e.clientX - state.lastPos.x) * sx;
+                const dy = (e.clientY - state.lastPos.y) * sy;
                 if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
                     state.dragMoved = true;
                 }
@@ -6284,9 +6334,7 @@
         function onMinimapMove(e) {
             if (!state.minimapDragging) return;
 
-            const rect = minimap.getBoundingClientRect();
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
+            const { x: mx, y: my } = minimapClientToBitmap(e.clientX, e.clientY);
 
             const w = state.bounds.maxX - state.bounds.minX;
             const h = state.bounds.maxY - state.bounds.minY;
@@ -6314,9 +6362,7 @@
             const delta = -Math.sign(e.deltaY);
             const factor = Math.pow(1.1, delta);
 
-            const rect = canvas.getBoundingClientRect();
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
+            const { x: mx, y: my } = canvasClientToBitmap(e.clientX, e.clientY);
 
             const newScale = state.view.scale * factor;
 
@@ -6450,20 +6496,20 @@
             const scriptEntries = getScriptPropertyEntries(node);
             const scriptComponent = isScriptComponent(node);
             const changedScriptEntries = scriptEntries.filter(entry => entry.isChanged);
-            const showScriptTab = changedScriptEntries.length > 0;
-            setScriptTabVisibility(showScriptTab, changedScriptEntries.length);
+            const showScriptTab = scriptEntries.length > 0;
+            setScriptTabVisibility(showScriptTab, scriptEntries.length);
 
-            if (changedScriptEntries.length === 0) {
+            if (scriptEntries.length === 0) {
                 state.scriptContext = null;
                 renderEmptyScriptPane(scriptComponent
-                    ? 'No changed script was found for this component.'
+                    ? 'No script source found for this component.'
                     : 'No script source found for this component');
             } else {
                 const selectedScriptKey = state.scriptContext && state.scriptContext.nodeId === node.id
                     ? state.scriptContext.key
-                    : changedScriptEntries[0].key;
+                    : (changedScriptEntries[0]?.key || scriptEntries[0].key);
 
-                renderScriptPane(node, changedScriptEntries, selectedScriptKey);
+                renderScriptPane(node, scriptEntries, selectedScriptKey);
             }
         }
 
@@ -6584,14 +6630,28 @@
                 });
             });
 
-            entries.sort((a, b) => {
-                const ai = isExplicitScriptKey(a.key) ? 0 : 1;
-                const bi = isExplicitScriptKey(b.key) ? 0 : 1;
-                if (ai !== bi) return ai - bi;
-                return a.key.localeCompare(b.key);
-            });
+            entries.sort((a, b) => compareScriptPropertyEntryOrder(a.key, b.key));
 
             return entries;
+        }
+
+        /**
+         * Rhino 7 C# script components expose three blocks: Using, Script, Additional.
+         * Rhino 8 often collapses to a single source field. Order: Using → Script → (other keys) → Additional last.
+         */
+        function getScriptPropertySortTier(key) {
+            const k = normalizeScriptKey(key);
+            if (k === 'usingsource') return 0;
+            if (k === 'scriptsource') return 1;
+            if (k === 'additionalsource') return 3;
+            return 2;
+        }
+
+        function compareScriptPropertyEntryOrder(keyA, keyB) {
+            const ta = getScriptPropertySortTier(keyA);
+            const tb = getScriptPropertySortTier(keyB);
+            if (ta !== tb) return ta - tb;
+            return String(keyA || '').localeCompare(String(keyB || ''), undefined, { sensitivity: 'base' });
         }
 
         function normalizeScriptKey(key) {
@@ -6606,15 +6666,36 @@
             return SCRIPT_NOISE_KEYS.has(normalizeScriptKey(key));
         }
 
+        function isPrimaryScriptEntryKey(key) {
+            const normalized = normalizeScriptKey(key);
+            return normalized === 'scriptsource' ||
+                normalized === 'additionalsource' ||
+                normalized === 'usingsource' ||
+                normalized === 'sourcecode' ||
+                normalized === 'code' ||
+                normalized === 'script' ||
+                normalized === 'pythonscript' ||
+                normalized === 'pythoncode' ||
+                normalized === 'csharpcode' ||
+                normalized === 'vbcode';
+        }
+
         function getChangedScriptEntries(entries) {
             return Array.isArray(entries) ? entries.filter(entry => entry?.isChanged) : [];
         }
 
         function getRequestedScriptEntry(entries, requestedKey) {
-            const changedEntries = getChangedScriptEntries(entries);
-            if (changedEntries.length === 0) return null;
-            if (!requestedKey || requestedKey === '*') return changedEntries[0];
-            return changedEntries.find(entry => entry.key === requestedKey) || changedEntries[0];
+            const availableEntries = Array.isArray(entries) ? entries.filter(Boolean) : [];
+            if (availableEntries.length === 0) return null;
+            if (requestedKey && requestedKey !== '*') {
+                const requestedEntry = availableEntries.find(entry => entry.key === requestedKey);
+                if (requestedEntry) return requestedEntry;
+            }
+
+            return availableEntries.find(entry => entry.isChanged && isPrimaryScriptEntryKey(entry.key)) ||
+                availableEntries.find(entry => isPrimaryScriptEntryKey(entry.key)) ||
+                availableEntries.find(entry => entry.isChanged) ||
+                availableEntries[0];
         }
 
         function isScriptModalOpen() {
@@ -6624,21 +6705,68 @@
         function renderExpandedScriptDiff(node, entry) {
             if (!scriptModalTitle || !scriptModalSubtitle || !scriptModalBody || !node || !entry) return;
 
-            const nodeName = String(node.nickname || node.name || node.id || 'Script Diff');
-            const language = entry.language || detectScriptLanguage(node, entry.key, entry.newValue || entry.oldValue);
+            const nodeName = String(node.nickname || node.name || node.id || 'Script');
+            const allEntries = getScriptPropertyEntries(node);
+            const focusKey = entry.key;
 
             scriptModalTitle.textContent = nodeName;
-            scriptModalSubtitle.textContent = `${entry.key} · ${language} · Full inline diff`;
-            scriptModalBody.innerHTML = `
+
+            const renderSingleBlock = (e) => {
+                const language = e.language || detectScriptLanguage(node, e.key, e.newValue || e.oldValue);
+                const renderMode = e.isChanged ? SCRIPT_DIFF_RENDER_MODE.FULL_INLINE : SCRIPT_DIFF_RENDER_MODE.VIEW_ONLY;
+                return `
                 <div class="script-modal-shell">
                     <div class="diff-container">
-                        ${computeDiff(entry.oldValue, entry.newValue, {
+                        ${computeDiff(e.oldValue, e.newValue, {
                             language,
-                            mode: SCRIPT_DIFF_RENDER_MODE.FULL_INLINE
+                            mode: renderMode
                         })}
                     </div>
                 </div>
             `;
+            };
+
+            if (allEntries.length <= 1) {
+                const e = allEntries[0] || entry;
+                const language = e.language || detectScriptLanguage(node, e.key, e.newValue || e.oldValue);
+                scriptModalSubtitle.textContent = `${e.key} · ${language} · ${e.isChanged ? 'Full inline diff' : 'Source view'}`;
+                scriptModalBody.innerHTML = renderSingleBlock(e);
+                return;
+            }
+
+            scriptModalSubtitle.textContent = `${allEntries.length} script properties · full document order`;
+
+            const blocks = allEntries.map((e) => {
+                const language = e.language || detectScriptLanguage(node, e.key, e.newValue || e.oldValue);
+                const renderMode = e.isChanged ? SCRIPT_DIFF_RENDER_MODE.FULL_INLINE : SCRIPT_DIFF_RENDER_MODE.VIEW_ONLY;
+                const modeLabel = e.isChanged ? 'Full inline diff' : 'Source view';
+                const isFocus = e.key === focusKey;
+                return `
+            <section class="script-modal-section" ${isFocus ? 'data-script-section-focus="true"' : ''}>
+                <div class="script-modal-section-header">${escapeHtml(e.key)} · ${escapeHtml(language)} · ${escapeHtml(modeLabel)}</div>
+                <div class="diff-container">
+                    ${computeDiff(e.oldValue, e.newValue, {
+                        language,
+                        mode: renderMode
+                    })}
+                </div>
+            </section>
+                `;
+            }).join('');
+
+            scriptModalBody.innerHTML = `
+                <div class="script-modal-shell script-modal-shell--multi">
+                    ${blocks}
+                </div>
+            `;
+
+            window.requestAnimationFrame(() => {
+                const focusSection = scriptModalBody.querySelector('[data-script-section-focus="true"]')
+                    || scriptModalBody.querySelector('.script-modal-section');
+                if (focusSection && typeof focusSection.scrollIntoView === 'function') {
+                    focusSection.scrollIntoView({ block: 'start', behavior: 'auto' });
+                }
+            });
         }
 
         function openExpandedScriptDiff() {
@@ -6647,7 +6775,7 @@
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             if (!selectedNode) return;
 
-            const scriptEntries = getChangedScriptEntries(getScriptPropertyEntries(selectedNode));
+            const scriptEntries = getScriptPropertyEntries(selectedNode);
             const requestedKey = state.scriptContext && state.scriptContext.nodeId === selectedNode.id
                 ? state.scriptContext.key
                 : null;
@@ -6692,19 +6820,43 @@
         }
 
         function renderScriptPane(node, entries, requestedKey) {
-            const changedEntries = getChangedScriptEntries(entries);
-            if (!changedEntries.length) {
-                renderEmptyScriptPane('No changed script was found for this component');
+            if (!entries.length) {
+                renderEmptyScriptPane('No script source found for this component');
                 return;
             }
 
-            const selectedEntry = getRequestedScriptEntry(changedEntries, requestedKey);
+            const selectedEntry = getRequestedScriptEntry(entries, requestedKey);
             if (!selectedEntry) {
-                renderEmptyScriptPane('No changed script was found for this component');
+                renderEmptyScriptPane('No script source found for this component');
                 return;
             }
 
             const language = selectedEntry.language || detectScriptLanguage(node, selectedEntry.key, selectedEntry.newValue || selectedEntry.oldValue);
+            const renderMode = selectedEntry.isChanged
+                ? SCRIPT_DIFF_RENDER_MODE.FULL_INLINE
+                : SCRIPT_DIFF_RENDER_MODE.VIEW_ONLY;
+            const modeLabel = selectedEntry.isChanged ? 'Diff' : 'Source';
+            const stateLabel = selectedEntry.isChanged ? 'Modified' : 'Unchanged';
+            const entrySelectorHtml = entries.length > 1 ? `
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                    ${entries.map(entry => {
+                        const isActive = entry.key === selectedEntry.key;
+                        const tone = entry.isChanged ? 'var(--modified)' : 'var(--text-secondary)';
+                        const background = isActive ? 'var(--accent-color)' : 'var(--bg-card)';
+                        const foreground = isActive ? 'white' : 'var(--text-primary)';
+                        const border = isActive ? 'var(--accent-color)' : 'var(--border-color)';
+                        const status = entry.isChanged ? 'diff' : 'source';
+                        return `
+                            <button type="button"
+                                data-script-key-select="${encodeURIComponent(entry.key)}"
+                                style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid ${border}; background:${background}; color:${foreground}; cursor:pointer; font-size:11px; line-height:1.2;">
+                                <span>${escapeHtml(entry.key)}</span>
+                                <span style="color:${isActive ? 'rgba(255,255,255,0.84)' : tone}; font-weight:600;">${status}</span>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            ` : '';
 
             state.scriptContext = {
                 nodeId: node.id,
@@ -6714,20 +6866,25 @@
             detailsPaneScript.innerHTML = `
                 <div class="script-pane-shell">
                     <div class="script-pane-toolbar">
-                        <button type="button" class="script-expand-btn" data-script-expand title="Expand code diff" aria-label="Expand code diff">
+                        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap;">
+                            <span style="font-size:12px; font-weight:600; color:var(--text-primary);">${escapeHtml(selectedEntry.key)}</span>
+                            <span style="font-size:11px; color:var(--text-secondary);">${escapeHtml(language)} · ${modeLabel} · ${stateLabel}</span>
+                        </div>
+                        <button type="button" class="script-expand-btn" data-script-expand title="Expand script" aria-label="Expand script">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path d="M15 3h6v6"></path>
                                 <path d="M9 21H3v-6"></path>
                                 <path d="M21 3l-7 7"></path>
                                 <path d="M3 21l7-7"></path>
                             </svg>
-                            <span class="visually-hidden">Expand code diff</span>
+                            <span class="visually-hidden">Expand script</span>
                         </button>
                     </div>
+                    ${entrySelectorHtml}
                     <div class="diff-container">
                         ${computeDiff(selectedEntry.oldValue, selectedEntry.newValue, {
                             language,
-                            mode: SCRIPT_DIFF_RENDER_MODE.SIDEBAR_CHANGED_ONLY
+                            mode: renderMode
                         })}
                     </div>
                 </div>
@@ -6737,6 +6894,14 @@
             if (expandButton) {
                 expandButton.addEventListener('click', () => openExpandedScriptDiff());
             }
+
+            detailsPaneScript.querySelectorAll('[data-script-key-select]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const encoded = button.dataset.scriptKeySelect || '';
+                    const nextKey = decodeURIComponent(encoded);
+                    renderScriptPane(node, entries, nextKey);
+                });
+            });
 
             if (isScriptModalOpen()) {
                 renderExpandedScriptDiff(node, selectedEntry);
@@ -7652,16 +7817,16 @@
                         ? normalizeScriptForCompare(oldValue) !== normalizeScriptForCompare(newValue)
                         : newValue.length > 0;
                     if (showOnlyChangedValues && !scriptChanged) continue;
-                    const openButton = scriptChanged ? `
+                    const openButton = `
                             <button class="script-diff-open" data-script-key="${encodeURIComponent(key)}"
                                 style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--accent-color); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                     <polyline points="14 2 14 8 20 8"></polyline>
                                 </svg>
-                                Open Changed Script Diff
+                                ${scriptChanged ? 'Open Script Diff' : 'Open Script'}
                             </button>
-                    ` : '';
+                    `;
                     rows += `
                         <div class="prop-row" style="flex-direction: column; gap: 8px; align-items: flex-start; padding-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -7800,10 +7965,10 @@
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             if (!selectedNode) return;
 
-            const scriptEntries = getChangedScriptEntries(getScriptPropertyEntries(selectedNode));
+            const scriptEntries = getScriptPropertyEntries(selectedNode);
             if (scriptEntries.length === 0) {
                 setScriptTabVisibility(false, 0);
-                renderEmptyScriptPane('No changed script was found for this component.');
+                renderEmptyScriptPane('No script source found for this component.');
                 return;
             }
 
@@ -7864,7 +8029,16 @@
                     changes.unshift({ type: 'same', content: oldLines[i - 1] });
                     i--;
                     j--;
-                } else if (j > 0 && (i === 0 || matrix[i][j - 1] >= matrix[i - 1][j])) {
+                } else if (i > 0 && j > 0) {
+                    // Prefer deletions when LCS scores tie so a replacement reads as removed line then added line.
+                    if (matrix[i - 1][j] >= matrix[i][j - 1]) {
+                        changes.unshift({ type: 'removed', content: oldLines[i - 1] });
+                        i--;
+                    } else {
+                        changes.unshift({ type: 'added', content: newLines[j - 1] });
+                        j--;
+                    }
+                } else if (j > 0) {
                     changes.unshift({ type: 'added', content: newLines[j - 1] });
                     j--;
                 } else {
@@ -7936,6 +8110,25 @@
             html += '</div>';
             return html;
         }
+
+        function shouldBlockInspectShortcut(event) {
+            const key = String(event?.key || '').toLowerCase();
+            return key === 'f12' ||
+                (event.ctrlKey && event.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
+                (event.ctrlKey && key === 'u');
+        }
+
+        function suppressInspectAccess(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        document.addEventListener('contextmenu', suppressInspectAccess);
+        document.addEventListener('keydown', event => {
+            if (shouldBlockInspectShortcut(event)) {
+                suppressInspectAccess(event);
+            }
+        }, true);
 
         // Start
         init();

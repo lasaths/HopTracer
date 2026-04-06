@@ -12,7 +12,7 @@ public class ConverterService : IConverterService
         _logger = logger;
     }
 
-    public string ConvertGhToGhx(string inputPath)
+    public string ConvertGhToGhx(string inputPath, string? outputPath = null)
     {
         if (!TryCheckDependencies(out var dependencyMessage))
         {
@@ -49,7 +49,7 @@ public class ConverterService : IConverterService
             throw new InvalidOperationException("GH_IO archive API shape changed or is unavailable.");
         }
 
-        var outputPath = Path.ChangeExtension(inputPath, ".ghx");
+        outputPath ??= Path.ChangeExtension(inputPath, ".ghx");
         _logger.LogInformation("Converting {InputPath} to {OutputPath}", inputPath, outputPath);
 
         var readOk = readFromFile.Invoke(archive, new object[] { inputPath }) is bool readResult && readResult;

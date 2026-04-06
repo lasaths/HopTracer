@@ -12,6 +12,13 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+#if WINDOWS
+        // WebView2 defaults to a user-data folder next to the executable. Portable copies often run
+        // from read-only media, synced folders, or blocked locations where that path is not writable,
+        // which prevents the embedded browser from initializing and the app appears to not start.
+        ConfigureWebView2UserDataFolder();
+#endif
+
         // Ensure dependencies are present before anything else.
         // If unavailable, app still starts and shows in-app remediation instructions.
         AppStartupState.IsGhIoAvailable = DependencyHelper.TryEnsureGhIoDll(out var ghIoErrorMessage);
@@ -57,6 +64,18 @@ public static class MauiProgram
 
 		return builder.Build();
 	}
+
+#if WINDOWS
+	private static void ConfigureWebView2UserDataFolder()
+	{
+		var folder = Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+			"HopTracer",
+			"WebView2");
+		Directory.CreateDirectory(folder);
+		Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", folder);
+	}
+#endif
 }
 
 // Simple file logger for debugging

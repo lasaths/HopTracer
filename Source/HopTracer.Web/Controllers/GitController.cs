@@ -384,7 +384,9 @@ public partial class GitController : ControllerBase
                 throw new InvalidOperationException(dependencyMessage);
             }
 
-            var convertedPath = _converter.ConvertGhToGhx(preparedPath);
+            var convertedPath = _converter.ConvertGhToGhx(
+                preparedPath,
+                Path.Combine(_storage.UploadsPath, $"git_{sourceTag}_converted_{Guid.NewGuid():N}.ghx"));
             if (!string.Equals(convertedPath, preparedPath, StringComparison.OrdinalIgnoreCase))
             {
                 tempFiles.Add(convertedPath);

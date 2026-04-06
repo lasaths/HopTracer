@@ -94,7 +94,7 @@ Example to create `MSIX_CERT_BASE64`:
 ### ✅ Already done
 - [x] Logo assets present (`hoptrace_logo.png`, `hoptrace_logo_noshadow.png`)
 - [x] `Package.appxmanifest` structure valid
-- [x] Version `1.1.0.0` set in manifest and `.csproj`
+- [x] Version `1.1.1.0` set in manifest and `.csproj`
 - [x] Privacy policy and AI disclosure in `docs/privacy.md` and `README.md`
 - [x] `store-msix.yml` workflow ready for manual trigger
 - [x] `check_store_readiness.ps1` passes (non-strict)
@@ -108,7 +108,7 @@ Example to create `MSIX_CERT_BASE64`:
   .\scripts\check_store_readiness.ps1 -Strict `
     -ExpectedIdentityName "YOUR_PARTNER_CENTER_NAME" `
     -ExpectedPublisher "CN=YOUR_PUBLISHER" `
-    -ExpectedPackageVersion "1.1.0.0"
+    -ExpectedPackageVersion "1.1.1.0"
   ```
 - [ ] **Configure GitHub secrets** (only needed if signing locally/in CI):
   - `MSIX_CERT_BASE64` — PFX base64: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx"))`

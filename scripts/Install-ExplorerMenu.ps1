@@ -17,6 +17,7 @@ $menuKey = "HKCU:\Software\Classes\SystemFileAssociations\.gh\shell\HopTracer.Co
 $commandKey = Join-Path $menuKey "command"
 $commandValue = ('"{0}" --convert "%1"' -f $resolvedExe)
 
+New-Item -Path $menuKey -Force | Out-Null
 New-Item -Path $commandKey -Force | Out-Null
 
 Set-Item -Path $menuKey -Value "Convert to GHX (HopTracer)"

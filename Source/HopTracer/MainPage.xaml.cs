@@ -14,6 +14,9 @@ using Microsoft.Maui.ApplicationModel;
 using System.Reflection;
 using System.Diagnostics;
 using System.Net;
+#if WINDOWS
+using WinUiWebView2 = Microsoft.UI.Xaml.Controls.WebView2;
+#endif
 
 namespace HopTracer.Maui;
 
@@ -27,6 +30,9 @@ public partial class MainPage : ContentPage
 	{
 		InitializeComponent();
         Loaded += OnLoaded;
+#if WINDOWS
+        DiffWebView.HandlerChanged += OnDiffWebViewHandlerChanged;
+#endif
 	}
 
     private async void OnLoaded(object? sender, EventArgs e)
@@ -34,6 +40,41 @@ public partial class MainPage : ContentPage
         await StartWebServer();
         _ = CheckForUpdatesAsync();
     }
+
+#if WINDOWS
+    private void OnDiffWebViewHandlerChanged(object? sender, EventArgs e)
+    {
+        if (DiffWebView.Handler?.PlatformView is WinUiWebView2 nativeWebView)
+        {
+            nativeWebView.CoreWebView2Initialized -= OnCoreWebView2Initialized;
+            nativeWebView.CoreWebView2Initialized += OnCoreWebView2Initialized;
+            ApplyWebViewSecuritySettings(nativeWebView);
+        }
+    }
+
+    private static void OnCoreWebView2Initialized(
+        WinUiWebView2 sender,
+        Microsoft.UI.Xaml.Controls.CoreWebView2InitializedEventArgs args)
+    {
+        if (args.Exception is null)
+        {
+            ApplyWebViewSecuritySettings(sender);
+        }
+    }
+
+    private static void ApplyWebViewSecuritySettings(WinUiWebView2 webView)
+    {
+        var settings = webView.CoreWebView2?.Settings;
+        if (settings is null)
+        {
+            return;
+        }
+
+        settings.AreDevToolsEnabled = false;
+        settings.AreDefaultContextMenusEnabled = false;
+        settings.AreBrowserAcceleratorKeysEnabled = false;
+    }
+#endif
 
     private async Task StartWebServer()
     {
@@ -60,7 +101,8 @@ public partial class MainPage : ContentPage
                     // Create providers with different base namespaces to handle both scenarios
                     var mainProviderWithNs = new EmbeddedFileProvider(mainAssembly, "HopTracer.Maui.wwwroot");
                     var mainProviderStandard = new EmbeddedFileProvider(mainAssembly, "wwwroot");
-                    var webProvider = new EmbeddedFileProvider(webAssembly, "wwwroot");
+                    // Embedded names in HopTracer.Web.dll are HopTracer.Web.wwwroot.*
+                    var webProvider = new EmbeddedFileProvider(webAssembly, "HopTracer.Web.wwwroot");
                     
                     // Composite provider checks all possibilities
                     var embeddedProvider = new CompositeFileProvider(

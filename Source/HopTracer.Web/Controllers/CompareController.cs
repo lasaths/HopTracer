@@ -147,7 +147,7 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(dependencyMessage);
                 }
-                var convertedPath = _converter.ConvertGhToGhx(finalPathOld);
+                var convertedPath = _converter.ConvertGhToGhx(finalPathOld, BuildConvertedTempPath("compare_old"));
                 if (!string.Equals(convertedPath, finalPathOld, StringComparison.OrdinalIgnoreCase))
                 {
                     tempScope.Track(convertedPath);
@@ -162,7 +162,7 @@ public class CompareController : ControllerBase
                 {
                     return await ReturnErrorPage(dependencyMessage);
                 }
-                var convertedPath = _converter.ConvertGhToGhx(finalPathNew);
+                var convertedPath = _converter.ConvertGhToGhx(finalPathNew, BuildConvertedTempPath("compare_new"));
                 if (!string.Equals(convertedPath, finalPathNew, StringComparison.OrdinalIgnoreCase))
                 {
                     tempScope.Track(convertedPath);
@@ -265,5 +265,10 @@ public class CompareController : ControllerBase
         System.IO.File.Copy(normalizedPath, stagedPath, overwrite: true);
         tempScope.Track(stagedPath);
         return stagedPath;
+    }
+
+    private string BuildConvertedTempPath(string prefix)
+    {
+        return Path.Combine(_storage.UploadsPath, $"{prefix}_{Guid.NewGuid():N}.ghx");
     }
 }

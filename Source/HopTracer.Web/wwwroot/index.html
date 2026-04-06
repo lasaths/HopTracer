@@ -1517,6 +1517,25 @@
             restoreGitModalFocus();
         }
 
+        function shouldBlockInspectShortcut(event) {
+            const key = String(event?.key || '').toLowerCase();
+            return key === 'f12' ||
+                (event.ctrlKey && event.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
+                (event.ctrlKey && key === 'u');
+        }
+
+        function suppressInspectAccess(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        document.addEventListener('contextmenu', suppressInspectAccess);
+        document.addEventListener('keydown', event => {
+            if (shouldBlockInspectShortcut(event)) {
+                suppressInspectAccess(event);
+            }
+        }, true);
+
         document.addEventListener('keydown', handleGitModalKeydown);
 
         document.getElementById('compareForm').addEventListener('submit', async (e) => {

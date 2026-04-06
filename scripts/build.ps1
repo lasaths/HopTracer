@@ -96,10 +96,12 @@ Write-Host "  OK Build successful" -ForegroundColor Green
 # Step 5: Publish and package
 Write-Host "`n[5/5] Publishing portable package..." -ForegroundColor Yellow
 $outputDir = Join-Path $releaseDir "HopTracer_Portable"
+$stagingDir = Join-Path $releaseDir "HopTracer_Portable_staging"
 $zipPath = Join-Path $releaseDir "HopTracer-Windows-x64.zip"
 
-if (Test-Path $outputDir) {
-    Remove-Item $outputDir -Recurse -Force
+# Publish to staging first so a locked HopTracer.exe under HopTracer_Portable does not fail the publish.
+if (Test-Path $stagingDir) {
+    Remove-Item $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 dotnet publish $appProject `
@@ -110,7 +112,7 @@ dotnet publish $appProject `
     -p:WindowsAppSDKSelfContained=true `
     -p:SelfContained=true `
     -p:PublishSingleFile=false `
-    -o $outputDir `
+    -o $stagingDir `
     --verbosity quiet `
     --ignore-failed-sources `
     -p:NuGetAudit=false `
@@ -119,7 +121,19 @@ dotnet publish $appProject `
 
 if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
-$exePath = Join-Path $outputDir "HopTracer.exe"
+$finalOutputDir = $outputDir
+if (Test-Path $outputDir) {
+    Remove-Item $outputDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+if (Test-Path $outputDir) {
+    Write-Host "  Warning: Could not remove $outputDir (close HopTracer.exe if it is running from this folder)." -ForegroundColor Yellow
+    Write-Host "  Using staging output: $stagingDir" -ForegroundColor Yellow
+    $finalOutputDir = $stagingDir
+} else {
+    Rename-Item -Path $stagingDir -NewName "HopTracer_Portable"
+}
+
+$exePath = Join-Path $finalOutputDir "HopTracer.exe"
 if (Test-Path $exePath) {
     $portableScripts = @(
         "Install-ExplorerMenu.ps1",
@@ -129,12 +143,12 @@ if (Test-Path $exePath) {
     foreach ($scriptName in $portableScripts) {
         $sourceScript = Join-Path $rootDir "scripts\$scriptName"
         if (Test-Path $sourceScript) {
-            Copy-Item -Path $sourceScript -Destination (Join-Path $outputDir $scriptName) -Force
+            Copy-Item -Path $sourceScript -Destination (Join-Path $finalOutputDir $scriptName) -Force
         }
     }
 
-    $fileCount = (Get-ChildItem -Path $outputDir -Recurse -File).Count
-    $folderSizeMb = [math]::Round(((Get-ChildItem -Path $outputDir -Recurse -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 2)
+    $fileCount = (Get-ChildItem -Path $finalOutputDir -Recurse -File).Count
+    $folderSizeMb = [math]::Round(((Get-ChildItem -Path $finalOutputDir -Recurse -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 2)
 
     Write-Host "  OK Portable package created: $folderSizeMb MB ($fileCount files)" -ForegroundColor Green
 
@@ -142,14 +156,14 @@ if (Test-Path $exePath) {
         Remove-Item $zipPath -Force
     }
 
-    Compress-Archive -Path (Join-Path $outputDir "*") -DestinationPath $zipPath -Force
+    Compress-Archive -Path (Join-Path $finalOutputDir "*") -DestinationPath $zipPath -Force
     $zipSizeMb = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
     Write-Host "  OK Release archive created: $zipPath ($zipSizeMb MB)" -ForegroundColor Green
 }
 
 # Summary
 Write-Host "`n=== Build Complete ===" -ForegroundColor Green
-Write-Host "Portable folder: $outputDir" -ForegroundColor Cyan
+Write-Host "Portable folder: $finalOutputDir" -ForegroundColor Cyan
 Write-Host "Release archive: $zipPath" -ForegroundColor Cyan
-Write-Host "To test: .\Release\HopTracer_Portable\HopTracer.exe" -ForegroundColor White
+Write-Host "To test: $finalOutputDir\HopTracer.exe" -ForegroundColor White
 Write-Host ""

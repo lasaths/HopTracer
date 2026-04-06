@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- None yet.
+
+### Changed
+
+- None yet.
+
+### Fixed
+
+- None yet.
+
+## [1.1.1] - 2026-04-06
+
+### Changed
+
+- Script components now keep their code accessible in the details panel even when the source is unchanged. Changed scripts still render as diffs, while unchanged C# and Python scripts open in source view.
+- App-managed `.gh` to `.ghx` conversions used for compare, review, and Git flows now write temporary `.ghx` files into HopTracer's app-data storage instead of next to the original Grasshopper file.
+
+### Fixed
+
+- Disabled embedded WebView inspect entry points by turning off the default right-click context menu, DevTools shortcuts, and related browser accelerator keys in the desktop app.
+- Windows-generated toolbar and tile icons now preserve transparent backgrounds instead of rendering a blue plate behind the HopTracer mark.
+
 ## [1.1.0] - 2026-04-03
 
 ### Added

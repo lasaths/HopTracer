@@ -15,6 +15,6 @@ public interface IDiffer
 
 public interface IConverterService
 {
-    string ConvertGhToGhx(string inputPath);
+    string ConvertGhToGhx(string inputPath, string? outputPath = null);
     bool TryCheckDependencies(out string message);
 }

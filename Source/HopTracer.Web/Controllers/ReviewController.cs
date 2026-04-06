@@ -285,7 +285,9 @@ public class ReviewController : ControllerBase
             throw new InvalidOperationException(dependencyMessage);
         }
 
-        var convertedPath = _converter.ConvertGhToGhx(tempSourcePath);
+        var convertedPath = _converter.ConvertGhToGhx(
+            tempSourcePath,
+            Path.Combine(uploadsPath, $"review_{Guid.NewGuid():N}.ghx"));
         if (!string.Equals(convertedPath, tempSourcePath, StringComparison.OrdinalIgnoreCase))
         {
             tempScope.Track(convertedPath);
