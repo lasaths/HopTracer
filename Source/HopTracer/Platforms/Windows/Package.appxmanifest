@@ -64,7 +64,7 @@
           Category="windows.appExecutionAlias"
           Executable="tools\hoptracer\hoptracer.exe"
           EntryPoint="Windows.FullTrustApplication">
-          <uap5:AppExecutionAlias desktop4:Subsystem="console">
+          <uap5:AppExecutionAlias>
             <uap5:ExecutionAlias Alias="hoptracer.exe" />
           </uap5:AppExecutionAlias>
         </uap5:Extension>
