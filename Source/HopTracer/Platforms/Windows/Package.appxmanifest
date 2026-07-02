@@ -11,7 +11,7 @@
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   IgnorableNamespaces="uap uap3 uap5 desktop desktop4 rescap com">
 
-  <Identity Name="lasaths.HopTracer" Publisher="CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" Version="1.2.0.0" />
+  <Identity Name="lasaths.HopTracer" Publisher="CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" Version="1.2.0.1" />
 
   <mp:PhoneIdentity PhoneProductId="C334DDAE-E204-40B4-BE32-DBD884E9E463" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
@@ -59,19 +59,7 @@
             </desktop4:ItemType>
           </desktop4:FileExplorerContextMenus>
         </desktop4:Extension>
-      </Extensions>
-    </Application>
 
-    <Application Id="HopTracerCli" Executable="tools\hoptracer\hoptracer.exe" EntryPoint="Windows.FullTrustApplication" desktop4:Subsystem="console" desktop4:SupportsMultipleInstances="true">
-      <uap:VisualElements
-        DisplayName="HopTracer CLI"
-        Description="HopTracer command-line diff tool"
-        Square150x150Logo="Resources\AppIcon\hoptrace_logo.png"
-        Square44x44Logo="Resources\AppIcon\hoptrace_logo.png"
-        BackgroundColor="transparent"
-        AppListEntry="none" />
-
-      <Extensions>
         <uap5:Extension
           Category="windows.appExecutionAlias"
           Executable="tools\hoptracer\hoptracer.exe"
