@@ -11,6 +11,7 @@ $rootDir = $PSScriptRoot | Split-Path -Parent
 $sourceDir = Join-Path $rootDir "Source"
 $releaseDir = Join-Path $rootDir "Release"
 $appProject = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
+$cliProject = Join-Path $sourceDir "Tools\GhDiffTool\GhDiffTool.csproj"
 $testProject = Join-Path $rootDir "Tests\HopTracer.UnitTests\HopTracer.UnitTests.csproj"
 
 # Keep dotnet's first-run state inside the repository so the build does not touch
@@ -70,6 +71,8 @@ if (-not $SkipClean) {
 Write-Host "`n[2/5] Restoring dependencies..." -ForegroundColor Yellow
 dotnet restore $appProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
 if ($LASTEXITCODE -ne 0) { throw "App restore failed" }
+dotnet restore $cliProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
+if ($LASTEXITCODE -ne 0) { throw "CLI restore failed" }
 dotnet restore $testProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
 if ($LASTEXITCODE -ne 0) { throw "Test restore failed" }
 Write-Host "  OK Dependencies restored" -ForegroundColor Green
@@ -121,6 +124,26 @@ dotnet publish $appProject `
 
 if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
+$cliOutputDir = Join-Path $stagingDir "tools\hoptracer"
+dotnet publish $cliProject `
+    -c Release `
+    -r win-x64 `
+    --self-contained true `
+    -p:PublishSingleFile=false `
+    -o $cliOutputDir `
+    --verbosity quiet `
+    --ignore-failed-sources `
+    -p:NuGetAudit=false `
+    -p:BuildInParallel=false `
+    @restoreSourceArgs
+
+if ($LASTEXITCODE -ne 0) { throw "CLI publish failed" }
+
+$ghIoSource = Join-Path $sourceDir "HopTracer.Web\tools\GH_IO.dll"
+if (Test-Path $ghIoSource) {
+    Copy-Item -Path $ghIoSource -Destination (Join-Path $cliOutputDir "GH_IO.dll") -Force
+}
+
 $finalOutputDir = $outputDir
 if (Test-Path $outputDir) {
     Remove-Item $outputDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -166,4 +189,5 @@ Write-Host "`n=== Build Complete ===" -ForegroundColor Green
 Write-Host "Portable folder: $finalOutputDir" -ForegroundColor Cyan
 Write-Host "Release archive: $zipPath" -ForegroundColor Cyan
 Write-Host "To test: $finalOutputDir\HopTracer.exe" -ForegroundColor White
+Write-Host "CLI tool: $finalOutputDir\tools\hoptracer\hoptracer.exe" -ForegroundColor White
 Write-Host ""

@@ -20,6 +20,7 @@ $rootDir = $PSScriptRoot | Split-Path -Parent
 $sourceDir = Join-Path $rootDir "Source"
 $releaseDir = Join-Path $rootDir "Release"
 $projectFile = Join-Path $sourceDir "HopTracer\HopTracer.csproj"
+$cliProject = Join-Path $sourceDir "Tools\GhDiffTool\GhDiffTool.csproj"
 $msixOutputDir = Join-Path $releaseDir "MSIX"
 $shellExtensionProject = Join-Path $sourceDir "HopTracer.ShellExtension\HopTracer.ShellExtension.vcxproj"
 $shellExtensionDll = Join-Path $sourceDir "HopTracer.ShellExtension\bin\$Configuration\x64\HopTracer.ShellExtension.dll"
@@ -158,6 +159,36 @@ if (-not (Test-Path $shellExtensionDll)) {
 
 Write-Host "  OK Shell extension built: $shellExtensionDll" -ForegroundColor Green
 
+Write-Host "`n[5b/7] Publishing hoptracer CLI for MSIX..." -ForegroundColor Yellow
+$cliStagingDir = Join-Path $msixOutputDir "_cli_staging"
+if (Test-Path $cliStagingDir) {
+    Remove-Item $cliStagingDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+dotnet publish $cliProject `
+    -c $Configuration `
+    -r $RuntimeIdentifier `
+    --self-contained true `
+    -p:PublishSingleFile=false `
+    -o $cliStagingDir `
+    --verbosity quiet `
+    --ignore-failed-sources `
+    -p:NuGetAudit=false `
+    -p:BuildInParallel=false
+
+if ($LASTEXITCODE -ne 0) { throw "CLI publish failed" }
+
+$ghIoSource = Join-Path $sourceDir "HopTracer.Web\tools\GH_IO.dll"
+if (Test-Path $ghIoSource) {
+    Copy-Item -Path $ghIoSource -Destination (Join-Path $cliStagingDir "GH_IO.dll") -Force
+}
+
+if (-not (Test-Path (Join-Path $cliStagingDir "hoptracer.exe"))) {
+    throw "hoptracer.exe was not produced in $cliStagingDir"
+}
+
+Write-Host "  OK CLI staged: $cliStagingDir" -ForegroundColor Green
+
 Write-Host "`n[6/7] Publishing MSIX package..." -ForegroundColor Yellow
 if (-not (Test-Path $msixOutputDir)) {
     New-Item -ItemType Directory -Path $msixOutputDir -Force | Out-Null
@@ -175,7 +206,8 @@ $publishArgs = @(
     "-p:UapAppxPackageBuildMode=StoreUpload",
     "-p:AppxPackageDir=$msixOutputDir\\",
     "-p:AppxPackageSigningEnabled=false",
-    "-p:ShellExtensionDllPath=$shellExtensionDll"
+    "-p:ShellExtensionDllPath=$shellExtensionDll",
+    "-p:HopTracerCliDir=$cliStagingDir"
 )
 
 if (-not [string]::IsNullOrWhiteSpace($Version)) {

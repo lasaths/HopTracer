@@ -7,17 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-02
+
 ### Added
 
-- None yet.
+- **`hoptracer` CLI** (`Source/Tools/GhDiffTool`): `compare` and `git` commands with text, markdown, JSON, HTML, and **agent** output formats.
+- **Agent diff format** (`--format agent`): resolved wire labels, classified property changes, opaque geometry cache detection, template summary, and 1-hop neighbor context for AI review workflows.
+- **Diff output services**: `DiffOutputGenerator`, `DiffGraphResolver`, and `DiffAgentFormatter` in HopTracer.Core.
+- CLI bundled in portable releases (`tools/hoptracer/`) and Microsoft Store MSIX (`hoptracer.exe` App Execution Alias on PATH).
+- Unit tests for diff output and agent formatting.
 
 ### Changed
 
-- None yet.
+- Portable and MSIX build scripts now publish the CLI alongside the desktop app.
+- JSON `--show-edges` output includes human-readable `sourceLabel` / `targetLabel` on changed wires.
+- `skills/gh-diff` updated for real CLI install paths and agent format.
+
+### Removed
+
+- Stale `TestDiff` tool project (replaced by `GhDiffTool`).
+- Redundant root-level git integration docs and `IMPLEMENTATION_COMPLETE.md` (content lives in `skills/gh-diff/`).
 
 ### Fixed
 
-- None yet.
+- CLI `.gh` conversion requires `Microsoft.WindowsDesktop.App` (GH_IO dependency on WinForms).
+- CLI error messages now surface inner exception details.
+- `.gitignore` no longer blocks `Source/Tools/` from version control.
 
 ## [1.1.1] - 2026-04-06
 

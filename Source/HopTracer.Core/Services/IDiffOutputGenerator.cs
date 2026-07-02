@@ -2,14 +2,6 @@ using HopTracer.Core.Models;
 
 namespace HopTracer.Core.Services;
 
-public interface IDiffOutputGenerator
-{
-    string GenerateTextDiff(DiffComputation diff, DiffOutputOptions options);
-    string GenerateMarkdownDiff(DiffComputation diff, DiffOutputOptions options);
-    string GenerateJsonDiff(DiffComputation diff, DiffOutputOptions options);
-    string GenerateHtmlDiff(DiffComputation diff, DiffOutputOptions options);
-}
-
 public class DiffOutputOptions
 {
     public string? FileOld { get; set; }
@@ -31,5 +23,6 @@ public enum DiffOutputFormat
     Text,
     Markdown,
     Json,
-    Html
+    Html,
+    Agent
 }

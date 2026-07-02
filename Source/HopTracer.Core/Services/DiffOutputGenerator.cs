@@ -7,8 +7,22 @@ namespace HopTracer.Core.Services;
 /// <summary>
 /// Generates diff output in various formats (Text, Markdown, JSON, HTML).
 /// </summary>
-public class DiffOutputGenerator : IDiffOutputGenerator
+public class DiffOutputGenerator
 {
+    public string Generate(DiffComputation diff, DiffOutputOptions options, DiffOutputFormat format) =>
+        format switch
+        {
+            DiffOutputFormat.Text => GenerateTextDiff(diff, options),
+            DiffOutputFormat.Markdown => GenerateMarkdownDiff(diff, options),
+            DiffOutputFormat.Json => GenerateJsonDiff(diff, options),
+            DiffOutputFormat.Html => GenerateHtmlDiff(diff, options),
+            DiffOutputFormat.Agent => GenerateAgentDiff(diff, options),
+            _ => GenerateTextDiff(diff, options)
+        };
+
+    public string GenerateAgentDiff(DiffComputation diff, DiffOutputOptions options) =>
+        DiffAgentFormatter.Generate(diff, options);
+
     public string GenerateTextDiff(DiffComputation diff, DiffOutputOptions options)
     {
         var sb = new StringBuilder();
@@ -62,7 +76,7 @@ public class DiffOutputGenerator : IDiffOutputGenerator
             foreach (var risk in diff.TopRisks)
             {
                 var nodeId = options.CompactFormat ? risk.NodeId.Substring(0, Math.Min(8, risk.NodeId.Length)) : risk.NodeId;
-                var nodeName = string.IsNullOrWhiteSpace(risk.NodeName) ? risk.NodeName : risk.NodeName;
+                var nodeName = string.IsNullOrWhiteSpace(risk.NodeName) ? risk.NodeId : risk.NodeName;
                 sb.AppendLine($"  [{risk.RiskScore:000}] {risk.NodeStatus}: {nodeName} ({nodeId})");
                 if (!options.CompactFormat)
                 {
@@ -385,6 +399,7 @@ public class DiffOutputGenerator : IDiffOutputGenerator
 
     public string GenerateJsonDiff(DiffComputation diff, DiffOutputOptions options)
     {
+        var resolver = new DiffGraphResolver(diff.Nodes);
         var result = new
         {
             GeneratedAt = DateTimeOffset.UtcNow,
@@ -409,6 +424,7 @@ public class DiffOutputGenerator : IDiffOutputGenerator
                 .OrderBy(e => e.Status)
                 .ThenBy(e => e.Source)
                 .Take(options.MaxEdgesToShow)
+                .Select(resolver.Resolve)
                 .ToList() : null,
             Diagnostics = diff.Diagnostics
         };
@@ -416,7 +432,8 @@ public class DiffOutputGenerator : IDiffOutputGenerator
         var jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
         return JsonSerializer.Serialize(result, jsonOptions);

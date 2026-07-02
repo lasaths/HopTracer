@@ -56,6 +56,8 @@ Artifacts are written under:
 - `Release\MSIX\**\*.msix`
 - `Release\MSIX\**\*.msixupload` (preferred for Store submission when present)
 
+The MSIX package includes `tools\hoptracer\hoptracer.exe` with an App Execution Alias, so `hoptracer` is available on PATH after Store install.
+
 ## 3. Validate Signature (Signed Builds)
 
 ```powershell

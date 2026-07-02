@@ -10,22 +10,13 @@ This skill enables comparison of Grasshopper definition files with comprehensive
 
 ## Prerequisites
 
-The `hoptracer` CLI tool must be available in your PATH. It provides the underlying diff computation and formatting capabilities.
+The `hoptracer` CLI is bundled with HopTracer:
 
-### Installing hoptracer CLI
+- **Microsoft Store install**: `hoptracer.exe` is on PATH via App Execution Alias (run `hoptracer` from any terminal after install).
+- **Portable release**: `tools/hoptracer/hoptracer.exe` inside `HopTracer_Portable`.
+- **From source**: `dotnet publish ./Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release -o ./bin/hoptracer`
 
-From the HopTracer repository root:
-
-```bash
-dotnet publish ./Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release -o ./bin/hoptracer
-```
-
-Or install as a global .NET tool:
-
-```bash
-dotnet pack ./Source/Tools/GhDiffTool/GhDiffTool.csproj
-dotnet tool install --global --add-source ./bin HopTracer.Tools.GhDiffTool
-```
+For `.gh` file support, `GH_IO.dll` must be present (Rhino install or `scripts/setup_dependencies.ps1` before building).
 
 ## Core Commands
 
@@ -92,6 +83,17 @@ Styled reports for presentations and stakeholder communication:
 ```bash
 hoptracer compare old.gh new.gh --format html -o report.html
 ```
+
+### Agent Format (recommended for AI)
+
+Compact JSON with resolved wire labels, classified property diffs, and a template summary. Omits opaque geometry blobs.
+
+```bash
+hoptracer compare old.gh new.gh --format agent -o diff-agent.json
+hoptracer git current.gh --commit HEAD~1 --format agent
+```
+
+Key fields: `summary`, `wireChanges`, `propertyChanges`, `opaqueChanges`, `nodeChanges`, `diagnostics`.
 
 ## Common Options
 
@@ -200,7 +202,7 @@ Conversion requires `GH_IO.dll` dependency - see troubleshooting section.
 ```
 ✗ ERROR: Commit abc1234 not found in file history
 ```
-**Solution**: Verify the commit hash exists in the file's git history, or use `ghtdiff git <file>` without commit to compare against the latest version.
+**Solution**: Verify the commit hash exists in the file's git history, or use `hoptracer git <file>` without `--commit` to compare against the latest version.
 
 ## Performance Considerations
 

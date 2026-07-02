@@ -27,8 +27,9 @@ hoptracer compare <oldFile> <newFile> [options]
 - `-f, --format <format>`: Output format (default: text)
   - `text`: Plain text output
   - `markdown` or `md`: Markdown format
-  - `json`: JSON format
+  - `json`: JSON format (use `--show-edges` for labeled wires)
   - `html`: HTML format
+  - `agent`: AI-oriented JSON with resolved wires and classified property changes
 - `-o, --output <file>`: Write output to file instead of stdout
 - `--max-nodes <n>`: Maximum number of nodes to show (default: 20)
 - `--max-edges <n>`: Maximum number of edges to show (default: 10)
@@ -78,8 +79,9 @@ hoptracer git <file> [options]
 - `-f, --format <format>`: Output format (default: text)
   - `text`: Plain text output
   - `markdown` or `md`: Markdown format
-  - `json`: JSON format
+  - `json`: JSON format (use `--show-edges` for labeled wires)
   - `html`: HTML format
+  - `agent`: AI-oriented JSON with resolved wires and classified property changes
 - `-o, --output <file>`: Write output to file instead of stdout
 - `--max-nodes <n>`: Maximum number of nodes to show (default: 20)
 - `--max-edges <n>`: Maximum number of edges to show (default: 10)
@@ -162,10 +164,18 @@ Machine-readable JSON format with structured data for automation.
 ### HTML
 Styled HTML report with CSS for browser viewing and printing.
 
+### Agent
+AI-oriented JSON with resolved wire labels, classified property changes, and a template `summary`. Use for LLM review workflows.
+
 ## File Support
 
 - **.gh files**: Grasshopper binary format (auto-converted to .ghx)
 - **.ghx files**: Grasshopper XML format (direct parsing)
+
+## Distribution
+
+- **Microsoft Store**: `hoptracer.exe` is registered as an App Execution Alias and available on PATH after install.
+- **Portable release**: `tools/hoptracer/hoptracer.exe` inside the extracted folder (not on PATH).
 
 ## Environment Variables
 
@@ -188,9 +198,3 @@ Run `scripts/setup_dependencies.ps1` to install the required dependency.
 
 ### Git comparison errors
 Ensure you're in a Git repository and the file has commit history. Use `git log --follow <file>` to verify.
-
-## Version Information
-
-```bash
-hoptracer --version
-```

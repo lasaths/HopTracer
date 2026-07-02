@@ -40,7 +40,10 @@ TestResults/
 # Release
 Release/
 publish/
-tools/
+/tools/
+Source/HopTracer.Web/tools/
+Source/Tools/HopTracer/
+graphify-out/
 artifacts/
 *.log
 *.msix

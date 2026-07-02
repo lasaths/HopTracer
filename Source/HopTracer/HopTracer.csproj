@@ -24,8 +24,8 @@
 		<ApplicationId>lasaths.HopTracer</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.1.1</ApplicationDisplayVersion>
-		<ApplicationVersion>5</ApplicationVersion>
+		<ApplicationDisplayVersion>1.2.0</ApplicationDisplayVersion>
+		<ApplicationVersion>6</ApplicationVersion>
                 <ApplicationIcon>HopTracer.ico</ApplicationIcon>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
@@ -108,6 +108,14 @@
 	<ItemGroup Condition="'$(ShellExtensionDllPath)' != '' and Exists('$(ShellExtensionDllPath)')">
 		<Content Include="$(ShellExtensionDllPath)">
 			<Link>HopTracer.ShellExtension.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(HopTracerCliDir)' != '' and Exists('$(HopTracerCliDir)')">
+		<Content Include="$(HopTracerCliDir)\**\*">
+			<Link>tools\hoptracer\%(RecursiveDir)%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</Content>

@@ -64,6 +64,15 @@ It compares two versions, renders an interactive graph diff, and surfaces risk-f
   - recursive cluster preview graph extraction with limits
   - cluster diagnostics (parsed/failed/depth-limited counters)
 
+### Review and Reporting
+- Forensic report export (JSON + HTML) from the diff viewer.
+- Baseline compare workflow with pass/fail risk gating.
+
+### CLI (`hoptracer`)
+- Compare two `.gh`/`.ghx` files or diff against a Git commit from the terminal.
+- Output formats: `text`, `markdown`, `json`, `html`, and `agent` (AI-oriented JSON with resolved wire labels).
+- Shipped in portable releases at `tools/hoptracer/hoptracer.exe`; on PATH after Microsoft Store install.
+
 ### Diff Viewer (Web UI inside Desktop App)
 - Interactive canvas:
   - pan, zoom, fit-to-view

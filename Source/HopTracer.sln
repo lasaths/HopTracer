@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HopTracer.Core", "HopTracer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HopTracer.Web", "HopTracer.Web\HopTracer.Web.csproj", "{C66CE928-772A-4C83-A514-CA752F84E28A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestDiff", "Tools\\TestDiff\\TestDiff.csproj", "{76558B21-D4CB-4210-97F5-1D36FB9211D3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GhDiffTool", "Tools\GhDiffTool\GhDiffTool.csproj", "{76558B21-D4CB-4210-97F5-1D36FB9211D3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HopTracer", "HopTracer\HopTracer.csproj", "{73549A01-01D2-48C8-A611-AAA6F1E26187}"
 EndProject

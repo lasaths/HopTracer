@@ -35,6 +35,7 @@ Options:
 Output:
 
 - `Release\HopTracer_Portable\`
+- `Release\HopTracer_Portable\tools\hoptracer\hoptracer.exe` (CLI for diff reports)
 - `Release\HopTracer-Windows-x64.zip`
 
 The app is intentionally multi-file (`PublishSingleFile=false`) because MAUI/WindowsAppSDK needs companion runtime files.
