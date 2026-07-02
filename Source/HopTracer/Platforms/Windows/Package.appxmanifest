@@ -7,9 +7,10 @@
   xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
   xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-  IgnorableNamespaces="uap uap3 uap5 desktop desktop4 rescap com">
+  IgnorableNamespaces="uap uap3 uap5 uap10 desktop desktop4 rescap com">
 
   <Identity Name="lasaths.HopTracer" Publisher="CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" Version="1.2.0.0" />
 
@@ -62,7 +63,7 @@
       </Extensions>
     </Application>
 
-    <Application Id="HopTracerCli" Executable="tools\hoptracer\hoptracer.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="HopTracerCli" Executable="tools\hoptracer\hoptracer.exe" EntryPoint="Windows.FullTrustApplication" uap10:SupportsMultipleInstances="true">
       <uap:VisualElements
         DisplayName="HopTracer CLI"
         Description="HopTracer command-line diff tool"
