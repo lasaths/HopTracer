@@ -2,7 +2,11 @@
 # Validates MSIX manifest fields and highlights Store submission risks.
 
 param(
-    [switch]$Strict = $false
+    [switch]$Strict = $false,
+    [string]$ExpectedIdentityName = "lasaths.HopTracer",
+    [string]$ExpectedPublisher = "CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25",
+    [string]$ExpectedPublisherDisplayName = "lasaths",
+    [string]$ExpectedPackageVersion = "1.2.0.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -88,14 +92,17 @@ if ([string]::IsNullOrWhiteSpace($publisherDisplayName)) {
 }
 
 if ($Strict) {
-    if ($identityName -eq "com.hoptracer.app") {
-        $errors.Add("Identity Name is still default ('com.hoptracer.app'). Replace with Partner Center reserved identity.")
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedIdentityName) -and $identityName -ne $ExpectedIdentityName) {
+        $errors.Add("Identity Name '$identityName' does not match expected '$ExpectedIdentityName'.")
     }
-    if ($identityPublisher -eq "CN=HopTracer") {
-        $errors.Add("Identity Publisher is still default ('CN=HopTracer'). Replace with Store-aligned publisher.")
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedPublisher) -and $identityPublisher -ne $ExpectedPublisher) {
+        $errors.Add("Identity Publisher '$identityPublisher' does not match expected '$ExpectedPublisher'.")
     }
-    if ($publisherDisplayName -eq "HopTracer") {
-        $errors.Add("PublisherDisplayName is still default ('HopTracer'). Replace with the Partner Center publisher display name.")
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedPublisherDisplayName) -and $publisherDisplayName -ne $ExpectedPublisherDisplayName) {
+        $errors.Add("PublisherDisplayName '$publisherDisplayName' does not match expected '$ExpectedPublisherDisplayName'.")
+    }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedPackageVersion) -and $identityVersion -ne $ExpectedPackageVersion) {
+        $errors.Add("Identity Version '$identityVersion' does not match expected '$ExpectedPackageVersion'.")
     }
 }
 else {

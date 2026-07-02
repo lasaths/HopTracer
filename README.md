@@ -302,6 +302,8 @@ dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj
 - Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Security: [SECURITY.md](SECURITY.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Privacy policy: [docs/privacy.md](docs/privacy.md) (Store URL: https://github.com/lasaths/HopTracer/blob/main/docs/privacy.md)
+- Microsoft Store: [docs/MICROSOFT_STORE.md](docs/MICROSOFT_STORE.md)
 
 ## License
 

@@ -133,7 +133,12 @@ if (-not (Test-Path $readinessScript)) {
     throw "Store readiness script not found: $readinessScript"
 }
 
-& $readinessScript -Strict:$RequireStoreReadiness
+& $readinessScript `
+    -Strict:$RequireStoreReadiness `
+    -ExpectedIdentityName $(if ($IdentityName) { $IdentityName } else { "lasaths.HopTracer" }) `
+    -ExpectedPublisher $(if ($Publisher) { $Publisher } else { "CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" }) `
+    -ExpectedPublisherDisplayName "lasaths" `
+    -ExpectedPackageVersion $(if ($PackageVersion) { $PackageVersion } else { "1.2.0.0" })
 if (-not $?) {
     throw "Store readiness checks failed."
 }
@@ -187,6 +192,10 @@ if (-not (Test-Path (Join-Path $cliStagingDir "hoptracer.exe"))) {
     throw "hoptracer.exe was not produced in $cliStagingDir"
 }
 
+# Satellite resource DLLs trigger PRI263 warnings in MSIX; English-only CLI does not need them.
+Get-ChildItem -Path $cliStagingDir -Recurse -Filter "*.resources.dll" -File -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
 Write-Host "  OK CLI staged: $cliStagingDir" -ForegroundColor Green
 
 Write-Host "`n[6/7] Publishing MSIX package..." -ForegroundColor Yellow
@@ -209,6 +218,10 @@ $publishArgs = @(
     "-p:ShellExtensionDllPath=$shellExtensionDll",
     "-p:HopTracerCliDir=$cliStagingDir"
 )
+
+if (-not [string]::IsNullOrWhiteSpace($IdentityName)) {
+    $publishArgs += "-p:ApplicationId=$IdentityName"
+}
 
 if (-not [string]::IsNullOrWhiteSpace($Version)) {
     $publishArgs += "-p:ApplicationDisplayVersion=$Version"
@@ -312,17 +325,22 @@ foreach ($f in $msixFiles) {
     Write-Host ("  OK MSIX: {0}" -f $f.FullName) -ForegroundColor Green
 }
 
-# Always produce a .msixupload from the (now signed) .msix
 $msixUploadFiles = @(Get-ChildItem -Path $msixOutputDir -Recurse -File -Filter *.msixupload -ErrorAction SilentlyContinue)
-foreach ($existing in $msixUploadFiles) { Remove-Item $existing.FullName -Force }
-
-foreach ($msix in $msixFiles) {
-    $uploadPath = [System.IO.Path]::ChangeExtension($msix.FullName, ".msixupload")
-    $tmpZip     = "$uploadPath.zip"
-    if (Test-Path $tmpZip) { Remove-Item $tmpZip -Force }
-    Compress-Archive -Path $msix.FullName -DestinationPath $tmpZip -Force
-    Move-Item $tmpZip $uploadPath -Force
-    Write-Host ("  OK MSIXUPLOAD: {0}" -f $uploadPath) -ForegroundColor Green
+if ($msixUploadFiles.Count -gt 0) {
+    foreach ($upload in $msixUploadFiles) {
+        Write-Host ("  OK MSIXUPLOAD (SDK): {0}" -f $upload.FullName) -ForegroundColor Green
+    }
+}
+else {
+    Write-Host "  ! SDK did not emit .msixupload; creating upload archive from .msix" -ForegroundColor Yellow
+    foreach ($msix in $msixFiles) {
+        $uploadPath = [System.IO.Path]::ChangeExtension($msix.FullName, ".msixupload")
+        $tmpZip     = "$uploadPath.zip"
+        if (Test-Path $tmpZip) { Remove-Item $tmpZip -Force }
+        Compress-Archive -Path $msix.FullName -DestinationPath $tmpZip -Force
+        Move-Item $tmpZip $uploadPath -Force
+        Write-Host ("  OK MSIXUPLOAD (fallback): {0}" -f $uploadPath) -ForegroundColor Green
+    }
 }
 
 Write-Host "`n=== MSIX Build Complete ===" -ForegroundColor Green

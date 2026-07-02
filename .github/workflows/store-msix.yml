@@ -4,22 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       identity_name:
-        description: "Partner Center package identity name (example: com.example.hoptracer)"
+        description: "Partner Center package identity name"
         required: true
         default: "lasaths.HopTracer"
         type: string
       version:
-        description: "Optional ApplicationDisplayVersion override (example: 1.2.3)"
+        description: "ApplicationDisplayVersion (example: 1.2.0)"
         required: false
-        default: ""
+        default: "1.2.0"
         type: string
       package_version:
-        description: "Optional MSIX PackageVersion override (example: 1.2.3.0)"
+        description: "MSIX PackageVersion (example: 1.2.0.0)"
         required: false
-        default: ""
+        default: "1.2.0.0"
         type: string
       publisher:
-        description: "Partner Center publisher subject (example: CN=YourPublisher)"
+        description: "Partner Center publisher subject"
         required: true
         default: "CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25"
         type: string
@@ -32,6 +32,11 @@ on:
         description: "Sign package with certificate secrets"
         required: true
         default: false
+        type: boolean
+      attach_to_release:
+        description: "Attach MSIX upload package to GitHub release v{version}"
+        required: true
+        default: true
         type: boolean
 
 permissions:
@@ -114,4 +119,35 @@ jobs:
         path: |
           Release/MSIX/**/*.msix
           Release/MSIX/**/*.msixupload
-        retention-days: 30
+        retention-days: 90
+
+  attach-release:
+    name: Attach to GitHub Release
+    needs: msix
+    if: ${{ inputs.attach_to_release && inputs.version != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download MSIX artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: HopTracer-MSIX
+        path: ./msix
+
+    - name: Upload to GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        UPLOAD=$(find ./msix -name '*.msixupload' | head -n 1)
+        if [ -z "$UPLOAD" ]; then
+          UPLOAD=$(find ./msix -name '*.msix' | head -n 1)
+        fi
+        if [ -z "$UPLOAD" ]; then
+          echo "No MSIX package found in artifact"
+          exit 1
+        fi
+        TAG="v${{ inputs.version }}"
+        echo "Uploading $UPLOAD to release $TAG"
+        gh release upload "$TAG" "$UPLOAD" --clobber

@@ -1,122 +1,129 @@
 # Microsoft Store Packaging Guide
 
-This guide documents how to produce Store-ready packages for HopTracer.
+HopTracer is reserved in Partner Center as **`lasaths.HopTracer`**.
 
-## 1. Prepare Identity
+## Quick submit (one command)
 
-Before submission, align package identity with your Partner Center app reservation.
+After CI builds the MSIX artifact (or a local `build_msix.ps1` run):
 
-Files to verify:
+```powershell
+.\scripts\prepare_store_submission.ps1
+```
+
+This validates manifest metadata, locates the upload package, and prints every Partner Center field you need to paste.
+
+## Identity (already aligned)
+
+| Field | Value |
+|-------|-------|
+| Identity Name | `lasaths.HopTracer` |
+| Publisher | `CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25` |
+| Publisher display name | `lasaths` |
+| Package version | `1.2.0.0` (bump **revision** only for repeat submissions: `1.2.0.1`, …) |
+| Privacy policy URL | https://github.com/lasaths/HopTracer/blob/main/docs/privacy.md |
+| Support URL | https://github.com/lasaths/HopTracer/issues |
+
+Files:
 
 - `Source/HopTracer/Platforms/Windows/Package.appxmanifest`
 - `Source/HopTracer/HopTracer.csproj`
 
-Required alignment:
+## Build MSIX
 
-- `Identity Name` must match the reserved Store identity.
-- `Identity Publisher` must match the certificate subject used for signing.
-- Display version stays `1.0.0` for the reissue; increment only the fourth package-version component for repeat Store submissions (`1.0.0.1`, `1.0.0.2`, ...).
+### GitHub Actions (recommended)
 
-Validate the checked-in metadata before building:
+Workflow: **Build Store MSIX** (manual trigger)
 
-```powershell
-.\scripts\check_store_readiness.ps1 `
-  -Strict `
-  -ExpectedIdentityName "com.hoptracer.app" `
-  -ExpectedPublisher "CN=HopTracer" `
-  -ExpectedPackageVersion "1.0.0.1" `
-  -CertificatePath "C:\path\store-signing-cert.pfx" `
-  -CertificatePassword "..."
-```
+Defaults are pre-filled for `lasaths.HopTracer`. Leave `package_version` at `1.2.0.0` unless you are submitting a revision bump.
 
-## 2. Build MSIX Locally
+1. Actions → **Build Store MSIX** → Run workflow
+2. Download artifact **HopTracer-MSIX**
+3. Run `.\scripts\prepare_store_submission.ps1 -MsixDir <extracted-folder>`
+4. Upload the `.msixupload` (or `.msix`) file in Partner Center
 
-Unsigned package:
+The workflow can also attach the package to the matching GitHub release when `attach_to_release` is enabled.
 
-```powershell
-.\scripts\build_msix.ps1 `
-  -IdentityName "com.hoptracer.app" `
-  -Publisher "CN=HopTracer"
-```
+### Local build
 
-Signed package:
+Requires Visual Studio with **Desktop development with C++** (shell extension).
 
 ```powershell
 .\scripts\build_msix.ps1 `
   -RequireStoreReadiness `
-  -IdentityName "com.hoptracer.app" `
-  -Publisher "CN=HopTracer" `
-  -PackageVersion "1.0.0.1" `
+  -PackageVersion "1.2.0.0" `
+  -Version "1.2.0"
+```
+
+Optional: copy `GH_IO.dll` for `.gh` conversion in the CLI:
+
+```powershell
+.\scripts\setup_dependencies.ps1
+```
+
+Artifacts:
+
+- `Release\MSIX\**\*.msixupload` (preferred)
+- `Release\MSIX\**\*.msix`
+
+## Validate before upload
+
+```powershell
+.\scripts\check_store_readiness.ps1 -Strict
+```
+
+## Partner Center submission
+
+1. Open [Partner Center](https://partner.microsoft.com/dashboard) → **HopTracer** → **Packages**
+2. **Upload new package** → select the `.msixupload` from the CI artifact
+3. **Store listings** → ensure privacy URL and support URL are set (see table above)
+4. **What's new** — use the release notes printed by `prepare_store_submission.ps1`
+5. **Capabilities** → when asked about `runFullTrust`, paste the justification from `prepare_store_submission.ps1`
+6. Submit for certification
+
+### runFullTrust justification (copy/paste)
+
+HopTracer registers a COM shell extension and Explorer context menu for `.gh` files. The extension converts Grasshopper binary definitions to `.ghx` for local diffing. This requires `runFullTrust` because Explorer shell extensions and COM surrogate servers cannot run inside a strict sandboxed UWP container.
+
+### What's new for 1.2.0
+
+- `hoptracer` CLI for terminal and CI diff workflows
+- Agent-oriented diff JSON with resolved wire labels for AI review
+- `hoptracer.exe` on PATH after Store install (App Execution Alias)
+- Forensic report export and baseline compare in the desktop app
+
+## Signed packages (optional)
+
+If you sign locally instead of using Microsoft Store signing:
+
+```powershell
+.\scripts\build_msix.ps1 `
+  -RequireStoreReadiness `
+  -PackageVersion "1.2.0.0" `
   -CertificatePath "C:\path\store-signing-cert.pfx" `
   -CertificatePassword "..."
 ```
 
-Artifacts are written under:
+GitHub secrets for CI signing: `MSIX_CERT_BASE64`, `MSIX_CERT_PASSWORD`
 
-- `Release\MSIX\**\*.msix`
-- `Release\MSIX\**\*.msixupload` (preferred for Store submission when present)
+## Revision bumps
 
-The MSIX package includes `tools\hoptracer\hoptracer.exe` with an App Execution Alias, so `hoptracer` is available on PATH after Store install.
+Microsoft Store rejects duplicate package versions. For each new submission without a marketing version change, increment only the fourth component:
 
-## 3. Validate Signature (Signed Builds)
+| Submission | Package version | Display version |
+|------------|-----------------|-----------------|
+| 1.2.0 first upload | `1.2.0.0` | `1.2.0` |
+| 1.2.0 hotfix | `1.2.0.1` | `1.2.0` |
+| 1.2.1 release | `1.2.1.0` | `1.2.1` |
 
-```powershell
-Get-AuthenticodeSignature "path\to\HopTracer.msix"
-```
+Update `Package.appxmanifest`, `HopTracer.csproj` (`ApplicationDisplayVersion` / `ApplicationVersion`), `CHANGELOG.md`, and workflow inputs together.
 
-Expected: `Status` should be `Valid`.
+## Checklist
 
-If you see `mspdbcmf.exe could not be found` during packaging, install Visual Studio C++ build tools / Windows SDK components. The script still emits `.msix`; symbol packaging may be skipped.
-
-## 4. Build via GitHub Actions
-
-Workflow: `.github/workflows/store-msix.yml` (manual trigger)
-
-Inputs:
-
-- `identity_name` (required)
-- `version` (optional)
-- `package_version` (optional, `major.minor.patch.revision`)
-- `publisher` (required)
-- `sign_package` (`true` or `false`)
-
-Secrets for signed packages:
-
-- `MSIX_CERT_BASE64` (PFX file encoded to base64)
-- `MSIX_CERT_PASSWORD`
-
-Example to create `MSIX_CERT_BASE64`:
-
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\store-signing-cert.pfx"))
-```
-
-## 5. Submission Checklist
-
-### ✅ Already done
-- [x] Logo assets present (`hoptrace_logo.png`, `hoptrace_logo_noshadow.png`)
-- [x] `Package.appxmanifest` structure valid
-- [x] Version `1.2.0.0` set in manifest and `.csproj`
-- [x] Privacy policy and AI disclosure in `docs/privacy.md` and `README.md`
-- [x] `store-msix.yml` workflow ready for manual trigger
-- [x] `check_store_readiness.ps1` passes (non-strict)
-- [x] Build and all tests pass
-
-### ⚠️ Required before submitting
-
-- [ ] **Align identity with Partner Center reservation.**
-  Run strict validation with your actual Partner Center identity:
-  ```powershell
-  .\scripts\check_store_readiness.ps1 -Strict `
-    -ExpectedIdentityName "YOUR_PARTNER_CENTER_NAME" `
-    -ExpectedPublisher "CN=YOUR_PUBLISHER" `
-    -ExpectedPackageVersion "1.2.0.0"
-  ```
-- [ ] **Configure GitHub secrets** (only needed if signing locally/in CI):
-  - `MSIX_CERT_BASE64` — PFX base64: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx"))`
-  - `MSIX_CERT_PASSWORD`
-  - _Note: if using Microsoft's Store signing flow, these are not required._
-- [ ] **Partner Center `runFullTrust` justification.** The manifest declares this restricted capability. During submission, provide justification: the app uses a COM shell extension to register a `.gh` right-click context menu, which requires full trust.
-- [ ] **Trigger `store-msix.yml`** via Actions → Build Store MSIX with your Partner Center identity and publisher values.
-- [ ] **Test on a clean Windows 10/11 machine** — launch, file pick, compare, diff render, Git history.
-- [ ] **Upload `.msixupload`** artifact from the Actions run to Partner Center.
+- [x] Logo and splash assets in manifest
+- [x] Identity matches Partner Center reservation
+- [x] Privacy policy published at public URL
+- [x] `hoptracer` CLI bundled with console App Execution Alias
+- [x] MSIX build workflow and strict readiness script
+- [ ] Upload package in Partner Center
+- [ ] Submit for certification
+- [ ] Smoke test on clean Windows 10/11 VM after Store publish

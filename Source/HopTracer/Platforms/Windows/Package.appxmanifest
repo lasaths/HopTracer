@@ -6,9 +6,10 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
   xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-  IgnorableNamespaces="uap uap3 desktop desktop4 rescap com">
+  IgnorableNamespaces="uap uap3 uap5 desktop desktop4 rescap com">
 
   <Identity Name="lasaths.HopTracer" Publisher="CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" Version="1.2.0.0" />
 
@@ -26,6 +27,7 @@
   </Dependencies>
 
   <Resources>
+    <Resource Language="en-US" />
     <Resource Language="x-generate" />
   </Resources>
 
@@ -70,14 +72,14 @@
         AppListEntry="none" />
 
       <Extensions>
-        <uap3:Extension
+        <uap5:Extension
           Category="windows.appExecutionAlias"
           Executable="tools\hoptracer\hoptracer.exe"
           EntryPoint="Windows.FullTrustApplication">
-          <uap3:AppExecutionAlias>
-            <desktop:ExecutionAlias Alias="hoptracer.exe" />
-          </uap3:AppExecutionAlias>
-        </uap3:Extension>
+          <uap5:AppExecutionAlias desktop4:Subsystem="console">
+            <uap5:ExecutionAlias Alias="hoptracer.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
       </Extensions>
     </Application>
   </Applications>
