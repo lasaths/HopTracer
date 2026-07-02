@@ -73,11 +73,14 @@ jobs:
     - name: Build unsigned MSIX
       if: ${{ !inputs.sign_package }}
       shell: pwsh
+      env:
+        REQUIRE_STORE_READINESS: ${{ inputs.require_store_readiness }}
       run: |
+        $requireReadiness = [System.Convert]::ToBoolean($env:REQUIRE_STORE_READINESS)
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
-          -RequireStoreReadiness:${{ inputs.require_store_readiness }} `
+          -RequireStoreReadiness:$requireReadiness `
           -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
@@ -86,14 +89,17 @@ jobs:
     - name: Build signed MSIX
       if: ${{ inputs.sign_package }}
       shell: pwsh
+      env:
+        REQUIRE_STORE_READINESS: ${{ inputs.require_store_readiness }}
       run: |
         if (-not "${{ secrets.MSIX_CERT_PASSWORD }}") {
           throw "sign_package=true but secret MSIX_CERT_PASSWORD is not configured."
         }
+        $requireReadiness = [System.Convert]::ToBoolean($env:REQUIRE_STORE_READINESS)
         ./scripts/build_msix.ps1 `
           -SkipClean:$false `
           -SkipTests:$false `
-          -RequireStoreReadiness:${{ inputs.require_store_readiness }} `
+          -RequireStoreReadiness:$requireReadiness `
           -IdentityName "${{ inputs.identity_name }}" `
           -Version "${{ inputs.version }}" `
           -PackageVersion "${{ inputs.package_version }}" `
