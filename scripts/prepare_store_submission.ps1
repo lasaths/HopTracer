@@ -2,7 +2,7 @@
 # Validates metadata, locates MSIX artifacts, and prints Partner Center copy-paste fields.
 
 param(
-    [string]$PackageVersion = "1.2.0.1",
+    [string]$PackageVersion = "1.2.0.0",
     [string]$DisplayVersion = "1.2.0",
     [string]$MsixDir = "",
     [switch]$Strict = $true

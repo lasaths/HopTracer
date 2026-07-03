@@ -19,7 +19,7 @@ This validates manifest metadata, locates the upload package, and prints every P
 | Identity Name | `lasaths.HopTracer` |
 | Publisher | `CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25` |
 | Publisher display name | `lasaths` |
-| Package version | `1.2.0.0` (bump **revision** only for repeat submissions: `1.2.0.1`, …) |
+| Package version | `1.2.0.0` (Store requires revision `0`; use `1.2.1.0` for the next submission) |
 | Privacy policy URL | https://github.com/lasaths/HopTracer/blob/main/docs/privacy.md |
 | Support URL | https://github.com/lasaths/HopTracer/issues |
 
@@ -109,10 +109,12 @@ GitHub secrets for CI signing: `MSIX_CERT_BASE64`, `MSIX_CERT_PASSWORD`
 
 Microsoft Store rejects duplicate package versions. For each new submission without a marketing version change, increment only the fourth component:
 
+Microsoft Store rejects non-zero revision numbers in the manifest (`1.2.0.0` is valid; `1.2.0.1` is not). For a new submission under the same display version, bump the **build** component instead (`1.2.1.0`).
+
 | Submission | Package version | Display version |
 |------------|-----------------|-----------------|
 | 1.2.0 first upload | `1.2.0.0` | `1.2.0` |
-| 1.2.0 hotfix | `1.2.0.1` | `1.2.0` |
+| 1.2.0 resubmit (headless fix) | `1.2.0.0` | `1.2.0` |
 | 1.2.1 release | `1.2.1.0` | `1.2.1` |
 
 Update `Package.appxmanifest`, `HopTracer.csproj` (`ApplicationDisplayVersion` / `ApplicationVersion`), `CHANGELOG.md`, and workflow inputs together.

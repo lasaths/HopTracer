@@ -16,7 +16,7 @@ on:
       package_version:
         description: "MSIX PackageVersion (example: 1.2.0.0)"
         required: false
-        default: "1.2.0.1"
+        default: "1.2.0.0"
         type: string
       publisher:
         description: "Partner Center publisher subject"
