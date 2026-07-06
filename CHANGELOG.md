@@ -5,6 +5,21 @@ All notable changes to HopTracer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-06
+
+### Added
+
+- **Git history comparison**: Select any two commits from file history and compare them directly.
+- **Dual-commit selection UI**: Click to select OLD and NEW commits with visual feedback (blue/green highlighting).
+- **Auto-chronological sorting**: OLD/NEW assignment is automatic based on commit date, regardless of click order.
+- **Flexible deselection**: Deselect either commit independently and pick a different one without resetting.
+- **Smart button states**: Dynamic "Load Selected Version" button shows appropriate action based on selection state.
+
+### Changed
+
+- Git history modal now shows OLD/NEW commit labels at the top for clarity.
+- Status messages guide users through the selection process step-by-step.
+
 ## [Unreleased]
 
 ## [1.2.0] - 2026-07-02

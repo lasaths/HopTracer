@@ -534,6 +534,16 @@
             border-left: 3px solid var(--accent-color);
         }
 
+        .commit-row.selected-old {
+            background: color-mix(in oklch, var(--accent-color) 15%, transparent);
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .commit-row.selected-new {
+            background: color-mix(in oklch, var(--success) 15%, transparent);
+            border-left: 3px solid var(--success);
+        }
+
         .commit-row:focus-visible {
             outline: 2px solid var(--ring);
             outline-offset: -2px;
@@ -670,6 +680,19 @@
                 <div id="gitStatus" role="status" aria-live="polite" aria-atomic="true"
                     style="padding: 10px 20px; color: var(--text-secondary); font-size: 13px; min-height: 18px;"></div>
 
+                <div style="padding: 0 20px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-panel);">
+                    <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between;">
+                        <div style="flex: 1; display: flex; gap: 8px; align-items: center;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">OLD:</span>
+                            <span id="selectedOldCommit" style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 12px; color: var(--accent-color); background: rgba(92, 128, 247, 0.1); padding: 4px 8px; border-radius: 4px;">None</span>
+                        </div>
+                        <div style="flex: 1; display: flex; gap: 8px; align-items: center;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">NEW:</span>
+                            <span id="selectedNewCommit" style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 12px; color: var(--success); background: rgba(76, 175, 80, 0.1); padding: 4px 8px; border-radius: 4px;">None</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="commit-header">
                     <div>Hash</div>
                     <div>Message</div>
@@ -778,11 +801,17 @@
 
 
         let currentGitPath = null;
-        let selectedCommit = null;
+        let selectedCommit = null; // Legacy single-select
+        let selectedOldCommit = null;
+        let selectedNewCommit = null;
         let sessionToken = null;
+        let commitSelectionMode = 'old'; // 'old' or 'new'
+        let commitsCache = []; // Store commit data for date comparison
         const selectedGitFileLabel = document.getElementById('selectedGitFile');
         const selectedGitFileMeta = document.getElementById('selectedGitFileMeta');
         const compareBtn = document.getElementById('compareBtn');
+        const selectedOldCommitLabel = document.getElementById('selectedOldCommit');
+        const selectedNewCommitLabel = document.getElementById('selectedNewCommit');
 
         async function ensureSessionToken() {
             if (sessionToken) return sessionToken;
@@ -1404,8 +1433,11 @@
         function renderCommits(commits) {
             commitList.innerHTML = '';
             loadCommitBtn.disabled = true;
-            loadCommitBtn.textContent = 'Load Selected Version';
+            updateLoadButtonText();
             selectedCommit = null;
+            selectedOldCommit = null;
+            selectedNewCommit = null;
+            updateSelectedCommitLabels();
 
             if (commits.length === 0) {
                 const emptyNode = document.createElement('div');
@@ -1418,7 +1450,9 @@
                 focusGitModalInitialControl();
                 return false;
             }
-            setStatus(`Loaded ${commits.length} commits. Select one to view.`, 'info');
+            // Cache commits for date comparison and sort by date (newest first, as git log returns)
+            commitsCache = commits;
+            setStatus(`Loaded ${commits.length} commits. Click any two to compare (order doesn't matter).`, 'info');
 
             commits.forEach(c => {
                 const item = document.createElement('button');
@@ -1451,16 +1485,7 @@
 
                 item.append(hash, message, author, date, size);
 
-                item.onclick = () => {
-                    document.querySelectorAll('.commit-row').forEach(d => {
-                        d.classList.remove('selected');
-                        d.setAttribute('aria-pressed', 'false');
-                    });
-                    item.classList.add('selected');
-                    item.setAttribute('aria-pressed', 'true');
-                    selectedCommit = c.hash;
-                    loadCommitBtn.disabled = false;
-                };
+                item.onclick = () => handleCommitSelection(item, c.hash);
 
                 commitList.appendChild(item);
             });
@@ -1470,29 +1495,197 @@
             return true;
         }
 
-        document.getElementById('loadCommitBtn').onclick = async () => {
-            if (!selectedCommit || !currentGitPath) return;
+        function getCommitDate(hash) {
+            const commit = commitsCache.find(c => c.hash === hash);
+            if (!commit) return Date.now(); // Fallback to now if not found
+            // Parse git relative date (e.g., "2 hours ago", "3 days ago") or absolute date
+            // For simplicity, we'll use the index in commitsCache (newest = lowest index)
+            const index = commitsCache.findIndex(c => c.hash === hash);
+            return index >= 0 ? index : Number.MAX_SAFE_INTEGER;
+        }
 
-            loadCommitBtn.disabled = true;
-            loadCommitBtn.textContent = 'Downloading...';
-            setStatus('Downloading file from commit…', 'info');
-            showLoadingOverlay('Downloading file from Git…', 'Fetching version and preparing diff.', 'git');
-            closeGitModal();
+        function handleCommitSelection(item, hash) {
+            // Toggle: if clicking the same commit, deselect it
+            if (selectedOldCommit === hash) {
+                selectedOldCommit = null;
+                item.classList.remove('selected-old');
+                item.setAttribute('aria-pressed', 'false');
+                // If NEW is also not selected, stay on 'old'. If NEW is selected, switch to 'old' to allow replacing OLD.
+                commitSelectionMode = 'old';
+                setStatus('Select OLD commit.', 'info');
+            } else if (selectedNewCommit === hash) {
+                selectedNewCommit = null;
+                item.classList.remove('selected-new');
+                item.setAttribute('aria-pressed', 'false');
+                // If OLD is still selected, stay on 'new' to pick a different NEW.
+                // If OLD is NOT selected, reset to 'old' since we need OLD first.
+                if (!selectedOldCommit) {
+                    commitSelectionMode = 'old';
+                    setStatus('Select OLD commit to start.', 'info');
+                } else {
+                    commitSelectionMode = 'new';
+                    setStatus('Select NEW commit.', 'info');
+                }
+            } else {
+                // Selecting a new commit
+                // If OLD is selected but NEW isn't, allow clicking any unselected commit for NEW
+                // If OLD was just deselected, we're in 'old' mode and should stay there
+                
+                // Special case: if we have NEW but no OLD, and user clicks a different commit,
+                // treat it as selecting OLD (not trying to replace NEW)
+                if (!selectedOldCommit && selectedNewCommit && selectedNewCommit !== hash) {
+                    // User is selecting OLD while NEW is already picked
+                    document.querySelectorAll('.commit-row.selected-old').forEach(d => {
+                        d.classList.remove('selected-old');
+                        d.setAttribute('aria-pressed', 'false');
+                    });
+                    selectedOldCommit = hash;
+                    item.classList.add('selected-old');
+                    item.setAttribute('aria-pressed', 'true');
+                } else if (commitSelectionMode === 'old') {
+                    // Normal OLD selection
+                    document.querySelectorAll('.commit-row.selected-old').forEach(d => {
+                        d.classList.remove('selected-old');
+                        d.setAttribute('aria-pressed', 'false');
+                    });
+                    selectedOldCommit = hash;
+                    item.classList.add('selected-old');
+                    item.setAttribute('aria-pressed', 'true');
+                    commitSelectionMode = 'new';
+                } else {
+                    // Normal NEW selection
+                    document.querySelectorAll('.commit-row.selected-new').forEach(d => {
+                        d.classList.remove('selected-new');
+                        d.setAttribute('aria-pressed', 'false');
+                    });
+                    selectedNewCommit = hash;
+                    item.classList.add('selected-new');
+                    item.setAttribute('aria-pressed', 'true');
+                }
+                
+                // If both selected, auto-sort by date (earlier = OLD, later = NEW)
+                if (selectedOldCommit && selectedNewCommit) {
+                    const oldDateIndex = getCommitDate(selectedOldCommit);
+                    const newDateIndex = getCommitDate(selectedNewCommit);
+                    
+                    // Higher index = older commit (git log returns newest first)
+                    if (oldDateIndex < newDateIndex) {
+                        // Currently selected OLD is newer than NEW - swap them
+                        const temp = selectedOldCommit;
+                        selectedOldCommit = selectedNewCommit;
+                        selectedNewCommit = temp;
+                        
+                        // Update visual highlighting
+                        document.querySelectorAll('.commit-row').forEach(row => {
+                            row.classList.remove('selected-old', 'selected-new');
+                            if (row.dataset.commitHash === selectedOldCommit) {
+                                row.classList.add('selected-old');
+                            } else if (row.dataset.commitHash === selectedNewCommit) {
+                                row.classList.add('selected-new');
+                            }
+                        });
+                    }
+                    
+                    setStatus('Both commits selected. Click "Compare" or select different commits.', 'info');
+                } else if (selectedOldCommit && !selectedNewCommit) {
+                    setStatus('Select NEW commit to compare.', 'info');
+                } else if (!selectedOldCommit && selectedNewCommit) {
+                    setStatus('Select OLD commit to compare.', 'info');
+                } else {
+                    setStatus('Select OLD commit to start.', 'info');
+                }
+            }
+            
+            updateSelectedCommitLabels();
+            updateLoadButtonText();
+        }
 
-            try {
-                await postData('/git/view_diff', {
-                    path: currentGitPath,
-                    hash_old: selectedCommit
-                });
-            } catch (e) {
+        function updateSelectedCommitLabels() {
+            if (selectedOldCommitLabel) {
+                selectedOldCommitLabel.textContent = selectedOldCommit ? (selectedOldCommit.length > 7 ? selectedOldCommit.substring(0, 7) : selectedOldCommit) : 'None';
+            }
+            if (selectedNewCommitLabel) {
+                selectedNewCommitLabel.textContent = selectedNewCommit ? (selectedNewCommit.length > 7 ? selectedNewCommit.substring(0, 7) : selectedNewCommit) : 'None';
+            }
+        }
+
+        function updateLoadButtonText() {
+            if (selectedOldCommit && selectedNewCommit) {
+                loadCommitBtn.textContent = 'Compare Selected Commits';
                 loadCommitBtn.disabled = false;
+            } else if (selectedOldCommit) {
+                loadCommitBtn.textContent = 'Compare with Current File';
+                loadCommitBtn.disabled = false;
+            } else {
                 loadCommitBtn.textContent = 'Load Selected Version';
-                hideLoadingOverlay();
-                showToast("Error loading diff", 'error');
+                loadCommitBtn.disabled = true;
+            }
+        }
+
+        document.getElementById('loadCommitBtn').onclick = async () => {
+            if (!currentGitPath) return;
+
+            // If both commits selected, compare them
+            if (selectedOldCommit && selectedNewCommit) {
+                loadCommitBtn.disabled = true;
+                loadCommitBtn.textContent = 'Downloading...';
+                setStatus('Downloading files from commits…', 'info');
+                showLoadingOverlay('Comparing Git Commits…', 'Fetching both versions and preparing diff.', 'git');
+                closeGitModal();
+
+                try {
+                    await postData('/git/view_diff', {
+                        path: currentGitPath,
+                        hash_old: selectedOldCommit,
+                        hash_new: selectedNewCommit
+                    });
+                } catch (e) {
+                    loadCommitBtn.disabled = false;
+                    updateLoadButtonText();
+                    hideLoadingOverlay();
+                    showToast("Error loading diff", 'error');
+                }
+            } else if (selectedOldCommit) {
+                // Compare selected commit with current file
+                loadCommitBtn.disabled = true;
+                loadCommitBtn.textContent = 'Downloading...';
+                setStatus('Downloading file from commit…', 'info');
+                showLoadingOverlay('Downloading file from Git…', 'Fetching version and preparing diff.', 'git');
+                closeGitModal();
+
+                try {
+                    await postData('/git/view_diff', {
+                        path: currentGitPath,
+                        hash_old: selectedOldCommit
+                    });
+                } catch (e) {
+                    loadCommitBtn.disabled = false;
+                    updateLoadButtonText();
+                    hideLoadingOverlay();
+                    showToast("Error loading diff", 'error');
+                }
             }
         };
 
         async function postData(url, data) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+
+            for (const key in data) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = data[key];
+                form.appendChild(input);
+            }
+
+            await ensureFormSessionToken(form);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        async function postJsonData(url, data) {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = url;
