@@ -373,6 +373,78 @@ Define variables for easy theming:
 - Custom footer content
 - Theme color overrides
 
+## Agent Format
+
+AI-oriented JSON for LLM review workflows. Recommended invocation:
+
+```bash
+hoptracer compare old.ghx new.ghx --format agent -o diff-agent.json
+```
+
+### Design goals
+
+- Resolved wire labels (`Src.O → Snk.I`) instead of raw GUIDs
+- Text/script property deltas with `old` / `new` strings
+- Opaque geometry/cache blobs listed separately (not inlined)
+- Risk summary and diagnostics for triage
+- Truncation metadata when node/edge/property lists are capped
+
+### Root structure
+
+```json
+{
+  "generatedAt": "2026-07-09T12:00:00+00:00",
+  "fileOld": "compare-old.ghx",
+  "fileNew": "compare-new.ghx",
+  "summary": "1 added, 0 removed, 0 modified nodes.",
+  "statistics": {},
+  "riskSummary": {},
+  "topRisks": [],
+  "wireChanges": [],
+  "propertyChanges": [],
+  "opaqueChanges": [],
+  "nodeChanges": [],
+  "diagnostics": [],
+  "totalChangedNodes": 1,
+  "totalChangedEdges": 0,
+  "truncatedNodes": false,
+  "truncatedEdges": false
+}
+```
+
+### Key fields
+
+| Field | Purpose |
+| ----- | ------- |
+| `summary` | One-line human/LLM rollup |
+| `wireChanges` | Changed connections with `wire` label and node GUIDs |
+| `propertyChanges` | Text/script deltas; `nodeId` + `truncated` when capped |
+| `opaqueChanges` | `ON_Data` / cluster hash changes without blob payload |
+| `nodeChanges` | Per-node status, risk, reasons, 1-hop neighbors |
+| `totalChangedNodes` / `totalChangedEdges` | Full counts before `--max-nodes` / `--max-edges` cap |
+| `truncatedNodes` / `truncatedEdges` | `true` when output lists were capped |
+
+### Defaults (agent mode)
+
+- `--show-edges` enabled automatically
+- `maxNodesToShow`: 100 (override with `--max-nodes`)
+- `maxEdgesToShow`: 50 (override with `--max-edges`)
+- Text/script property limit: 4000 characters (`truncated: true` when shorter)
+
+### Schema
+
+Machine-readable contract: [`agent-schema.json`](agent-schema.json)
+
+### CLI errors (agent/json formats)
+
+When `--format agent` or `--format json`, failures emit structured JSON on stderr:
+
+```json
+{"error":"file_not_found","message":"File not found: C:\\path\\old.ghx","path":"C:\\path\\old.ghx"}
+```
+
+Plain-text errors remain the default for `text`, `markdown`, and `html` formats.
+
 ## Format Selection Guide
 
 ### When to Use Each Format
@@ -400,6 +472,11 @@ Define variables for easy theming:
 - Email reports
 - Web dashboards
 - Print documentation
+
+#### Agent Format
+- Automation and AI agent review
+- LLM workflows with resolved wires and classified property changes
+- CI gates combined with `--fail-on-risk`
 
 ### Conversion Between Formats
 

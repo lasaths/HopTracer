@@ -117,6 +117,7 @@ Display help information.
 #### Syntax
 ```bash
 hoptracer help [command]
+hoptracer --version
 ```
 
 #### Arguments
@@ -126,6 +127,9 @@ hoptracer help [command]
 ```bash
 # General help
 hoptracer help
+
+# Version
+hoptracer --version
 
 # Help for specific command
 hoptracer help compare
@@ -149,6 +153,7 @@ hoptracer help git
 | `--no-risk` | | Exclude risk summary | false |
 | `--no-risks` | | Exclude top risks | false |
 | `--no-nodes` | | Exclude changed nodes | false |
+| `--version` | `-V` | Show CLI version | |
 
 ## Output Formats
 

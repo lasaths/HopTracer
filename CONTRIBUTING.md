@@ -37,9 +37,10 @@ HopTracer/
 │   ├── HopTracer.Web/      # Web backend & UI
 │   ├── HopTracer.Core/     # Parsing & diffing logic
 │   ├── GhConverter/        # GH to GHX converter
-│   └── Tools/TestDiff/     # CLI diagnostics tool
+│   └── Tools/GhDiffTool/   # hoptracer CLI (compare, git, --format agent)
+├── skills/gh-diff/         # Agent skill — see SKILL.md for CLI workflows
 ├── Tests/HopTracer.UnitTests/ # Unit tests
-├── Tests/data/             # Test fixtures
+├── Tests/data/             # Test fixtures (.ghx)
 ├── scripts/                # Build and setup scripts
 └── Assets/                 # Images and resources
 ```
@@ -114,6 +115,16 @@ dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj
 - Test with both .gh and .ghx files
 - Test with files from different Rhino/Grasshopper versions
 - Test git integration with real repositories
+- CLI smoke tests use fixtures in `Tests/data/` and target `Source/Tools/GhDiffTool`
+
+### CLI (hoptracer)
+
+```powershell
+dotnet publish ./Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release -o ./bin/hoptracer
+./bin/hoptracer/hoptracer.exe compare Tests/data/compare-old.ghx Tests/data/compare-new.ghx --format agent
+```
+
+Agent workflows: [`skills/gh-diff/SKILL.md`](skills/gh-diff/SKILL.md).
 
 ## Questions?
 

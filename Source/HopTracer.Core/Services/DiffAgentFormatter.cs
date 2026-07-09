@@ -6,12 +6,14 @@ namespace HopTracer.Core.Services;
 
 public static class DiffAgentFormatter
 {
-    private const int TextPropertyMaxLength = 500;
+    private const int TextPropertyMaxLength = 4000;
 
     public static string Generate(DiffComputation diff, DiffOutputOptions options)
     {
         var resolver = new DiffGraphResolver(diff.Nodes);
         var stats = BuildStatistics(diff);
+        var totalChangedNodes = diff.Nodes.Count(n => n.Status != "same");
+        var totalChangedEdges = diff.Edges.Count(e => e.Status != "same");
         var changedNodes = GetChangedNodes(diff, options.MaxNodesToShow);
         var wireChanges = GetWireChanges(diff, resolver, options.MaxEdgesToShow);
         var (propertyChanges, opaqueChanges) = GetPropertyChanges(changedNodes);
@@ -30,7 +32,11 @@ public static class DiffAgentFormatter
             PropertyChanges = propertyChanges,
             OpaqueChanges = opaqueChanges,
             NodeChanges = nodeChanges,
-            Diagnostics = diff.Diagnostics
+            Diagnostics = diff.Diagnostics,
+            TotalChangedNodes = totalChangedNodes,
+            TotalChangedEdges = totalChangedEdges,
+            TruncatedNodes = totalChangedNodes > changedNodes.Count,
+            TruncatedEdges = totalChangedEdges > wireChanges.Count
         };
 
         return JsonSerializer.Serialize(result, AgentJsonOptions);
@@ -78,6 +84,7 @@ public static class DiffAgentFormatter
                 {
                     opaque.Add(new AgentOpaqueChange
                     {
+                        NodeId = node.Id,
                         Node = nodeLabel,
                         Key = key,
                         TypeName = GetPropertyValue(node.Properties, "TypeName"),
@@ -88,12 +95,16 @@ public static class DiffAgentFormatter
 
                 if (IsTextProperty(key))
                 {
+                    var (oldTruncated, oldText) = Truncate(oldValue);
+                    var (newTruncated, newText) = Truncate(newValue);
                     text.Add(new AgentPropertyChange
                     {
+                        NodeId = node.Id,
                         Node = nodeLabel,
                         Key = key,
-                        Old = Truncate(oldValue),
-                        New = Truncate(newValue)
+                        Old = oldText,
+                        New = newText,
+                        Truncated = oldTruncated || newTruncated
                     });
                 }
             }
@@ -128,6 +139,7 @@ public static class DiffAgentFormatter
 
             return new AgentNodeChange
             {
+                NodeId = node.Id,
                 Label = label,
                 Status = node.Status,
                 RiskScore = node.RiskScore,
@@ -223,8 +235,10 @@ public static class DiffAgentFormatter
     private static string? GetPropertyValue(Dictionary<string, string> properties, string key) =>
         properties.TryGetValue(key, out var value) ? value : null;
 
-    private static string Truncate(string value) =>
-        value.Length <= TextPropertyMaxLength ? value : value[..TextPropertyMaxLength] + "…";
+    private static (bool Truncated, string Value) Truncate(string value) =>
+        value.Length <= TextPropertyMaxLength
+            ? (false, value)
+            : (true, value[..TextPropertyMaxLength] + "…");
 
     private static DiffStatistics BuildStatistics(DiffComputation diff) => new()
     {
@@ -262,18 +276,25 @@ internal sealed class AgentDiffReport
     public List<AgentOpaqueChange> OpaqueChanges { get; set; } = new();
     public List<AgentNodeChange> NodeChanges { get; set; } = new();
     public List<DiffDiagnostic> Diagnostics { get; set; } = new();
+    public int TotalChangedNodes { get; set; }
+    public int TotalChangedEdges { get; set; }
+    public bool TruncatedNodes { get; set; }
+    public bool TruncatedEdges { get; set; }
 }
 
 internal sealed class AgentPropertyChange
 {
+    public string NodeId { get; set; } = string.Empty;
     public string Node { get; set; } = string.Empty;
     public string Key { get; set; } = string.Empty;
     public string Old { get; set; } = string.Empty;
     public string New { get; set; } = string.Empty;
+    public bool Truncated { get; set; }
 }
 
 internal sealed class AgentOpaqueChange
 {
+    public string NodeId { get; set; } = string.Empty;
     public string Node { get; set; } = string.Empty;
     public string Key { get; set; } = string.Empty;
     public string? TypeName { get; set; }
@@ -282,6 +303,7 @@ internal sealed class AgentOpaqueChange
 
 internal sealed class AgentNodeChange
 {
+    public string NodeId { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int RiskScore { get; set; }

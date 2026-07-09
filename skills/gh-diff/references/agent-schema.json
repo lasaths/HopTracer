@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hoptracer.dev/schemas/agent-diff.json",
+  "title": "HopTracer Agent Diff Report",
+  "type": "object",
+  "required": [
+    "generatedAt",
+    "summary",
+    "statistics",
+    "riskSummary",
+    "topRisks",
+    "wireChanges",
+    "propertyChanges",
+    "opaqueChanges",
+    "nodeChanges",
+    "diagnostics",
+    "totalChangedNodes",
+    "totalChangedEdges",
+    "truncatedNodes",
+    "truncatedEdges"
+  ],
+  "properties": {
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "fileOld": { "type": "string" },
+    "fileNew": { "type": "string" },
+    "summary": { "type": "string" },
+    "statistics": {
+      "type": "object",
+      "required": [
+        "totalNodes",
+        "totalEdges",
+        "addedNodes",
+        "removedNodes",
+        "modifiedNodes",
+        "unchangedNodes",
+        "addedEdges",
+        "removedEdges",
+        "nodesWithConnectionChanges"
+      ],
+      "properties": {
+        "totalNodes": { "type": "integer", "minimum": 0 },
+        "totalEdges": { "type": "integer", "minimum": 0 },
+        "addedNodes": { "type": "integer", "minimum": 0 },
+        "removedNodes": { "type": "integer", "minimum": 0 },
+        "modifiedNodes": { "type": "integer", "minimum": 0 },
+        "unchangedNodes": { "type": "integer", "minimum": 0 },
+        "addedEdges": { "type": "integer", "minimum": 0 },
+        "removedEdges": { "type": "integer", "minimum": 0 },
+        "nodesWithConnectionChanges": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "riskSummary": {
+      "type": "object",
+      "required": ["criticalCount", "highCount", "mediumCount", "lowCount"],
+      "properties": {
+        "criticalCount": { "type": "integer", "minimum": 0 },
+        "highCount": { "type": "integer", "minimum": 0 },
+        "mediumCount": { "type": "integer", "minimum": 0 },
+        "lowCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "topRisks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["nodeId", "nodeName", "nodeStatus", "riskScore", "reasons"],
+        "properties": {
+          "nodeId": { "type": "string" },
+          "nodeName": { "type": "string" },
+          "nodeStatus": { "type": "string" },
+          "riskScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "reasons": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "wireChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "status", "wire"],
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "status": { "type": "string" },
+          "wire": { "type": "string" },
+          "sourceLabel": { "type": "string" },
+          "targetLabel": { "type": "string" }
+        }
+      }
+    },
+    "propertyChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["nodeId", "node", "key", "old", "new"],
+        "properties": {
+          "nodeId": { "type": "string" },
+          "node": { "type": "string" },
+          "key": { "type": "string" },
+          "old": { "type": "string" },
+          "new": { "type": "string" },
+          "truncated": { "type": "boolean" }
+        }
+      }
+    },
+    "opaqueChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["nodeId", "node", "key"],
+        "properties": {
+          "nodeId": { "type": "string" },
+          "node": { "type": "string" },
+          "key": { "type": "string" },
+          "typeName": { "type": "string" },
+          "hint": { "type": "string" }
+        }
+      }
+    },
+    "nodeChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["nodeId", "label", "status", "riskScore", "reasons", "neighbors"],
+        "properties": {
+          "nodeId": { "type": "string" },
+          "label": { "type": "string" },
+          "status": { "type": "string" },
+          "riskScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "reasons": { "type": "array", "items": { "type": "string" } },
+          "neighbors": {
+            "type": "object",
+            "required": ["upstream", "downstream"],
+            "properties": {
+              "upstream": { "type": "array", "items": { "type": "string" } },
+              "downstream": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "severity", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "totalChangedNodes": { "type": "integer", "minimum": 0 },
+    "totalChangedEdges": { "type": "integer", "minimum": 0 },
+    "truncatedNodes": { "type": "boolean" },
+    "truncatedEdges": { "type": "boolean" }
+  }
+}

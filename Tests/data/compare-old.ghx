@@ -1,0 +1,15 @@
+<Archive>
+  <chunks>
+    <chunk name="Object">
+      <chunks>
+        <chunk name="Container">
+          <items>
+            <item name="InstanceGuid">aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa</item>
+            <item name="Name">Number Slider</item>
+            <item name="NickName">Sld</item>
+          </items>
+        </chunk>
+      </chunks>
+    </chunk>
+  </chunks>
+</Archive>

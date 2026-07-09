@@ -22,8 +22,20 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses
     - **Key Classes**: `GhxParser`, `Differ`, `GitWrapper`, `ConverterService`.
 - **GhConverter**: Utility.
     - **Role**: Converts binary `.gh` files to XML `.ghx` using `GH_IO.dll`.
+- **GhDiffTool** (`hoptracer` CLI): Headless diff tool.
+    - **Type**: .NET Console (`Source/Tools/GhDiffTool`).
+    - **Role**: `compare` and `git` commands with text, markdown, JSON, HTML, and **agent** output formats.
+    - **Agent skill**: [`skills/gh-diff/SKILL.md`](../skills/gh-diff/SKILL.md) — commands, `--format agent`, CI patterns.
 
-### Data Flow
+### CLI Data Flow (agents / CI)
+1. `hoptracer compare <old> <new> --format agent` (or `hoptracer git <file> --commit <hash>`).
+2. For `git`, the tool writes the commit snapshot to a temp file, then diffs it against the working-tree file.
+3. `ConverterService` converts `.gh` → `.ghx` when `GH_IO.dll` is present.
+4. `GhxParser` + `Differ` produce `DiffComputation`.
+5. `DiffAgentFormatter` emits JSON with resolved wires, property deltas, risk summary, and diagnostics.
+6. Exit `1` when `--fail-on-risk` detects critical/high risks.
+
+### Desktop Data Flow
 1.  User drops files in MAUI WebView.
 2.  Files are POSTed to `CompareController` (embedded server).
 3.  `ConverterService` converts `.gh` -> `.ghx` if needed.
@@ -165,9 +177,10 @@ HopTracer/
 │   ├── HopTracer.Web/       # UI & API (Logic)
 │   ├── HopTracer.Core/      # Parsing & Diffing (Core)
 │   ├── GhConverter/         # GH->GHX Tool
-│   └── Tools/TestDiff/      # Diagnostic CLI
+│   └── Tools/GhDiffTool/    # hoptracer CLI (compare, git, --format agent)
+├── skills/gh-diff/          # Agent skill for CLI workflows
 ├── Tests/
 │   ├── HopTracer.UnitTests/ # Unit tests
-│   └── data/                # Sample files
+│   └── data/                # Sample .ghx fixtures
 └── README.md                # User Guide
 ```

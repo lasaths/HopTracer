@@ -182,25 +182,33 @@ Conversion requires `GH_IO.dll` dependency - see troubleshooting section.
 
 ### File Not Found
 ```
-✗ ERROR: Old file not found: old.gh
+File not found: old.gh
+```
+With `--format agent` or `--format json`, stderr is structured JSON:
+```json
+{"error":"file_not_found","message":"File not found: old.gh","path":"..."}
 ```
 **Solution**: Verify the file path and extension.
 
 ### Git Repository Error
 ```
-✗ ERROR: Not in a Git repository
+Not a git repository: /path/to/dir
 ```
+Structured (`agent`/`json`): `{"error":"not_git_repository","message":"..."}`
+
 **Solution**: Run from within a Git repository for git comparisons.
 
 ### Missing GH_IO Dependency
 ```
-✗ ERROR: GH_IO dependency unavailable
+Error: GH_IO dependency unavailable
 ```
+Structured (`agent`/`json`): `{"error":"error","message":"..."}`
+
 **Solution**: Run `scripts/setup_dependencies.ps1` to install dependencies.
 
 ### Commit Not Found
 ```
-✗ ERROR: Commit abc1234 not found in file history
+Error: Commit abc1234 not found in file history
 ```
 **Solution**: Verify the commit hash exists in the file's git history, or use `hoptracer git <file>` without `--commit` to compare against the latest version.
 
@@ -269,5 +277,6 @@ hoptracer git current.gh --commit HEAD~3 --format markdown -o HEAD-3.md
 ## See Also
 
 - `references/hoptracer-cli.md` - Complete CLI command reference
+- `references/agent-schema.json` - JSON Schema for `--format agent` output
 - `references/risk-scoring.md` - Risk assessment methodology
 - `references/output-formats.md` - Detailed format specifications

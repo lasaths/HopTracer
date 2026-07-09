@@ -50,6 +50,19 @@ public class DiffAgentFormatterTests
         var wire = doc.RootElement.GetProperty("wireChanges")[0];
         Assert.Equal("Src.O → Snk.I", wire.GetProperty("wire").GetString());
         Assert.Contains("summary", json);
+        var nodeChange = doc.RootElement.GetProperty("nodeChanges")[0];
+        Assert.False(string.IsNullOrWhiteSpace(nodeChange.GetProperty("nodeId").GetString()));
+    }
+
+    [Fact]
+    public void Generate_Agent_NodeChangesIncludeNodeId()
+    {
+        var diff = _differ.DiffDetailed(CreateOldGraph(), CreateNewGraph());
+        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Agent);
+        using var doc = JsonDocument.Parse(json);
+
+        var nodeChange = doc.RootElement.GetProperty("nodeChanges")[0];
+        Assert.Equal("B", nodeChange.GetProperty("nodeId").GetString());
     }
 
     [Fact]

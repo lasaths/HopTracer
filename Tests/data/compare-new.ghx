@@ -1,0 +1,33 @@
+<Archive>
+  <chunks>
+    <chunk name="Object">
+      <chunks>
+        <chunk name="Container">
+          <items>
+            <item name="InstanceGuid">aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa</item>
+            <item name="Name">Number Slider</item>
+            <item name="NickName">Sld</item>
+          </items>
+        </chunk>
+      </chunks>
+    </chunk>
+    <chunk name="Object">
+      <chunks>
+        <chunk name="Container">
+          <items>
+            <item name="InstanceGuid">bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb</item>
+            <item name="Name">Panel</item>
+            <item name="NickName">Pnl</item>
+          </items>
+          <chunks>
+            <chunk name="PanelProperties">
+              <items>
+                <item name="UserText">new panel notes</item>
+              </items>
+            </chunk>
+          </chunks>
+        </chunk>
+      </chunks>
+    </chunk>
+  </chunks>
+</Archive>

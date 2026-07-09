@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Source\HopTracer.Core\HopTracer.Core.csproj" />
     <ProjectReference Include="..\..\Source\HopTracer.Web\HopTracer.Web.csproj" />
+    <ProjectReference Include="..\..\Source\Tools\GhDiffTool\GhDiffTool.csproj" />
   </ItemGroup>
 
 </Project>
