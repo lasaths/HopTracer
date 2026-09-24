@@ -1,3 +1,5 @@
+using HopTracer.Core.Services;
+
 namespace HopTracer.Web.Services;
 
 public interface IAppDataStorageService
@@ -23,7 +25,7 @@ public class AppDataStorageService : IAppDataStorageService
 
         RootPath = Path.Combine(localAppData, "HopTracer");
         UploadsPath = Path.Combine(RootPath, "uploads");
-        BaselinesPath = Path.Combine(RootPath, "baselines");
+        BaselinesPath = HopTracerPaths.BaselinesPath;
 
         Directory.CreateDirectory(RootPath);
         Directory.CreateDirectory(UploadsPath);

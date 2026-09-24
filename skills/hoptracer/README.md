@@ -1,8 +1,14 @@
-# Grasshopper Diff Skill
+# HopTracer CLI Skill
 
-Agent skill for comparing Grasshopper definition files (`.gh` / `.ghx`) with multi-format reports and risk scoring.
+Agent skill for the `hoptracer` CLI — compare Grasshopper definitions (`.gh` / `.ghx`), git history, baselines, forensic reports, and agent-oriented diff JSON.
 
-## Install
+## Install skill (agents)
+
+```bash
+npx skills add lasaths/HopTracer@hoptracer -g -y
+```
+
+## Install CLI
 
 - **Microsoft Store**: `hoptracer` is on PATH after install.
 - **Portable**: `Release/HopTracer_Portable/tools/hoptracer/hoptracer.exe`
@@ -13,11 +19,15 @@ For `.gh` files: `scripts/setup_dependencies.ps1` (installs `GH_IO.dll`).
 ## Usage
 
 ```bash
+hoptracer doctor
 hoptracer compare old.ghx new.ghx
 hoptracer compare old.gh new.gh --format agent -o diff-agent.json
 hoptracer compare old.gh new.gh --format html -o report.html
 hoptracer git current.gh --commit HEAD~1 --format markdown -o changes.md
 hoptracer git current.gh --fail-on-risk
+hoptracer baseline save current.gh --name release-1.0
+hoptracer baseline compare current.gh --name release-1.0 --fail-on-risk
+hoptracer report old.ghx new.ghx -o ./reports
 hoptracer --version
 ```
 

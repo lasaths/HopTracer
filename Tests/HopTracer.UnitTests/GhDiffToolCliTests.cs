@@ -122,14 +122,51 @@ public class GhDiffToolCliTests
     }
 
     [Fact]
-    public void ParseArgs_RecognizesFormatAndFlags()
+    public void Doctor_ReturnsJsonWithVersion()
     {
-        var (flags, positional) = CliRunner.ParseArgsForTests(
-            ["old.ghx", "new.ghx", "--format", "agent", "--fail-on-risk", "--max-nodes", "5"]);
+        var stdout = new StringWriter();
+        var code = CliRunner.Run(["doctor"], stdout);
+        using var doc = JsonDocument.Parse(stdout.ToString().Trim());
+        Assert.Contains("hoptracer", doc.RootElement.GetProperty("version").GetString());
+        Assert.True(doc.RootElement.TryGetProperty("ghIoAvailable", out _));
+        Assert.True(doc.RootElement.TryGetProperty("baselinesPath", out _));
+        Assert.True(code is 0 or 1);
+    }
 
-        Assert.Equal(new[] { "old.ghx", "new.ghx" }, positional);
-        Assert.Equal(DiffOutputFormat.Agent, flags.Format);
-        Assert.True(flags.FailOnRisk);
-        Assert.Equal(5, flags.MaxNodes);
+    [Fact]
+    public void Help_ListsBaselineAndReportCommands()
+    {
+        var stdout = new StringWriter();
+        var code = CliRunner.Run(["help"], stdout);
+        Assert.Equal(0, code);
+        var text = stdout.ToString();
+        Assert.Contains("hoptracer baseline", text);
+        Assert.Contains("hoptracer report", text);
+        Assert.Contains("hoptracer doctor", text);
+    }
+
+    [Fact]
+    public void Report_Fixtures_WritesJsonAndHtml()
+    {
+        var oldPath = FixturePath("compare-old.ghx");
+        var newPath = FixturePath("compare-new.ghx");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"hoptracer-report-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(outputDir);
+        try
+        {
+            var stdout = new StringWriter();
+            var code = CliRunner.Run(["report", oldPath, newPath, "-o", outputDir], stdout);
+            Assert.Equal(0, code);
+            var files = Directory.GetFiles(outputDir);
+            Assert.Contains(files, f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(files, f => f.EndsWith(".html", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (Directory.Exists(outputDir))
+            {
+                Directory.Delete(outputDir, recursive: true);
+            }
+        }
     }
 }

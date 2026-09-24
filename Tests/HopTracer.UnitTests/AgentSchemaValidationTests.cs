@@ -19,7 +19,7 @@ public class AgentSchemaValidationTests
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
             while (dir != null)
             {
-                if (File.Exists(Path.Combine(dir.FullName, "skills", "gh-diff", "references", "agent-schema.json")))
+                if (File.Exists(Path.Combine(dir.FullName, "skills", "hoptracer", "references", "agent-schema.json")))
                 {
                     return dir.FullName;
                 }
@@ -51,7 +51,7 @@ public class AgentSchemaValidationTests
     [Fact]
     public void AgentSchemaFile_ExistsAndListsRequiredFields()
     {
-        var schemaPath = Path.Combine(RepoRoot, "skills", "gh-diff", "references", "agent-schema.json");
+        var schemaPath = Path.Combine(RepoRoot, "skills", "hoptracer", "references", "agent-schema.json");
         Assert.True(File.Exists(schemaPath));
 
         using var doc = JsonDocument.Parse(File.ReadAllText(schemaPath));

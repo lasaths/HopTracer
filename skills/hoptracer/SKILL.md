@@ -1,12 +1,18 @@
 ---
-name: gh-diff
+name: hoptracer
 description: |
-  Compare Grasshopper definition files (.gh/.ghx) and generate detailed diff reports. Key trigger phrases: "diff grasshopper files", "compare gh files", "grasshopper file comparison", "ghx diff", ".gh diff", "show changes in grasshopper", "compare grasshopper versions", "grasshopper version diff", "delta grasshopper definition". Use when user wants to compare two Grasshopper definitions, see changes between versions, compare with git commits, or analyze change impact and risks.
+  Compare Grasshopper definition files (.gh/.ghx) with the hoptracer CLI — diff reports, git history, baselines, forensic export, and agent-oriented JSON. Key trigger phrases: "diff grasshopper files", "compare gh files", "hoptracer", "ghx diff", ".gh diff", "grasshopper version diff", "forensic report", "baseline compare". Use when comparing Grasshopper definitions, running CI diff gates, or analyzing change risk.
 ---
 
-# Grasshopper Diff Skill
+# HopTracer CLI Skill
 
 This skill enables comparison of Grasshopper definition files with comprehensive change analysis, risk assessment, and multi-format reporting.
+
+## Install skill (agents)
+
+```bash
+npx skills add lasaths/HopTracer@hoptracer -g -y
+```
 
 ## Prerequisites
 
@@ -40,6 +46,31 @@ Use when comparing a file with its previous version in Git history:
 ```bash
 hoptracer git <currentFile>
 hoptracer git <currentFile> --commit <hash>
+```
+
+### Environment Check
+
+```bash
+hoptracer doctor
+```
+
+### Baselines
+
+Save, list, and compare against known-good snapshots (shared with the desktop app at `%LOCALAPPDATA%\\HopTracer\\baselines`):
+
+```bash
+hoptracer baseline save current.gh --name release-1.0
+hoptracer baseline list
+hoptracer baseline compare current.gh --name release-1.0 --fail-on-risk
+```
+
+### Forensic Report
+
+Export signed JSON + HTML forensic artifacts:
+
+```bash
+hoptracer report old.ghx new.ghx -o ./reports
+hoptracer report old.ghx new.ghx -o ./reports --baseline release-1.0
 ```
 
 **Examples:**

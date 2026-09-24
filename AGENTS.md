@@ -31,7 +31,7 @@ Note: Prefer `scripts/build.ps1` over ad-hoc `dotnet build` for final validation
 
 ## CLI for Agents (`hoptracer`)
 
-Headless Grasshopper diffing for CI and AI workflows. Skill docs: [`skills/gh-diff/SKILL.md`](skills/gh-diff/SKILL.md).
+Headless Grasshopper diffing for CI and AI workflows. Skill: [`skills/hoptracer/SKILL.md`](skills/hoptracer/SKILL.md) — install with `npx skills add lasaths/HopTracer@hoptracer -g -y`.
 
 ```powershell
 dotnet publish ./Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release -o ./bin/hoptracer

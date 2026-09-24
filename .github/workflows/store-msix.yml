@@ -9,14 +9,14 @@ on:
         default: "lasaths.HopTracer"
         type: string
       version:
-        description: "ApplicationDisplayVersion (example: 1.2.0)"
+        description: "ApplicationDisplayVersion (example: 1.2.1)"
         required: false
-        default: "1.2.0"
+        default: "1.2.1"
         type: string
       package_version:
-        description: "MSIX PackageVersion (example: 1.2.0.0)"
+        description: "MSIX PackageVersion (example: 1.2.1.0)"
         required: false
-        default: "1.2.0.0"
+        default: "1.2.1.0"
         type: string
       publisher:
         description: "Partner Center publisher subject"

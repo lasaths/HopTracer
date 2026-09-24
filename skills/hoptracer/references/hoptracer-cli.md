@@ -110,6 +110,38 @@ hoptracer git current.gh --format markdown -o changes.md
 hoptracer git current.gh --commit HEAD~1 --fail-on-risk
 ```
 
+### doctor
+
+Check CLI environment and Grasshopper conversion dependencies.
+
+```bash
+hoptracer doctor
+```
+
+Prints JSON with `version`, `ghIoAvailable`, `ghIoMessage`, `baselinesPath`, and `ready`. Exit code `1` when `GH_IO.dll` is unavailable.
+
+### baseline
+
+Manage known-good snapshots under `%LOCALAPPDATA%\\HopTracer\\baselines` (shared with the desktop app).
+
+```bash
+hoptracer baseline save <file> --name <baselineName>
+hoptracer baseline list
+hoptracer baseline compare <file> --name <baselineName> [compare options]
+```
+
+`baseline compare` accepts the same `--format` and `--fail-on-risk` options as `compare`.
+
+### report
+
+Generate signed forensic JSON and HTML artifacts.
+
+```bash
+hoptracer report <oldFile> <newFile> [-o <dir>] [--baseline <name>]
+```
+
+With `-o <dir>`, writes `hoptracer_forensic_<timestamp>.json` and `.html` into that directory.
+
 ### help
 
 Display help information.
@@ -153,7 +185,15 @@ hoptracer help git
 | `--no-risk` | | Exclude risk summary | false |
 | `--no-risks` | | Exclude top risks | false |
 | `--no-nodes` | | Exclude changed nodes | false |
+| `--name` | | Baseline name | |
+| `--baseline` | | Baseline metadata for forensic report | |
 | `--version` | `-V` | Show CLI version | |
+
+## Agent Skill Install
+
+```bash
+npx skills add lasaths/HopTracer@hoptracer -g -y
+```
 
 ## Output Formats
 

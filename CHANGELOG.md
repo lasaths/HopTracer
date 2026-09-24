@@ -22,6 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-07-10
+
+### Added
+
+- **Review & Export** sidebar: forensic report export, save baseline, and check baseline controls in the diff viewer.
+- **Show changed wires only** filter toggle in View Options.
+- **`hoptracer` CLI**: `doctor`, `baseline save|list|compare`, and `report` commands (parity with desktop review workflows).
+- Agent skill renamed to **`hoptracer`** (`skills/hoptracer/`); install via `npx skills add lasaths/HopTracer@hoptracer`.
+
+### Fixed
+
+- Forensic report export failed at runtime because `ForensicReportArtifact` was missing from the source-generated JSON context.
+
 ## [1.2.0] - 2026-07-02
 
 ### Added

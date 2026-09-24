@@ -384,6 +384,18 @@
             margin-top: 14px;
         }
 
+        .review-action-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .review-action-btn {
+            width: 100%;
+            justify-content: center;
+            font-weight: 600;
+        }
+
         .sidebar-primary-action {
             text-decoration: none;
             display: inline-flex;
@@ -2166,6 +2178,15 @@
                     </div>
                 </div>
 
+                <div class="sidebar-card review-actions-card">
+                    <div class="section-label">Review &amp; Export</div>
+                    <div class="review-action-stack">
+                        <button type="button" id="btn-export-forensic" class="filter-btn review-action-btn" title="Download forensic JSON and HTML report">Export Report</button>
+                        <button type="button" id="btn-save-baseline" class="filter-btn review-action-btn" title="Save current file as a known-good baseline">Save Baseline</button>
+                        <button type="button" id="btn-check-baseline" class="filter-btn review-action-btn" title="Compare current file against a saved baseline">Check Baseline</button>
+                    </div>
+                </div>
+
                 <div class="component-results">
                     <div class="component-results-header">
                         <span>Components</span>
@@ -2199,6 +2220,10 @@
                         <label for="toggle-high-level-mods" class="option-toggle">
                             <input type="checkbox" id="toggle-high-level-mods" />
                             <span>Include high-level modifications</span>
+                        </label>
+                        <label for="toggle-changed-edges" class="option-toggle">
+                            <input type="checkbox" id="toggle-changed-edges" />
+                            <span>Show changed wires only</span>
                         </label>
                     </div>
                 </details>

@@ -71,7 +71,9 @@ It compares two versions, renders an interactive graph diff, and surfaces risk-f
 ### CLI (`hoptracer`)
 - Compare two `.gh`/`.ghx` files or diff against a Git commit from the terminal.
 - Output formats: `text`, `markdown`, `json`, `html`, and `agent` (AI-oriented JSON with resolved wire labels).
+- Review workflows: `doctor`, `baseline save|list|compare`, `report` (forensic JSON + HTML).
 - Shipped in portable releases at `tools/hoptracer/hoptracer.exe`; on PATH after Microsoft Store install.
+- Agent skill: `npx skills add lasaths/HopTracer@hoptracer -g -y` (see [`skills/hoptracer/SKILL.md`](skills/hoptracer/SKILL.md)).
 
 ### Diff Viewer (Web UI inside Desktop App)
 - Interactive canvas:
@@ -127,8 +129,6 @@ It compares two versions, renders an interactive graph diff, and surfaces risk-f
 
 ## Current Gaps / Missing Pieces
 
-- Baseline/report actions are implemented server-side, but corresponding UI buttons are not currently exposed in the default diff sidebar.
-- `toggle-changed-edges` logic exists in viewer code, but the checkbox is not currently present in visible markup.
 - Official build/distribution path is Windows-focused (MAUI project currently targets Windows in active config).
 - Full `.gh` conversion and best-effort cluster archive decoding depend on `GH_IO.dll` availability.
 - Cluster internals can still be unavailable for some archives/environments (diagnostics are surfaced when this happens).

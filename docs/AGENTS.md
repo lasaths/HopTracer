@@ -25,7 +25,7 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses
 - **GhDiffTool** (`hoptracer` CLI): Headless diff tool.
     - **Type**: .NET Console (`Source/Tools/GhDiffTool`).
     - **Role**: `compare` and `git` commands with text, markdown, JSON, HTML, and **agent** output formats.
-    - **Agent skill**: [`skills/gh-diff/SKILL.md`](../skills/gh-diff/SKILL.md) — commands, `--format agent`, CI patterns.
+    - **Agent skill**: [`skills/hoptracer/SKILL.md`](../skills/hoptracer/SKILL.md) — `npx skills add lasaths/HopTracer@hoptracer`; commands, `--format agent`, baselines, forensic report.
 
 ### CLI Data Flow (agents / CI)
 1. `hoptracer compare <old> <new> --format agent` (or `hoptracer git <file> --commit <hash>`).
@@ -178,7 +178,7 @@ HopTracer/
 │   ├── HopTracer.Core/      # Parsing & Diffing (Core)
 │   ├── GhConverter/         # GH->GHX Tool
 │   └── Tools/GhDiffTool/    # hoptracer CLI (compare, git, --format agent)
-├── skills/gh-diff/          # Agent skill for CLI workflows
+├── skills/hoptracer/          # Agent skill for CLI workflows
 ├── Tests/
 │   ├── HopTracer.UnitTests/ # Unit tests
 │   └── data/                # Sample .ghx fixtures

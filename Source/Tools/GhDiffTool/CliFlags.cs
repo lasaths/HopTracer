@@ -7,6 +7,8 @@ public sealed class CliFlags
     public DiffOutputFormat Format { get; set; } = DiffOutputFormat.Text;
     public string? OutputPath { get; set; }
     public string? Commit { get; set; }
+    public string? Name { get; set; }
+    public string? BaselineName { get; set; }
     public string? FileOldLabel { get; set; }
     public string? FileNewLabel { get; set; }
     public bool Compact { get; set; }

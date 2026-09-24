@@ -2,8 +2,8 @@
 # Validates metadata, locates MSIX artifacts, and prints Partner Center copy-paste fields.
 
 param(
-    [string]$PackageVersion = "1.2.0.0",
-    [string]$DisplayVersion = "1.2.0",
+    [string]$PackageVersion = "1.2.1.0",
+    [string]$DisplayVersion = "1.2.1",
     [string]$MsixDir = "",
     [switch]$Strict = $true
 )
@@ -56,10 +56,11 @@ else {
 $releaseNotes = @"
 HopTracer $DisplayVersion
 
-- hoptracer CLI for terminal and CI diff workflows
-- Agent-oriented diff JSON with resolved wire labels for AI review
-- hoptracer.exe on PATH after Store install
-- Forensic report export and baseline compare in the desktop app
+- Review & Export panel: forensic report download, save baseline, check baseline
+- Fix forensic export serialization crash
+- Show changed wires only filter in diff viewer
+- hoptracer CLI: doctor, baseline, and forensic report commands
+- Agent skill: npx skills add lasaths/HopTracer@hoptracer
 "@.Trim()
 
 $runFullTrustJustification = @"

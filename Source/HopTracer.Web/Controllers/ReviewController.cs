@@ -1,11 +1,9 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using HopTracer.Core.Models;
 using HopTracer.Core.Services;
 using HopTracer.Web.Serialization;
 using HopTracer.Web.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace HopTracer.Web.Controllers;
 
@@ -14,12 +12,10 @@ namespace HopTracer.Web.Controllers;
 public class ReviewController : ControllerBase
 {
     private readonly ILogger<ReviewController> _logger;
-    private readonly IGhxParser _parser;
-    private readonly IDiffer _differ;
-    private readonly IConverterService _converter;
     private readonly IFileValidationService _fileValidator;
     private readonly IAppDataStorageService _storage;
     private readonly ITempFileManager _tempFiles;
+    private readonly ReviewWorkflowService _review;
 
     public ReviewController(
         ILogger<ReviewController> logger,
@@ -31,12 +27,10 @@ public class ReviewController : ControllerBase
         ITempFileManager tempFiles)
     {
         _logger = logger;
-        _parser = parser;
-        _differ = differ;
-        _converter = converter;
         _fileValidator = fileValidator;
         _storage = storage;
         _tempFiles = tempFiles;
+        _review = new ReviewWorkflowService(parser, differ, converter, storage.BaselinesPath, logger: null);
     }
 
     [HttpPost("baseline/save")]
@@ -55,36 +49,14 @@ public class ReviewController : ControllerBase
         try
         {
             using var tempScope = _tempFiles.CreateScope();
-
-            var baselineDir = _storage.BaselinesPath;
-
-            var safeName = SanitizeName(request.Name);
-            var snapshotPath = Path.Combine(baselineDir, $"{safeName}.ghx");
-            var metadataPath = Path.Combine(baselineDir, $"{safeName}.json");
-
-            var preparedPath = EnsureGhx(normalizedPath, tempScope);
-            System.IO.File.Copy(preparedPath, snapshotPath, overwrite: true);
-
-            var graph = _parser.Parse(snapshotPath);
-            var baseline = new BaselineArtifact
-            {
-                Name = request.Name,
-                SourcePath = normalizedPath,
-                SnapshotPath = snapshotPath,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Fingerprint = ComputeFingerprint(graph),
-                NodeCount = graph.Nodes.Count,
-                EdgeCount = graph.Edges.Count
-            };
-
-            var json = JsonSerializer.Serialize(baseline);
-            System.IO.File.WriteAllText(metadataPath, json, Encoding.UTF8);
+            _ = tempScope;
+            var baseline = _review.SaveBaseline(normalizedPath, request.Name);
 
             return Ok(new
             {
                 ok = true,
                 baseline = baseline.Name,
-                baseline_file = metadataPath,
+                baseline_file = Path.Combine(_storage.BaselinesPath, $"{SanitizeFileName(request.Name)}.json"),
                 node_count = baseline.NodeCount,
                 edge_count = baseline.EdgeCount
             });
@@ -112,36 +84,22 @@ public class ReviewController : ControllerBase
         try
         {
             using var tempScope = _tempFiles.CreateScope();
-
-            var baseline = LoadBaseline(request.Name);
-            if (baseline == null)
-            {
-                return NotFound(new { error = $"Baseline '{request.Name}' not found." });
-            }
-
-            if (!System.IO.File.Exists(baseline.SnapshotPath))
-            {
-                return NotFound(new { error = $"Baseline snapshot is missing: {baseline.SnapshotPath}" });
-            }
-
-            var currentPath = EnsureGhx(normalizedPath, tempScope);
-            var oldGraph = _parser.Parse(baseline.SnapshotPath);
-            var newGraph = _parser.Parse(currentPath);
-            var diff = _differ.DiffDetailed(oldGraph, newGraph);
-
-            var currentFingerprint = ComputeFingerprint(newGraph);
-            var fingerprintMatch = string.Equals(baseline.Fingerprint, currentFingerprint, StringComparison.Ordinal);
-            var hasCritical = diff.RiskSummary.CriticalCount > 0 || diff.RiskSummary.HighCount > 0;
+            _ = tempScope;
+            var result = _review.CompareBaseline(normalizedPath, request.Name);
 
             return Ok(new
             {
-                baseline = baseline.Name,
-                fingerprint_match = fingerprintMatch,
-                passed = !hasCritical,
-                risk_summary = diff.RiskSummary,
-                top_risks = diff.TopRisks,
-                diagnostics = diff.Diagnostics
+                baseline = result.Baseline.Name,
+                fingerprint_match = result.FingerprintMatch,
+                passed = result.Passed,
+                risk_summary = result.Diff.RiskSummary,
+                top_risks = result.Diff.TopRisks,
+                diagnostics = result.Diff.Diagnostics
             });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { error = ex.Message });
         }
         catch (Exception ex)
         {
@@ -171,46 +129,14 @@ public class ReviewController : ControllerBase
         try
         {
             using var tempScope = _tempFiles.CreateScope();
-            var oldPath = EnsureGhx(normalizedOld, tempScope);
-            var newPath = EnsureGhx(normalizedNew, tempScope);
+            _ = tempScope;
+            var bundle = _review.BuildForensicReport(normalizedOld, normalizedNew, request.BaselineName);
 
-            var oldGraph = _parser.Parse(oldPath);
-            var newGraph = _parser.Parse(newPath);
-            var diff = _differ.DiffDetailed(oldGraph, newGraph);
-
-            var report = new ForensicReportArtifact
-            {
-                GeneratedAt = DateTimeOffset.UtcNow,
-                FileOld = Path.GetFileName(normalizedOld),
-                FileNew = Path.GetFileName(normalizedNew),
-                NodeCount = diff.Nodes.Count,
-                EdgeCount = diff.Edges.Count,
-                RiskSummary = diff.RiskSummary,
-                TopRisks = diff.TopRisks,
-                Diagnostics = diff.Diagnostics
-            };
-
-            if (!string.IsNullOrWhiteSpace(request.BaselineName))
-            {
-                var baseline = LoadBaseline(request.BaselineName);
-                if (baseline != null)
-                {
-                    report.BaselineName = baseline.Name;
-                    report.BaselineFingerprint = baseline.Fingerprint;
-                }
-            }
-
-            var reportJson = JsonSerializer.Serialize(report);
-            var signature = ComputeSha256(reportJson);
-            report.Signature = signature;
-            reportJson = JsonSerializer.Serialize(report, AppJsonContext.Default.Options);
-
-            var reportHtml = BuildReportHtml(report);
             return Ok(new
             {
-                report_json = reportJson,
-                report_html = reportHtml,
-                signature
+                report_json = bundle.ReportJson,
+                report_html = bundle.ReportHtml,
+                signature = bundle.Signature
             });
         }
         catch (Exception ex)
@@ -239,7 +165,7 @@ public class ReviewController : ControllerBase
 
             if (!string.IsNullOrWhiteSpace(request.BaselineName))
             {
-                var baseline = LoadBaseline(request.BaselineName);
+                var baseline = _review.LoadBaseline(request.BaselineName);
                 if (baseline != null)
                 {
                     report.BaselineName = baseline.Name;
@@ -248,16 +174,14 @@ public class ReviewController : ControllerBase
             }
 
             var reportJson = JsonSerializer.Serialize(report);
-            var signature = ComputeSha256(reportJson);
-            report.Signature = signature;
+            report.Signature = ComputeSha256(reportJson);
             reportJson = JsonSerializer.Serialize(report, AppJsonContext.Default.Options);
 
-            var reportHtml = BuildReportHtml(report);
             return Ok(new
             {
                 report_json = reportJson,
-                report_html = reportHtml,
-                signature
+                report_html = BuildReportHtml(report),
+                signature = report.Signature
             });
         }
         catch (Exception ex)
@@ -267,75 +191,17 @@ public class ReviewController : ControllerBase
         }
     }
 
-    private string EnsureGhx(string normalizedPath, ITempFileScope tempScope)
-    {
-        var uploadsPath = _storage.UploadsPath;
-        var extension = Path.GetExtension(normalizedPath);
-        var tempSourcePath = Path.Combine(uploadsPath, $"review_{Guid.NewGuid():N}{extension}");
-        System.IO.File.Copy(normalizedPath, tempSourcePath, overwrite: true);
-        tempScope.Track(tempSourcePath);
-
-        if (tempSourcePath.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase))
-        {
-            return tempSourcePath;
-        }
-
-        if (!_converter.TryCheckDependencies(out var dependencyMessage))
-        {
-            throw new InvalidOperationException(dependencyMessage);
-        }
-
-        var convertedPath = _converter.ConvertGhToGhx(
-            tempSourcePath,
-            Path.Combine(uploadsPath, $"review_{Guid.NewGuid():N}.ghx"));
-        if (!string.Equals(convertedPath, tempSourcePath, StringComparison.OrdinalIgnoreCase))
-        {
-            tempScope.Track(convertedPath);
-        }
-
-        return convertedPath;
-    }
-
-    private BaselineArtifact? LoadBaseline(string name)
-    {
-        var safeName = SanitizeName(name);
-        var metadataPath = Path.Combine(_storage.BaselinesPath, $"{safeName}.json");
-        if (!System.IO.File.Exists(metadataPath))
-        {
-            return null;
-        }
-
-        var json = System.IO.File.ReadAllText(metadataPath, Encoding.UTF8);
-        return JsonSerializer.Deserialize<BaselineArtifact>(json);
-    }
-
-    private static string ComputeFingerprint(Graph graph)
-    {
-        var nodeSignature = string.Join("\n",
-            graph.Nodes.Values
-                .OrderBy(n => n.Id, StringComparer.Ordinal)
-                .Select(n => $"{n.Id}|{n.Name}|{n.Nickname}|{n.X:F3}|{n.Y:F3}|{n.Inputs.Count}|{n.Outputs.Count}"));
-        var edgeSignature = string.Join("\n",
-            graph.Edges
-                .OrderBy(e => e.Source, StringComparer.Ordinal)
-                .ThenBy(e => e.SourcePort, StringComparer.Ordinal)
-                .ThenBy(e => e.Target, StringComparer.Ordinal)
-                .ThenBy(e => e.TargetPort, StringComparer.Ordinal)
-                .Select(e => $"{e.Source}:{e.SourcePort}->{e.Target}:{e.TargetPort}"));
-        return ComputeSha256(nodeSignature + "\n---\n" + edgeSignature);
-    }
-
-    private static string ComputeSha256(string text)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
-        return Convert.ToHexString(bytes);
-    }
-
-    private static string SanitizeName(string raw)
+    private static string SanitizeFileName(string raw)
     {
         var chars = raw.Where(c => char.IsLetterOrDigit(c) || c is '-' or '_').ToArray();
         var sanitized = new string(chars);
         return string.IsNullOrWhiteSpace(sanitized) ? "baseline" : sanitized;
+    }
+
+    private static string ComputeSha256(string text)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(bytes);
     }
 
     private static string BuildReportHtml(ForensicReportArtifact report)
@@ -396,30 +262,4 @@ public class ForensicReportFromDiffRequest
     public List<NodeRiskFinding>? TopRisks { get; set; }
     public List<DiffDiagnostic>? Diagnostics { get; set; }
     public string? BaselineName { get; set; }
-}
-
-public class BaselineArtifact
-{
-    public string Name { get; set; } = string.Empty;
-    public string SourcePath { get; set; } = string.Empty;
-    public string SnapshotPath { get; set; } = string.Empty;
-    public DateTimeOffset CreatedAt { get; set; }
-    public string Fingerprint { get; set; } = string.Empty;
-    public int NodeCount { get; set; }
-    public int EdgeCount { get; set; }
-}
-
-public class ForensicReportArtifact
-{
-    public DateTimeOffset GeneratedAt { get; set; }
-    public string FileOld { get; set; } = string.Empty;
-    public string FileNew { get; set; } = string.Empty;
-    public int NodeCount { get; set; }
-    public int EdgeCount { get; set; }
-    public DiffRiskSummary RiskSummary { get; set; } = new();
-    public List<NodeRiskFinding> TopRisks { get; set; } = new();
-    public List<DiffDiagnostic> Diagnostics { get; set; } = new();
-    public string Signature { get; set; } = string.Empty;
-    public string? BaselineName { get; set; }
-    public string? BaselineFingerprint { get; set; }
 }

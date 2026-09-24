@@ -43,6 +43,9 @@ public static class CliRunner
             {
                 "compare" => RunCompare(positional, flags, stdout, stderr),
                 "git" => RunGit(positional, flags, stdout, stderr),
+                "doctor" => RunDoctor(stdout, stderr),
+                "baseline" => RunBaseline(positional, flags, stdout, stderr),
+                "report" => RunReport(positional, flags, stdout, stderr),
                 _ => Fail(stderr, flags.Format, "unknown_command", $"Unknown command: {command}", $"Unknown command: {command}")
             };
         }
@@ -64,6 +67,157 @@ public static class CliRunner
     {
         while (ex.InnerException != null) ex = ex.InnerException;
         return ex.Message;
+    }
+
+    private static int RunDoctor(TextWriter stdout, TextWriter stderr)
+    {
+        var review = new ReviewWorkflowService();
+        var deps = review.CheckDependencies();
+        var payload = new Dictionary<string, object?>
+        {
+            ["version"] = GetVersion(),
+            ["ghIoAvailable"] = deps.GhIoAvailable,
+            ["ghIoMessage"] = deps.GhIoMessage,
+            ["baselinesPath"] = deps.BaselinesPath,
+            ["ready"] = deps.GhIoAvailable
+        };
+
+        stdout.WriteLine(JsonSerializer.Serialize(payload));
+        return deps.GhIoAvailable ? 0 : 1;
+    }
+
+    private static int RunBaseline(string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
+    {
+        if (positional.Length < 1)
+        {
+            return Fail(stderr, flags.Format, "usage_error", "baseline requires a subcommand",
+                "Usage: hoptracer baseline <save|list|compare> ...");
+        }
+
+        var review = new ReviewWorkflowService();
+        var subcommand = positional[0].ToLowerInvariant();
+        var args = positional.Skip(1).ToArray();
+
+        try
+        {
+            return subcommand switch
+            {
+                "save" => RunBaselineSave(review, args, flags, stdout, stderr),
+                "list" => RunBaselineList(review, flags, stdout),
+                "compare" => RunBaselineCompare(review, args, flags, stdout, stderr),
+                _ => Fail(stderr, flags.Format, "unknown_command", $"Unknown baseline subcommand: {subcommand}",
+                    $"Unknown baseline subcommand: {subcommand}")
+            };
+        }
+        catch (Exception ex)
+        {
+            return Fail(stderr, flags.Format, "error", GetDeepMessage(ex), $"Error: {GetDeepMessage(ex)}");
+        }
+    }
+
+    private static int RunBaselineSave(ReviewWorkflowService review, string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
+    {
+        if (positional.Length < 1 || string.IsNullOrWhiteSpace(flags.Name))
+        {
+            return Fail(stderr, flags.Format, "usage_error", "baseline save requires file and --name",
+                "Usage: hoptracer baseline save <file> --name <baselineName>");
+        }
+
+        var filePath = Path.GetFullPath(positional[0]);
+        var baseline = review.SaveBaseline(filePath, flags.Name);
+        var payload = new
+        {
+            ok = true,
+            baseline = baseline.Name,
+            nodeCount = baseline.NodeCount,
+            edgeCount = baseline.EdgeCount,
+            fingerprint = baseline.Fingerprint,
+            snapshotPath = baseline.SnapshotPath
+        };
+
+        WriteJson(stdout, flags, payload);
+        return 0;
+    }
+
+    private static int RunBaselineList(ReviewWorkflowService review, CliFlags flags, TextWriter stdout)
+    {
+        var baselines = review.ListBaselines();
+        WriteJson(stdout, flags, baselines.Select(b => new
+        {
+            name = b.Name,
+            createdAt = b.CreatedAt,
+            nodeCount = b.NodeCount,
+            edgeCount = b.EdgeCount,
+            sourcePath = b.SourcePath
+        }));
+        return 0;
+    }
+
+    private static int RunBaselineCompare(ReviewWorkflowService review, string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
+    {
+        if (positional.Length < 1 || string.IsNullOrWhiteSpace(flags.Name))
+        {
+            return Fail(stderr, flags.Format, "usage_error", "baseline compare requires file and --name",
+                "Usage: hoptracer baseline compare <file> --name <baselineName> [compare options]");
+        }
+
+        var filePath = Path.GetFullPath(positional[0]);
+        var result = review.CompareBaseline(filePath, flags.Name);
+        flags.FileOldLabel = $"{result.Baseline.Name} (baseline)";
+        flags.FileNewLabel = Path.GetFileName(filePath);
+        var code = WriteOutput(result.Diff, flags.FileOldLabel, flags.FileNewLabel, flags, stdout, stderr);
+        if (flags.FailOnRisk && !result.Passed)
+        {
+            return 1;
+        }
+
+        return code;
+    }
+
+    private static int RunReport(string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
+    {
+        if (positional.Length < 2)
+        {
+            return Fail(stderr, flags.Format, "usage_error", "report requires old and new file paths",
+                "Usage: hoptracer report <oldFile> <newFile> [-o <dir>] [--baseline <name>]");
+        }
+
+        var oldPath = Path.GetFullPath(positional[0]);
+        var newPath = Path.GetFullPath(positional[1]);
+        var review = new ReviewWorkflowService();
+        var bundle = review.BuildForensicReport(oldPath, newPath, flags.BaselineName);
+
+        if (!string.IsNullOrWhiteSpace(flags.OutputPath))
+        {
+            var outputDir = Path.GetFullPath(flags.OutputPath);
+            Directory.CreateDirectory(outputDir);
+            var stem = $"hoptracer_forensic_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}";
+            var jsonPath = Path.Combine(outputDir, $"{stem}.json");
+            var htmlPath = Path.Combine(outputDir, $"{stem}.html");
+            File.WriteAllText(jsonPath, bundle.ReportJson);
+            File.WriteAllText(htmlPath, bundle.ReportHtml);
+            stdout.WriteLine(jsonPath);
+            stdout.WriteLine(htmlPath);
+            return 0;
+        }
+
+        WriteJson(stdout, flags, new
+        {
+            signature = bundle.Signature,
+            reportJson = bundle.ReportJson,
+            reportHtml = bundle.ReportHtml
+        });
+        return 0;
+    }
+
+    private static void WriteJson(TextWriter stdout, CliFlags flags, object payload)
+    {
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = flags.Format is DiffOutputFormat.Agent or DiffOutputFormat.Json
+        });
+        stdout.WriteLine(json);
     }
 
     private static int RunCompare(string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
@@ -273,6 +427,12 @@ public static class CliRunner
                 case "--commit":
                     flags.Commit = NextArg(args, ref i, arg);
                     break;
+                case "--name":
+                    flags.Name = NextArg(args, ref i, arg);
+                    break;
+                case "--baseline":
+                    flags.BaselineName = NextArg(args, ref i, arg);
+                    break;
                 case "--compact":
                     flags.Compact = true;
                     break;
@@ -349,6 +509,27 @@ public static class CliRunner
             PrintOptions(stdout);
             return;
         }
+        if (command is "baseline")
+        {
+            stdout.WriteLine("hoptracer baseline <save|list|compare> ...");
+            stdout.WriteLine("  save <file> --name <baselineName>");
+            stdout.WriteLine("  list");
+            stdout.WriteLine("  compare <file> --name <baselineName> [compare options]");
+            stdout.WriteLine();
+            PrintOptions(stdout);
+            return;
+        }
+        if (command is "report")
+        {
+            stdout.WriteLine("hoptracer report <oldFile> <newFile> [-o <dir>] [--baseline <name>]");
+            return;
+        }
+        if (command is "doctor")
+        {
+            stdout.WriteLine("hoptracer doctor");
+            stdout.WriteLine("  Check GH_IO availability and print CLI environment details.");
+            return;
+        }
         if (command is "git")
         {
             stdout.WriteLine("hoptracer git <file> [--commit <hash>] [options]");
@@ -363,6 +544,9 @@ public static class CliRunner
 Usage:
   hoptracer compare <oldFile> <newFile> [options]
   hoptracer git <file> [--commit <hash>] [options]
+  hoptracer baseline <save|list|compare> ...
+  hoptracer report <oldFile> <newFile> [-o <dir>] [--baseline <name>]
+  hoptracer doctor
   hoptracer help [command]
   hoptracer --version
 """);
@@ -374,8 +558,10 @@ Usage:
         stdout.WriteLine("""
 Options:
   -f, --format <text|md|json|html|agent>   Output format (default: text)
-  -o, --output <file>                Write to file instead of stdout
+  -o, --output <file>                Write to file or output directory
   --commit <hash>                    Git commit to compare against (git command)
+  --name <baselineName>              Baseline name (baseline save/compare)
+  --baseline <name>                  Attach baseline metadata to forensic report
   --compact                          Compact output
   -v, --verbose                      Include port/connection details
   --show-edges                       Include changed edges

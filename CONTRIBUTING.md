@@ -38,7 +38,7 @@ HopTracer/
 │   ├── HopTracer.Core/     # Parsing & diffing logic
 │   ├── GhConverter/        # GH to GHX converter
 │   └── Tools/GhDiffTool/   # hoptracer CLI (compare, git, --format agent)
-├── skills/gh-diff/         # Agent skill — see SKILL.md for CLI workflows
+├── skills/hoptracer/         # Agent skill — see SKILL.md; `npx skills add lasaths/HopTracer@hoptracer`
 ├── Tests/HopTracer.UnitTests/ # Unit tests
 ├── Tests/data/             # Test fixtures (.ghx)
 ├── scripts/                # Build and setup scripts
@@ -124,7 +124,7 @@ dotnet publish ./Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release -o ./bin/h
 ./bin/hoptracer/hoptracer.exe compare Tests/data/compare-old.ghx Tests/data/compare-new.ghx --format agent
 ```
 
-Agent workflows: [`skills/gh-diff/SKILL.md`](skills/gh-diff/SKILL.md).
+Agent workflows: [`skills/hoptracer/SKILL.md`](skills/hoptracer/SKILL.md).
 
 ## Questions?
 

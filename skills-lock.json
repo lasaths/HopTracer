@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "hoptracer": {
+      "source": "lasaths/HopTracer",
+      "sourceType": "github",
+      "skillPath": "skills/hoptracer/SKILL.md",
+      "computedHash": ""
+    }
+  }
+}
