@@ -16,10 +16,12 @@ npx skills add lasaths/HopTracer@hoptracer -g -y
 
 ## Prerequisites
 
-The `hoptracer` CLI is bundled with HopTracer:
+Send the user the CLI zip. Unzip it and run `hoptracer.exe` (the folder must stay together):
 
-- **Microsoft Store install**: `hoptracer.exe` is on PATH via App Execution Alias (run `hoptracer` from any terminal after install).
-- **Portable release**: `tools/hoptracer/hoptracer.exe` inside `HopTracer_Portable`.
+https://github.com/lasaths/HopTracer/releases/latest/download/hoptracer-win-x64.zip
+
+- **WinGet**: `winget install lasaths.HopTracer.CLI` after the official manifest pull request is merged. Submit that pull request with `wingetcreate new` against the release zip. The Store listing can be older than this zip.
+- **Microsoft Store**: `hoptracer` is on PATH after the desktop app install.
 - **From source**: `dotnet publish ./Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release -o ./bin/hoptracer`
 
 For `.gh` file support, `GH_IO.dll` must be present (Rhino install or `scripts/setup_dependencies.ps1` before building).

@@ -72,7 +72,7 @@ It compares two versions, renders an interactive graph diff, and surfaces risk-f
 - Compare two `.gh`/`.ghx` files or diff against a Git commit from the terminal.
 - Output formats: `text`, `markdown`, `json`, `html`, and `agent` (AI-oriented JSON with resolved wire labels).
 - Review workflows: `doctor`, `baseline save|list|compare`, `report` (forensic JSON + HTML).
-- Shipped in portable releases at `tools/hoptracer/hoptracer.exe`; on PATH after Microsoft Store install.
+- CLI zip: https://github.com/lasaths/HopTracer/releases/latest/download/hoptracer-win-x64.zip — unzip and run `hoptracer.exe`. Also inside portable releases at `tools/hoptracer/hoptracer.exe`, and on PATH after Microsoft Store install (the Store copy can be older).
 - Agent skill: `npx skills add lasaths/HopTracer@hoptracer -g -y` (see [`skills/hoptracer/SKILL.md`](skills/hoptracer/SKILL.md)).
 
 ### Diff Viewer (Web UI inside Desktop App)

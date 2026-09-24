@@ -219,8 +219,13 @@ AI-oriented JSON with resolved wire labels, classified property changes, and a t
 
 ## Distribution
 
-- **Microsoft Store**: `hoptracer.exe` is registered as an App Execution Alias and available on PATH after install.
-- **Portable release**: `tools/hoptracer/hoptracer.exe` inside the extracted folder (not on PATH).
+Send the CLI zip. Unzip it and run `hoptracer.exe`:
+
+https://github.com/lasaths/HopTracer/releases/latest/download/hoptracer-win-x64.zip
+
+- **WinGet**: `winget install lasaths.HopTracer.CLI` after `wingetcreate new` is merged for that zip. The Store package can lag.
+- **Microsoft Store**: `hoptracer.exe` is on PATH via the desktop app execution alias.
+- **Portable app**: `tools/hoptracer/hoptracer.exe` inside `HopTracer_Portable` (not on PATH).
 
 ## Environment Variables
 

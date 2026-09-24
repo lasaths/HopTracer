@@ -46,7 +46,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: HopTracer-Windows-x64
-        path: ./Release/HopTracer-Windows-x64.zip
+        path: |
+          ./Release/HopTracer-Windows-x64.zip
+          ./Release/hoptracer-win-x64.zip
         retention-days: 30
 
   release:
@@ -67,7 +69,9 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: ./artifacts/HopTracer-Windows-x64.zip
+        files: |
+          ./artifacts/HopTracer-Windows-x64.zip
+          ./artifacts/hoptracer-win-x64.zip
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

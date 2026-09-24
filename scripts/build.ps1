@@ -184,10 +184,23 @@ if (Test-Path $exePath) {
     Write-Host "  OK Release archive created: $zipPath ($zipSizeMb MB)" -ForegroundColor Green
 }
 
+$cliZipPath = Join-Path $releaseDir "hoptracer-win-x64.zip"
+$cliDir = Join-Path $finalOutputDir "tools\hoptracer"
+if (Test-Path $cliDir) {
+    if (Test-Path $cliZipPath) {
+        Remove-Item $cliZipPath -Force
+    }
+
+    Compress-Archive -Path (Join-Path $cliDir "*") -DestinationPath $cliZipPath -Force
+    $cliZipSizeMb = [math]::Round((Get-Item $cliZipPath).Length / 1MB, 2)
+    Write-Host "  OK CLI archive created: $cliZipPath ($cliZipSizeMb MB)" -ForegroundColor Green
+}
+
 # Summary
 Write-Host "`n=== Build Complete ===" -ForegroundColor Green
 Write-Host "Portable folder: $finalOutputDir" -ForegroundColor Cyan
 Write-Host "Release archive: $zipPath" -ForegroundColor Cyan
 Write-Host "To test: $finalOutputDir\HopTracer.exe" -ForegroundColor White
 Write-Host "CLI tool: $finalOutputDir\tools\hoptracer\hoptracer.exe" -ForegroundColor White
+Write-Host "CLI archive: $cliZipPath" -ForegroundColor White
 Write-Host ""
