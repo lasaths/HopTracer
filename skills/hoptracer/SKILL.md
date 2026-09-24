@@ -16,11 +16,11 @@ npx skills add lasaths/HopTracer@hoptracer -g -y
 
 ## Prerequisites
 
-Send the user the CLI zip. Unzip it and run `hoptracer.exe` (the folder must stay together):
+Send `hoptracer-win-x64.zip` from GitHub release **v1.3.1**. Unzip it and run `hoptracer.exe`. Keep the unzipped folder together.
 
-https://github.com/lasaths/HopTracer/releases/latest/download/hoptracer-win-x64.zip
+The repository is private, so that release URL is not anonymous. Send the zip file unless the recipient can already access the repo.
 
-- **WinGet**: `winget install lasaths.HopTracer.CLI` after the official manifest pull request is merged. Submit that pull request with `wingetcreate new` against the release zip. The Store listing can be older than this zip.
+- **WinGet**: `wingetcreate new` cannot download a private release asset (HTTP 404). Publish the zip at a public URL first, then submit `lasaths.HopTracer.CLI`. The Store listing can be older than this zip.
 - **Microsoft Store**: `hoptracer` is on PATH after the desktop app install.
 - **From source**: `dotnet publish ./Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release -o ./bin/hoptracer`
 

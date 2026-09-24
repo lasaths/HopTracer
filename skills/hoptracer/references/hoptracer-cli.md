@@ -219,11 +219,9 @@ AI-oriented JSON with resolved wire labels, classified property changes, and a t
 
 ## Distribution
 
-Send the CLI zip. Unzip it and run `hoptracer.exe`:
+Send `hoptracer-win-x64.zip` from GitHub release **v1.3.1**. Unzip it and run `hoptracer.exe`. The repository is private, so send the file unless the recipient can access the repo.
 
-https://github.com/lasaths/HopTracer/releases/latest/download/hoptracer-win-x64.zip
-
-- **WinGet**: `winget install lasaths.HopTracer.CLI` after `wingetcreate new` is merged for that zip. The Store package can lag.
+- **WinGet**: blocked until the zip is on a public URL. `wingetcreate new` returns HTTP 404 for this release. Package id to use then: `lasaths.HopTracer.CLI`. The Store package can lag.
 - **Microsoft Store**: `hoptracer.exe` is on PATH via the desktop app execution alias.
 - **Portable app**: `tools/hoptracer/hoptracer.exe` inside `HopTracer_Portable` (not on PATH).
 
