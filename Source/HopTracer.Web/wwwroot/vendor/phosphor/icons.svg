@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Clock (modified) -->
+  <symbol id="ph-clock" viewBox="0 0 256 256">
+    <circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <polyline points="128 80 128 128 168 152" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Minus Circle (removed) -->
+  <symbol id="ph-minus-circle" viewBox="0 0 256 256">
+    <circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="88" y1="128" x2="168" y2="128" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Plus Circle (added) -->
+  <symbol id="ph-plus-circle" viewBox="0 0 256 256">
+    <circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="88" y1="128" x2="168" y2="128" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="128" y1="88" x2="128" y2="168" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Magnifying Glass (search) -->
+  <symbol id="ph-magnifying-glass" viewBox="0 0 256 256">
+    <circle cx="116" cy="116" r="84" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="175.4" y1="175.4" x2="224" y2="224" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Arrows Out (fit) -->
+  <symbol id="ph-arrows-out" viewBox="0 0 256 256">
+    <polyline points="168 48 208 48 208 88" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="152" y1="104" x2="208" y2="48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <polyline points="88 208 48 208 48 168" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="104" y1="152" x2="48" y2="208" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Caret Right -->
+  <symbol id="ph-caret-right" viewBox="0 0 256 256">
+    <polyline points="96 48 176 128 96 208" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Caret Left -->
+  <symbol id="ph-caret-left" viewBox="0 0 256 256">
+    <polyline points="160 208 80 128 160 48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Funnel (filter) -->
+  <symbol id="ph-funnel" viewBox="0 0 256 256">
+    <path d="M32,56H224L152,144v56l-48,32V144Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Download Simple -->
+  <symbol id="ph-download-simple" viewBox="0 0 256 256">
+    <line x1="128" y1="24" x2="128" y2="144" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <polyline points="56 96 128 168 200 96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="216" y1="152" x2="216" y2="208" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="40" y1="152" x2="40" y2="208" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="40" y1="208" x2="216" y2="208" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Gear Six -->
+  <symbol id="ph-gear-six" viewBox="0 0 256 256">
+    <circle cx="128" cy="128" r="48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M197.4,80.7a73.6,73.6,0,0,1,6.3,10.9L229.6,106a102.9,102.9,0,0,1,0,44l-25.9,14.4a73.6,73.6,0,0,1-6.3,10.9l.5,29.7a104,104,0,0,1-38.1,22.1l-25.5-15.3a88.3,88.3,0,0,1-12.6,0L96.2,227a104,104,0,0,1-38.1-22.1l.5-29.7a73.6,73.6,0,0,1-6.3-10.9L26.4,150a102.9,102.9,0,0,1,0-44L52.3,91.6a73.6,73.6,0,0,1,6.3-10.9L58.1,51a104,104,0,0,1,38.1-22.1l25.5,15.3a88.3,88.3,0,0,1,12.6,0L159.8,29a104,104,0,0,1,38.1,22.1Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+</svg>
