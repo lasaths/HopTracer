@@ -24,7 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **ANDURA design system**: Mission-critical dark UI with monochrome base (grey when normal, colour only for abnormal states). Sources: https://github.com/lasaths/andura-skill (MIT license, commit 963ae3c).
+- **Apple-inspired design system**: Comprehensive redesign following Apple pro app principles (Xcode, Final Cut, Logic dark mode)
+  - True dark mode: Pure black (#000) base with subtle elevated surfaces
+  - System font stack with precise typography scale
+  - Spring-based, interruptible motion with `prefers-reduced-motion` support
+  - Single source of truth for all colors (no hard-coded values)
 - **Enhanced agent diff output** (`--format agent`):
   - Component category classification (Params, Maths, Script, etc.) for better semantic context
   - Group context: detects group nodes and includes member count and color
