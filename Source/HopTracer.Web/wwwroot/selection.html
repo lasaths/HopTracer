@@ -6,20 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grasshopper Diff Tool</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
+    <link rel="stylesheet" href="/andura/andura-fonts.css">
     <style>
+        /* ANDURA Design System - Selection Page */
         :root {
-            --bg: #0f1115;
-            --panel: #16181d;
-            --border: #2a2d36;
-            --accent: #5c80f7;
-            --text: #eceef5;
-            --text-dim: #949aa5;
+            --void: #000000;
+            --surface: #090A0C;
+            --line: #3C3D41;
+            --muted: #8A8C91;
+            --text: #DADADD;
+            --ultramarine: #3A3CFF;
+            --ultramarine-text: #5A74F1;
         }
 
         body {
             margin: 0;
-            font-family: "Geist Sans", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-            background-color: var(--bg);
+            font-family: "IBM Plex Sans", sans-serif;
+            background-color: var(--void);
             color: var(--text);
             display: flex;
             flex-direction: column;
@@ -42,7 +45,8 @@
 
         h1 {
             margin-bottom: 40px;
-            font-weight: 600;
+            font-weight: 500;
+            font-size: 22px;
         }
 
         .drop-zone-container {
@@ -54,8 +58,8 @@
         .drop-zone {
             flex: 1;
             height: 200px;
-            background: var(--panel);
-            border: 2px dashed var(--border);
+            background: var(--surface);
+            border: 2px dashed var(--line);
             border-radius: 12px;
             display: flex;
             flex-direction: column;
@@ -68,8 +72,8 @@
 
         .drop-zone:hover,
         .drop-zone.dragover {
-            border-color: var(--accent);
-            background: rgba(92, 128, 247, 0.05);
+            border-color: var(--ultramarine);
+            background: rgba(58, 60, 255, 0.05);
         }
 
         .drop-zone input {
@@ -84,48 +88,48 @@
             width: 48px;
             height: 48px;
             margin-bottom: 16px;
-            color: var(--text-dim);
+            color: var(--muted);
         }
 
         .label {
             font-size: 14px;
-            color: var(--text-dim);
+            color: var(--muted);
             font-weight: 500;
         }
 
         .filename {
             margin-top: 10px;
             font-size: 13px;
-            color: var(--accent);
+            color: var(--ultramarine-text);
             font-weight: 600;
-            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-family: "IBM Plex Mono", monospace;
         }
 
         .btn {
-            background: var(--accent);
-            color: white;
+            background: var(--ultramarine);
+            color: var(--text);
             border: none;
             padding: 12px 32px;
             border-radius: 8px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: opacity 0.2s;
         }
 
         .btn:hover {
-            background: #4b6cdb;
+            opacity: 0.9;
         }
 
         .btn:disabled {
-            background: var(--border);
+            background: var(--line);
             cursor: not-allowed;
-            color: var(--text-dim);
+            color: var(--muted);
         }
 
         .flash-messages {
             margin-bottom: 20px;
-            color: #f44336;
+            color: #F45536;
             background: rgba(244, 67, 54, 0.1);
             padding: 10px;
             border-radius: 6px;
