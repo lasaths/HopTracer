@@ -66,6 +66,56 @@ public class DiffAgentFormatterTests
     }
 
     [Fact]
+    public void Generate_Agent_IncludesComponentCategoryAndPosition()
+    {
+        var diff = _differ.DiffDetailed(CreateOldGraph(), CreateNewGraph());
+        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Agent);
+        using var doc = JsonDocument.Parse(json);
+
+        var nodeChange = doc.RootElement.GetProperty("nodeChanges")[0];
+        Assert.True(nodeChange.TryGetProperty("componentName", out var componentName));
+        Assert.False(string.IsNullOrWhiteSpace(componentName.GetString()));
+        Assert.True(nodeChange.TryGetProperty("position", out var position));
+        Assert.True(position.TryGetProperty("x", out _));
+        Assert.True(position.TryGetProperty("y", out _));
+    }
+
+    [Fact]
+    public void Generate_Agent_SummaryIncludesRiskLevels()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = CreateNode("A", "Number Slider", "Sld"),
+                ["B"] = CreateNode("B", "Python", "Py", properties: new Dictionary<string, string>
+                {
+                    ["Code"] = "# old code"
+                })
+            }
+        };
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = CreateNode("A", "Number Slider", "Sld"),
+                ["B"] = CreateNode("B", "Python", "Py", properties: new Dictionary<string, string>
+                {
+                    ["Code"] = "# new code"
+                })
+            }
+        };
+
+        var diff = _differ.DiffDetailed(oldGraph, newGraph);
+        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Agent);
+        using var doc = JsonDocument.Parse(json);
+
+        var summary = doc.RootElement.GetProperty("summary").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(summary));
+        Assert.Contains("script", summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Generate_Agent_ClassifiesPanelAndOpaqueProperties()
     {
         var blobOld = new string('A', 300);

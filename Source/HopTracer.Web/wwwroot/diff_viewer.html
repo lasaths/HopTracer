@@ -1,113 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HopTracer</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
+    
+    <!-- ANDURA Design System (mission-critical dark UI, github.com/lasaths/andura-skill) -->
+    <link rel="stylesheet" href="/andura/andura-fonts.css">
+    <link rel="stylesheet" href="/andura/hoptracer-andura.css">
+    
     <style>
         :root {
-            /* Shadcn Dark Theme (Zinc/Slate) */
-            --radius: 0.65rem;
-            --background: oklch(1 0 0);
-            --foreground: oklch(0.141 0.005 285.823);
-            --card: oklch(1 0 0);
-            --card-foreground: oklch(0.141 0.005 285.823);
-            --popover: oklch(1 0 0);
-            --popover-foreground: oklch(0.141 0.005 285.823);
-            --primary: oklch(0.541 0.281 293.009);
-            --primary-foreground: oklch(0.969 0.016 293.756);
-            --secondary: oklch(0.967 0.001 286.375);
-            --secondary-foreground: oklch(0.21 0.006 285.885);
-            --muted: oklch(0.967 0.001 286.375);
-            --muted-foreground: oklch(0.552 0.016 285.938);
-            --accent: oklch(0.967 0.001 286.375);
-            --accent-foreground: oklch(0.21 0.006 285.885);
-            --destructive: oklch(0.577 0.245 27.325);
-            --border: oklch(0.92 0.004 286.32);
-            --input: oklch(0.92 0.004 286.32);
-            --ring: oklch(0.702 0.183 293.541);
-            --chart-1: oklch(0.811 0.111 293.571);
-            --chart-2: oklch(0.606 0.25 292.717);
-            --chart-3: oklch(0.541 0.281 293.009);
-            --chart-4: oklch(0.491 0.27 292.581);
-            --chart-5: oklch(0.432 0.232 292.759);
-            --sidebar: oklch(0.985 0 0);
-            --sidebar-foreground: oklch(0.141 0.005 285.823);
-            --sidebar-primary: oklch(0.541 0.281 293.009);
-            --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-            --sidebar-accent: oklch(0.967 0.001 286.375);
-            --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-            --sidebar-border: oklch(0.92 0.004 286.32);
-            --sidebar-ring: oklch(0.702 0.183 293.541);
-
-            /* App Mappings (Light Mode Default) */
+            /* ANDURA Design System - Dark Only, Monochrome, Type-Led
+               Grey when normal, colour only for abnormal states.
+               Source: github.com/lasaths/andura-skill (commit 963ae3c)
+               License: MIT */
+            
+            --radius: 0;
+            
+            /* ANDURA Core Palette v2.2 */
+            --background: #000000;
+            --foreground: #DADADD;
+            --card: #090A0C;
+            --card-foreground: #DADADD;
+            --popover: #090A0C;
+            --popover-foreground: #DADADD;
+            --primary: #3A3CFF;
+            --primary-foreground: #DADADD;
+            --secondary: #141518;
+            --secondary-foreground: #DADADD;
+            --muted: #141518;
+            --muted-foreground: #8A8C91;
+            --accent: #3A3CFF;
+            --accent-foreground: #DADADD;
+            --destructive: #F45536;
+            --border: #3C3D41;
+            --input: #3C3D41;
+            --ring: #DADADD;
+            
+            /* App Mappings */
             --bg-app: var(--background);
             --bg-panel: var(--card);
             --bg-card: var(--secondary);
             --border-color: var(--border);
-            /* Renamed to avoid conflict */
             --text-primary: var(--foreground);
             --text-secondary: var(--muted-foreground);
             --accent-color: var(--primary);
-            /* Renamed to avoid conflict */
-            --accent-hover: var(--ring);
+            --accent-hover: #5A74F1;
 
-            /* Status Colors */
-            --success: #4caf50;
-            --danger: #f44336;
-            --warning: #ff9800;
-            --added: #2e7d32;
-            --removed: #c62828;
-            --modified: #f57f17;
-            --same: #424242;
-            --scrollbar-track: rgba(26, 28, 33, 0.9);
-            --scrollbar-thumb: rgba(87, 91, 100, 0.82);
-            --scrollbar-thumb-dark: rgba(66, 70, 78, 0.94);
-            --scrollbar-thumb-hover: rgba(115, 120, 131, 0.94);
-            --surface-1: color-mix(in oklch, var(--bg-panel) 90%, black 10%);
-            --surface-2: color-mix(in oklch, var(--bg-card) 88%, black 12%);
-            --focus-ring: color-mix(in oklch, var(--accent-color) 62%, white 38%);
-            --interactive-hover: color-mix(in oklch, var(--accent-color) 16%, transparent);
-            --elev-1: 0 12px 32px rgba(0, 0, 0, 0.28);
-            --elev-2: 0 18px 40px rgba(0, 0, 0, 0.36);
+            /* Status Colors (ANDURA mapping) */
+            --success: #44B782;
+            --danger: #F45536;
+            --warning: #FBB636;
+            --added: #3A3CFF;
+            --removed: #F45536;
+            --modified: #FBB636;
+            --same: #3C3D41;
+            
+            /* Scrollbar (ANDURA tokens) */
+            --scrollbar-track: #000000;
+            --scrollbar-thumb: #3C3D41;
+            --scrollbar-thumb-dark: #3C3D41;
+            --scrollbar-thumb-hover: #8A8C91;
+            
+            /* Surfaces */
+            --surface-1: #141518;
+            --surface-2: #1A1B1E;
+            
+            /* Focus and interaction (ANDURA: 2px Text ring, never Ultramarine) */
+            --focus-ring: #DADADD;
+            --interactive-hover: rgba(58, 60, 255, 0.1);
+            
+            /* Elevation */
+            --elev-1: none;
+            --elev-2: none;
+            --radius-button: 0;
+            --radius-button-compact: 0;
         }
 
+        /* ANDURA: dark-only, no light mode variant */
         .dark {
-            --background: oklch(0.141 0.005 285.823);
-            --foreground: oklch(0.985 0 0);
-            --card: oklch(0.21 0.006 285.885);
-            --card-foreground: oklch(0.985 0 0);
-            --popover: oklch(0.21 0.006 285.885);
-            --popover-foreground: oklch(0.985 0 0);
-            --primary: oklch(0.606 0.25 292.717);
-            --primary-foreground: oklch(0.969 0.016 293.756);
-            --secondary: oklch(0.274 0.006 286.033);
-            --secondary-foreground: oklch(0.985 0 0);
-            --muted: oklch(0.274 0.006 286.033);
-            --muted-foreground: oklch(0.705 0.015 286.067);
-            --accent: oklch(0.274 0.006 286.033);
-            --accent-foreground: oklch(0.985 0 0);
-            --destructive: oklch(0.704 0.191 22.216);
-            --border: oklch(1 0 0 / 10%);
-            --input: oklch(1 0 0 / 15%);
-            --ring: oklch(0.38 0.189 293.745);
-            --chart-1: oklch(0.811 0.111 293.571);
-            --chart-2: oklch(0.606 0.25 292.717);
-            --chart-3: oklch(0.541 0.281 293.009);
-            --chart-4: oklch(0.491 0.27 292.581);
-            --chart-5: oklch(0.432 0.232 292.759);
-            --sidebar: oklch(0.21 0.006 285.885);
-            --sidebar-foreground: oklch(0.985 0 0);
-            --sidebar-primary: oklch(0.606 0.25 292.717);
-            --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-            --sidebar-accent: oklch(0.274 0.006 286.033);
-            --sidebar-accent-foreground: oklch(0.985 0 0);
-            --sidebar-border: oklch(1 0 0 / 10%);
-            --sidebar-ring: oklch(0.38 0.189 293.745);
-
-            /* App Mappings (Dark Mode Override) */
+            --background: #000000;
+            --foreground: #DADADD;
+            --card: #090A0C;
+            --card-foreground: #DADADD;
+            --popover: #090A0C;
+            --popover-foreground: #DADADD;
+            --primary: #3A3CFF;
+            --primary-foreground: #DADADD;
+            --secondary: #141518;
+            --secondary-foreground: #DADADD;
+            --muted: #141518;
+            --muted-foreground: #8A8C91;
+            --accent: #3A3CFF;
+            --accent-foreground: #DADADD;
+            --destructive: #F45536;
+            --border: #3C3D41;
+            --input: #3C3D41;
+            --ring: #DADADD;
+            
             --bg-app: var(--background);
             --bg-panel: var(--card);
             --bg-card: var(--secondary);
@@ -115,19 +108,19 @@
             --text-primary: var(--foreground);
             --text-secondary: var(--muted-foreground);
             --accent-color: var(--primary);
-            --accent-hover: var(--ring);
-            --scrollbar-track: rgba(22, 24, 29, 0.95);
-            --scrollbar-thumb: rgba(93, 98, 109, 0.86);
-            --scrollbar-thumb-dark: rgba(70, 75, 85, 0.96);
-            --scrollbar-thumb-hover: rgba(124, 130, 143, 0.96);
-            --surface-1: color-mix(in oklch, var(--bg-panel) 90%, black 10%);
-            --surface-2: color-mix(in oklch, var(--bg-card) 86%, black 14%);
-            --focus-ring: color-mix(in oklch, var(--accent-color) 60%, white 40%);
-            --interactive-hover: color-mix(in oklch, var(--accent-color) 18%, transparent);
-            --elev-1: 0 16px 38px rgba(0, 0, 0, 0.4);
-            --elev-2: 0 22px 52px rgba(0, 0, 0, 0.48);
-            --radius-button: 8px;
-            --radius-button-compact: 6px;
+            --accent-hover: #5A74F1;
+            --scrollbar-track: #000000;
+            --scrollbar-thumb: #3C3D41;
+            --scrollbar-thumb-dark: #3C3D41;
+            --scrollbar-thumb-hover: #8A8C91;
+            --surface-1: #141518;
+            --surface-2: #1A1B1E;
+            --focus-ring: #DADADD;
+            --interactive-hover: rgba(58, 60, 255, 0.1);
+            --elev-1: none;
+            --elev-2: none;
+            --radius-button: 0;
+            --radius-button-compact: 0;
         }
 
         * {
@@ -162,14 +155,17 @@
 
         body {
             margin: 0;
-            font-family: "Geist Sans", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            font-family: "IBM Plex Sans", sans-serif;
+            font-weight: 400;
             background-color: var(--bg-app);
             color: var(--text-primary);
             overflow: hidden;
             display: flex;
             flex-direction: column;
             height: 100vh;
-            line-height: 1.45;
+            line-height: 1.3333;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .no-glow,

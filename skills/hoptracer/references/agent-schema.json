@@ -121,19 +121,54 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["nodeId", "label", "status", "riskScore", "reasons", "neighbors"],
+        "required": ["nodeId", "label", "componentName", "status", "riskScore", "reasons", "position", "neighbors"],
         "properties": {
           "nodeId": { "type": "string" },
           "label": { "type": "string" },
+          "componentName": { "type": "string" },
+          "category": { "type": "string" },
           "status": { "type": "string" },
           "riskScore": { "type": "integer", "minimum": 0, "maximum": 100 },
           "reasons": { "type": "array", "items": { "type": "string" } },
+          "groupContext": {
+            "type": "object",
+            "properties": {
+              "memberCount": { "type": "integer", "minimum": 0 },
+              "color": { "type": "string" }
+            }
+          },
+          "position": {
+            "type": "object",
+            "required": ["x", "y"],
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          },
+          "movement": {
+            "type": "object",
+            "required": ["dx", "dy"],
+            "properties": {
+              "dx": { "type": "number" },
+              "dy": { "type": "number" }
+            }
+          },
           "neighbors": {
             "type": "object",
             "required": ["upstream", "downstream"],
             "properties": {
               "upstream": { "type": "array", "items": { "type": "string" } },
               "downstream": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "connectionChanges": {
+            "type": "object",
+            "required": ["inAdded", "inRemoved", "outAdded", "outRemoved"],
+            "properties": {
+              "inAdded": { "type": "integer", "minimum": 0 },
+              "inRemoved": { "type": "integer", "minimum": 0 },
+              "outAdded": { "type": "integer", "minimum": 0 },
+              "outRemoved": { "type": "integer", "minimum": 0 }
             }
           }
         }

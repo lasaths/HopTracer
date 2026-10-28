@@ -22,6 +22,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **ANDURA design system**: Mission-critical dark UI with monochrome base (grey when normal, colour only for abnormal states). Sources: https://github.com/lasaths/andura-skill (MIT license, commit 963ae3c).
+- **Enhanced agent diff output** (`--format agent`):
+  - Component category classification (Params, Maths, Script, etc.) for better semantic context
+  - Group context: detects group nodes and includes member count and color
+  - Position and movement: absolute (X, Y) coordinates and movement deltas (Dx, Dy)
+  - Connection change details: per-node in/out connection add/remove counts
+  - Enhanced topology: includes both changed wires and existing unchanged connections for full upstream/downstream neighbor view
+  - Deterministic ordering: nodes consistently sorted by risk score (descending), then status, then label
+  - Improved summary: structured, token-efficient summary highlighting risk levels, script changes, wire changes, and geometry updates
+- **Updated JSON schema**: `skills/hoptracer/references/agent-schema.json` reflects new agent output fields
+- **Comprehensive documentation**: Updated `skills/hoptracer/references/output-formats.md` with detailed field descriptions and changelog
+
+### Changed
+
+- **UI restyle with ANDURA tokens**:
+  - All web views (`diff_viewer.html`, `index.html`, `selection.html`, `error.html`) now use ANDURA color palette v2.2
+  - Status mapping: unchanged = Muted grey, added = Ultramarine blue, modified = Caution yellow, removed = Emergency red
+  - IBM Plex Sans (UI text) and IBM Plex Mono (values, labels) replace previous fonts
+  - No rounded corners, no box shadows (ANDURA: whitespace before lines before boxes)
+  - Focus ring: 2px Text (#DADADD) with 2px gap (ANDURA rule: never Ultramarine for focus)
+- **Agent formatter improvements**: Better neighbor resolution includes both changed and unchanged connections for complete topology context
+
+### Fixed
+
+- Agent output now includes all necessary context for LLM agents to understand graph topology, change location, and risk assessment
+
 ## [1.2.1] - 2026-07-10
 
 ### Added

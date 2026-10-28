@@ -388,6 +388,9 @@ hoptracer compare old.ghx new.ghx --format agent -o diff-agent.json
 - Opaque geometry/cache blobs listed separately (not inlined)
 - Risk summary and diagnostics for triage
 - Truncation metadata when node/edge/property lists are capped
+- Rich node context: component category, group membership, position, neighbors
+- Semantic topology: upstream/downstream connections for understanding data flow
+- Deterministic ordering: nodes sorted by risk score, then status, then label
 
 ### Root structure
 
@@ -416,13 +419,25 @@ hoptracer compare old.ghx new.ghx --format agent -o diff-agent.json
 
 | Field | Purpose |
 | ----- | ------- |
-| `summary` | One-line human/LLM rollup |
-| `wireChanges` | Changed connections with `wire` label and node GUIDs |
-| `propertyChanges` | Text/script deltas; `nodeId` + `truncated` when capped |
-| `opaqueChanges` | `ON_Data` / cluster hash changes without blob payload |
-| `nodeChanges` | Per-node status, risk, reasons, 1-hop neighbors |
+| `summary` | Concise, structured summary: node counts, risk levels, script/wire changes, geometry updates |
+| `wireChanges` | Changed connections with `wire` label (e.g., "Src.O → Snk.I"), node GUIDs, and status |
+| `propertyChanges` | Text/script deltas; `nodeId` + `old`/`new` values + `truncated` flag when capped at 4000 chars |
+| `opaqueChanges` | `ON_Data` / cluster hash changes without blob payload; includes `typeName` and `hint` (count or path) |
+| `nodeChanges` | Per-node: `nodeId`, `label`, `componentName`, `category` (e.g., "Params", "Maths", "Script"), `status`, `riskScore`, `reasons`, `groupContext` (for group nodes), `position` (X, Y), `movement` (Dx, Dy if moved), `neighbors` (upstream/downstream labels), `connectionChanges` (in/out added/removed counts) |
+| `topRisks` | Top risky changes ordered by score; helps agents prioritize review |
+| `diagnostics` | Parser warnings, unresolved edges, or other issues that might affect diff quality |
 | `totalChangedNodes` / `totalChangedEdges` | Full counts before `--max-nodes` / `--max-edges` cap |
-| `truncatedNodes` / `truncatedEdges` | `true` when output lists were capped |
+| `truncatedNodes` / `truncatedEdges` | `true` when output lists were capped; check these to know if you're seeing partial results |
+
+#### New in this version
+
+- **Component category**: Automatically classified into "Params", "Maths", "Sets", "Vector", "Curve", "Surface", "Mesh", "Script", etc., helping agents understand the type of change
+- **Group context**: When a node is a group, includes member count and color
+- **Position and movement**: Absolute (X, Y) position and movement delta (Dx, Dy) for spatial context
+- **Connection changes**: Detailed in/out connection add/remove counts per node
+- **Enhanced neighbors**: Includes both changed wires and existing unchanged connections for full topology view
+- **Deterministic ordering**: Nodes consistently ordered by risk score (descending), then status, then label
+- **Improved summary**: Structured, token-efficient summary that highlights risk levels and change types
 
 ### Defaults (agent mode)
 
