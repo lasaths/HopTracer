@@ -3497,6 +3497,24 @@
             scheduleDraw();
         }
 
+        function navigateToNext() {
+            const filtered = getFilteredNodes();
+            if (filtered.length === 0) return;
+
+            const currentIndex = filtered.findIndex(n => n.id === state.selected);
+            const nextIndex = (currentIndex + 1) % filtered.length;
+            zoomToNode(filtered[nextIndex].id);
+        }
+
+        function navigateToPrevious() {
+            const filtered = getFilteredNodes();
+            if (filtered.length === 0) return;
+
+            const currentIndex = filtered.findIndex(n => n.id === state.selected);
+            const prevIndex = currentIndex <= 0 ? filtered.length - 1 : currentIndex - 1;
+            zoomToNode(filtered[prevIndex].id);
+        }
+
         function syncStatusFilterButtons() {
             document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
                 const key = btn.dataset.filter;
@@ -5574,6 +5592,10 @@
 
                 switch (key) {
                     case 'f': fitView(); break;
+                    case 'j':
+                    case 'arrowdown': navigateToNext(); break;
+                    case 'k':
+                    case 'arrowup': navigateToPrevious(); break;
                     case 'escape':
                         state.selected = null;
                         updateDetailsPanel(null);
