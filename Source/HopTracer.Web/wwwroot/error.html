@@ -7,51 +7,19 @@
     <title>Error - HopTracer</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
     
-    <!-- ANDURA Design System -->
-    <link rel="stylesheet" href="/andura/andura-fonts.css">
-    <link rel="stylesheet" href="/andura/hoptracer-andura.css">
+    <!-- HopTracer Design System -->
+    <link rel="stylesheet" href="/design/hoptracer-design-system.css">
     
     <style>
-        :root {
-            /* ANDURA Design System */
-            --radius: 0;
-            --background: #000000;
-            --foreground: #DADADD;
-            --card: #090A0C;
-            --card-foreground: #DADADD;
-            --popover: #090A0C;
-            --popover-foreground: #DADADD;
-            --primary: #3A3CFF;
-            --primary-foreground: #DADADD;
-            --secondary: #141518;
-            --secondary-foreground: #DADADD;
-            --muted: #141518;
-            --muted-foreground: #8A8C91;
-            --accent: #3A3CFF;
-            --accent-foreground: #DADADD;
-            --destructive: #F45536;
-            --border: #3C3D41;
-            --input: #3C3D41;
-            --ring: #DADADD;
-
-            --bg-app: var(--background);
-            --bg-panel: var(--card);
-            --text-primary: var(--foreground);
-            --text-secondary: var(--muted-foreground);
-            --accent-color: var(--primary);
-            --accent-hover: #5A74F1;
-            --danger: #F45536;
-        }
-
         * {
             box-sizing: border-box;
         }
 
         body {
             margin: 0;
-            font-family: "IBM Plex Sans", sans-serif;
-            background-color: var(--bg-app);
-            color: var(--text-primary);
+            font-family: var(--ht-font-sans);
+            background-color: var(--ht-bg-base);
+            color: var(--ht-text-primary);
             display: flex;
             flex-direction: column;
             align-items: center;

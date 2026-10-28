@@ -4,123 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HopTracer</title>
+    <title>HopTracer - Grasshopper Diff</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
     
-    <!-- ANDURA Design System (mission-critical dark UI, github.com/lasaths/andura-skill) -->
-    <link rel="stylesheet" href="/andura/andura-fonts.css">
-    <link rel="stylesheet" href="/andura/hoptracer-andura.css">
+    <!-- HopTracer Design System (Apple-inspired pro app) -->
+    <link rel="stylesheet" href="/design/hoptracer-design-system.css">
     
     <style>
+        /* Additional page-specific styles */
         :root {
-            /* ANDURA Design System - Dark Only, Monochrome, Type-Led
-               Grey when normal, colour only for abnormal states.
-               Source: github.com/lasaths/andura-skill (commit 963ae3c)
-               License: MIT */
+            /* Legacy compat (will be removed) */
+            --bg-app: var(--ht-bg-base);
+            --bg-panel: var(--ht-bg-elevated-1);
+            --bg-card: var(--ht-bg-elevated-2);
+            --border-color: var(--ht-border-subtle);
+            --text-primary: var(--ht-text-primary);
+            --text-secondary: var(--ht-text-secondary);
+            --accent-color: var(--ht-accent);
+            --accent-hover: var(--ht-accent-hover);
             
-            --radius: 0;
-            
-            /* ANDURA Core Palette v2.2 */
-            --background: #000000;
-            --foreground: #DADADD;
-            --card: #090A0C;
-            --card-foreground: #DADADD;
-            --popover: #090A0C;
-            --popover-foreground: #DADADD;
-            --primary: #3A3CFF;
-            --primary-foreground: #DADADD;
-            --secondary: #141518;
-            --secondary-foreground: #DADADD;
-            --muted: #141518;
-            --muted-foreground: #8A8C91;
-            --accent: #3A3CFF;
-            --accent-foreground: #DADADD;
-            --destructive: #F45536;
-            --border: #3C3D41;
-            --input: #3C3D41;
-            --ring: #DADADD;
-            
-            /* App Mappings */
-            --bg-app: var(--background);
-            --bg-panel: var(--card);
-            --bg-card: var(--secondary);
-            --border-color: var(--border);
-            --text-primary: var(--foreground);
-            --text-secondary: var(--muted-foreground);
-            --accent-color: var(--primary);
-            --accent-hover: #5A74F1;
-
-            /* Status Colors (ANDURA mapping) */
-            --success: #44B782;
-            --danger: #F45536;
-            --warning: #FBB636;
-            --added: #3A3CFF;
-            --removed: #F45536;
-            --modified: #FBB636;
-            --same: #3C3D41;
-            
-            /* Scrollbar (ANDURA tokens) */
-            --scrollbar-track: #000000;
-            --scrollbar-thumb: #3C3D41;
-            --scrollbar-thumb-dark: #3C3D41;
-            --scrollbar-thumb-hover: #8A8C91;
-            
-            /* Surfaces */
-            --surface-1: #141518;
-            --surface-2: #1A1B1E;
-            
-            /* Focus and interaction (ANDURA: 2px Text ring, never Ultramarine) */
-            --focus-ring: #DADADD;
-            --interactive-hover: rgba(58, 60, 255, 0.1);
-            
-            /* Elevation */
-            --elev-1: none;
-            --elev-2: none;
-            --radius-button: 0;
-            --radius-button-compact: 0;
-        }
-
-        /* ANDURA: dark-only, no light mode variant */
-        .dark {
-            --background: #000000;
-            --foreground: #DADADD;
-            --card: #090A0C;
-            --card-foreground: #DADADD;
-            --popover: #090A0C;
-            --popover-foreground: #DADADD;
-            --primary: #3A3CFF;
-            --primary-foreground: #DADADD;
-            --secondary: #141518;
-            --secondary-foreground: #DADADD;
-            --muted: #141518;
-            --muted-foreground: #8A8C91;
-            --accent: #3A3CFF;
-            --accent-foreground: #DADADD;
-            --destructive: #F45536;
-            --border: #3C3D41;
-            --input: #3C3D41;
-            --ring: #DADADD;
-            
-            --bg-app: var(--background);
-            --bg-panel: var(--card);
-            --bg-card: var(--secondary);
-            --border-color: var(--border);
-            --text-primary: var(--foreground);
-            --text-secondary: var(--muted-foreground);
-            --accent-color: var(--primary);
-            --accent-hover: #5A74F1;
-            --scrollbar-track: #000000;
-            --scrollbar-thumb: #3C3D41;
-            --scrollbar-thumb-dark: #3C3D41;
-            --scrollbar-thumb-hover: #8A8C91;
-            --surface-1: #141518;
-            --surface-2: #1A1B1E;
-            --focus-ring: #DADADD;
-            --interactive-hover: rgba(58, 60, 255, 0.1);
-            --elev-1: none;
-            --elev-2: none;
-            --radius-button: 0;
-            --radius-button-compact: 0;
+            /* Status compat */
+            --added: var(--ht-status-added);
+            --removed: var(--ht-status-removed);
+            --modified: var(--ht-status-modified);
+            --same: var(--ht-status-unchanged);
         }
 
         * {
@@ -155,15 +62,16 @@
 
         body {
             margin: 0;
-            font-family: "IBM Plex Sans", sans-serif;
-            font-weight: 400;
-            background-color: var(--bg-app);
-            color: var(--text-primary);
+            font-family: var(--ht-font-sans);
+            font-size: var(--ht-text-base);
+            font-weight: var(--ht-weight-regular);
+            line-height: var(--ht-leading-normal);
+            background-color: var(--ht-bg-base);
+            color: var(--ht-text-primary);
             overflow: hidden;
             display: flex;
             flex-direction: column;
             height: 100vh;
-            line-height: 1.3333;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
@@ -2476,16 +2384,16 @@
         // Configuration
         const CONFIG = {
             colors: {
-                added: '#2e7d32',
-                removed: '#c62828',
-                modified: '#f57f17',
-                same: '#424242',
-                edgeSame: '#8f98ae',
-                bg: '#0f1115',
-                nodeBg: '#1c1e24',
-                text: '#eceef5',
-                textMuted: '#949aa5',
-                selection: '#5c80f7'
+                added: getComputedStyle(document.documentElement).getPropertyValue('--ht-status-added').trim() || '#30d158',
+                removed: getComputedStyle(document.documentElement).getPropertyValue('--ht-status-removed').trim() || '#ff453a',
+                modified: getComputedStyle(document.documentElement).getPropertyValue('--ht-status-modified').trim() || '#ffd60a',
+                same: getComputedStyle(document.documentElement).getPropertyValue('--ht-status-unchanged').trim() || '#636366',
+                edgeSame: getComputedStyle(document.documentElement).getPropertyValue('--ht-status-unchanged-dim').trim() || '#48484a',
+                bg: getComputedStyle(document.documentElement).getPropertyValue('--ht-bg-canvas').trim() || '#000000',
+                nodeBg: getComputedStyle(document.documentElement).getPropertyValue('--ht-bg-elevated-2').trim() || '#1a1a1a',
+                text: getComputedStyle(document.documentElement).getPropertyValue('--ht-text-primary').trim() || '#ffffff',
+                textMuted: getComputedStyle(document.documentElement).getPropertyValue('--ht-text-secondary').trim() || '#98989d',
+                selection: getComputedStyle(document.documentElement).getPropertyValue('--ht-accent').trim() || '#0a84ff'
             },
             node: {
                 width: 120,
