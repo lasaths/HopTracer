@@ -65,16 +65,16 @@
             /* Renamed to avoid conflict */
             --accent-hover: var(--ring);
 
-            /* Status Colors - Apple-style with better contrast */
+            /* Status Colors - Apple-style with better contrast, NO YELLOW */
             --success: #30d158;
             --danger: #ff453a;
-            --warning: #ffd60a;
+            --warning: #ff9f0a;
             --added: #30d158;
-            --added-dim: #1f3a2b;
+            --added-dim: #1a2e23;
             --removed: #ff453a;
-            --removed-dim: #3d2020;
-            --modified: #ffd60a;
-            --modified-dim: #3d3520;
+            --removed-dim: #3d1f1e;
+            --modified: #ff9f0a;
+            --modified-dim: #3d2e1a;
             --same: #636366;
             --scrollbar-track: rgba(26, 28, 33, 0.9);
             --scrollbar-thumb: rgba(87, 91, 100, 0.82);
@@ -89,15 +89,15 @@
         }
 
         .dark {
-            /* True Dark Mode - Pure Black Base */
+            /* True Dark Mode - Pure Black Base, NO YELLOW */
             --background: #000000;
             --foreground: #ffffff;
             --card: #0a0a0a;
             --card-foreground: #ffffff;
             --popover: #141414;
             --popover-foreground: #ffffff;
-            --primary: #ffd60a;
-            --primary-foreground: #000000;
+            --primary: #0a84ff;
+            --primary-foreground: #ffffff;
             --secondary: #1e1e1e;
             --secondary-foreground: #ffffff;
             --muted: #1e1e1e;
@@ -107,7 +107,7 @@
             --destructive: #ff453a;
             --border: rgba(255, 255, 255, 0.1);
             --input: rgba(255, 255, 255, 0.15);
-            --ring: #ffd60a;
+            --ring: #0a84ff;
             --chart-1: oklch(0.811 0.111 293.571);
             --chart-2: oklch(0.606 0.25 292.717);
             --chart-3: oklch(0.541 0.281 293.009);
@@ -115,12 +115,12 @@
             --chart-5: oklch(0.432 0.232 292.759);
             --sidebar: #0a0a0a;
             --sidebar-foreground: #ffffff;
-            --sidebar-primary: #ffd60a;
-            --sidebar-primary-foreground: #000000;
+            --sidebar-primary: #0a84ff;
+            --sidebar-primary-foreground: #ffffff;
             --sidebar-accent: #1e1e1e;
             --sidebar-accent-foreground: #ffffff;
             --sidebar-border: rgba(255, 255, 255, 0.1);
-            --sidebar-ring: #ffd60a;
+            --sidebar-ring: #0a84ff;
 
             /* App Mappings (Dark Mode Override) */
             --bg-app: var(--background);
@@ -137,8 +137,8 @@
             --scrollbar-thumb-hover: rgba(80, 80, 80, 0.96);
             --surface-1: #0a0a0a;
             --surface-2: #141414;
-            --focus-ring: rgba(255, 214, 10, 0.6);
-            --interactive-hover: rgba(255, 214, 10, 0.15);
+            --focus-ring: rgba(10, 132, 255, 0.6);
+            --interactive-hover: rgba(10, 132, 255, 0.15);
             --elev-1: 0 8px 32px rgba(0, 0, 0, 0.5);
             --elev-2: 0 12px 40px rgba(0, 0, 0, 0.6);
             --radius-button: 8px;
@@ -2168,7 +2168,7 @@
             <div class="sidebar-header">
                 <div class="sidebar-header-top">
                     <h1 class="sidebar-brand">
-                        <img src="/images/HopTrace_Logo_White.png" alt="HopTracer" class="sidebar-brand-logo">
+                        <img src="/images/HopTrace_Logo.png" alt="HopTracer" class="sidebar-brand-logo">
                         <span class="sidebar-brand-title">HopTracer</span>
                     </h1>
                     <button type="button" id="btn-sidebar-collapse" class="panel-icon-btn" title="Hide left panel">◀</button>
