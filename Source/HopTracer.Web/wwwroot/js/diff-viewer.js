@@ -1,14 +1,7 @@
-        // Placeholder for injected data. When opened directly (without template replacement),
-        // fall back to an empty model so the UI can still initialize safely.
-        const GRAPH_DATA = (() => {
-            try {
-                return {json_data};
-            } catch {
-                return {};
-            }
-        })();
+        // Data from server injection
+        const GRAPH_DATA = window.HOP_DATA || {};
 
-        // Configuration - ANDURA Colors
+        // Configuration - ANDURA Colors (v2.2)
         const CONFIG = {
             colors: {
                 added: '#30d158',
@@ -17,10 +10,12 @@
                 same: '#636366',
                 edgeSame: '#636366',
                 bg: '#000000',
-                nodeBg: '#0a0a0a',
-                text: '#ffffff',
-                textMuted: 'rgba(255,255,255,0.5)',
-                selection: '#0a84ff'
+                surface: '#090A0C',
+                line: '#3C3D41',
+                muted: '#8A8C91',
+                text: '#DADADD',
+                selection: '#3A3CFF',
+                emergency: '#F45536'
             },
             node: {
                 width: 120,
@@ -832,10 +827,19 @@
 
         function compareNodesForComponentSort(a, b) {
             const sort = state.componentSort || 'risk';
+            
+            // ANDURA Review Queue: changed items first, sorted by risk (high to low)
+            const aChanged = (a.status === 'added' || a.status === 'removed' || a.status === 'modified');
+            const bChanged = (b.status === 'added' || b.status === 'removed' || b.status === 'modified');
+            
+            // Changed before unchanged
+            if (aChanged !== bChanged) {
+                return aChanged ? -1 : 1;
+            }
 
             if (sort === 'risk') {
-                const ar = Number(a.risk || a.RiskScore || 0);
-                const br = Number(b.risk || b.RiskScore || 0);
+                const ar = Number(a.riskScore ?? a.risk ?? a.RiskScore ?? 0);
+                const br = Number(b.riskScore ?? b.risk ?? b.RiskScore ?? 0);
                 if (ar !== br) return br - ar; // Higher risk first
                 return compareNodesAlphabetical(a, b, false);
             }
@@ -959,7 +963,8 @@
 
                 const riskValue = document.createElement('span');
                 riskValue.className = 'change-risk-value';
-                const riskScore = Number(node.risk || node.RiskScore || 0);
+                const riskScoreRaw = node.riskScore ?? node.risk ?? node.RiskScore;
+                const riskScore = Number.isFinite(Number(riskScoreRaw)) ? Number(riskScoreRaw) : 0;
                 riskValue.textContent = Math.round(riskScore);
 
                 const riskBar = document.createElement('div');
@@ -996,11 +1001,28 @@
             if (!node) return '';
             
             const status = node.status || 'same';
-            const riskScore = Number(node.risk || node.RiskScore || 0);
+            const riskScoreRaw = node.riskScore ?? node.risk ?? node.RiskScore;
+            const riskScore = Number.isFinite(Number(riskScoreRaw)) ? Number(riskScoreRaw) : 0;
             
             if (status === 'added') return 'Component added to definition';
             if (status === 'removed') return 'Component removed from definition';
             if (status === 'modified') {
+                // Try to get real changed fields
+                const changed = [];
+                if (node.changedInputs && node.changedInputs.length > 0) {
+                    changed.push(`${node.changedInputs.length} input${node.changedInputs.length > 1 ? 's' : ''}`);
+                }
+                if (node.changedOutputs && node.changedOutputs.length > 0) {
+                    changed.push(`${node.changedOutputs.length} output${node.changedOutputs.length > 1 ? 's' : ''}`);
+                }
+                if (node.scriptChanged) {
+                    changed.push('script');
+                }
+                if (changed.length > 0) {
+                    return `Changed: ${changed.join(', ')}`;
+                }
+                
+                // Fall back to risk-based message
                 if (riskScore >= 70) return 'High-risk modifications detected';
                 if (riskScore >= 40) return 'Moderate changes to parameters';
                 return 'Minor parameter adjustments';
@@ -1028,7 +1050,10 @@
         }
 
         function navigateToNext() {
-            const filtered = getFilteredNodes();
+            // Only navigate through changed nodes
+            const filtered = getFilteredNodes().filter(n => 
+                n.status === 'added' || n.status === 'removed' || n.status === 'modified'
+            );
             if (filtered.length === 0) return;
 
             const currentIndex = filtered.findIndex(n => n.id === state.selected);
@@ -1037,7 +1062,10 @@
         }
 
         function navigateToPrevious() {
-            const filtered = getFilteredNodes();
+            // Only navigate through changed nodes
+            const filtered = getFilteredNodes().filter(n => 
+                n.status === 'added' || n.status === 'removed' || n.status === 'modified'
+            );
             if (filtered.length === 0) return;
 
             const currentIndex = filtered.findIndex(n => n.id === state.selected);

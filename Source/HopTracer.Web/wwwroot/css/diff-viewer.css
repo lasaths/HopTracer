@@ -1,4 +1,4 @@
-/* ANDURA Design Tokens */
+/* ANDURA Design Tokens v2.2 */
 :root {
     /* Typography */
     --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -8,23 +8,23 @@
     --transition-base: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-spring: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
-    /* Core Colors - ANDURA Dark */
+    /* Core Colors - ANDURA v2.2 */
     --bg-app: #000000;
     --bg-panel: #000000;
-    --bg-surface: #0a0a0a;
+    --bg-surface: #090A0C;
     
     /* Borders - Hairlines Only */
-    --border-hairline: rgba(255, 255, 255, 0.08);
+    --border-hairline: #3C3D41;
     --border-hairline-strong: rgba(255, 255, 255, 0.12);
     
     /* Text */
-    --text-primary: #ffffff;
-    --text-secondary: rgba(255, 255, 255, 0.7);
-    --text-muted: rgba(255, 255, 255, 0.5);
+    --text-primary: #DADADD;
+    --text-secondary: rgba(218, 218, 221, 0.7);
+    --text-muted: #8A8C91;
     
     /* Accent - Ultramarine */
-    --accent-primary: #0a84ff;
-    --accent-hover: #0066cc;
+    --accent-primary: #3A3CFF;
+    --accent-hover: #2A2CDD;
     
     /* Status Colors - ANDURA Semantics */
     --status-added: #30d158;
@@ -35,6 +35,7 @@
     --status-modified-dim: rgba(255, 159, 10, 0.15);
     --status-same: #636366;
     --status-same-dim: rgba(99, 99, 102, 0.15);
+    --status-emergency: #F45536;
     
     /* Interactive */
     --interactive-hover: rgba(255, 255, 255, 0.08);
@@ -276,15 +277,44 @@ html, body {
 
 /* Change List Section */
 .change-list-section {
-    padding: var(--space-md) 0;
+    display: flex;
+    flex-direction: column;
     border-bottom: 1px solid var(--border-hairline);
+    max-height: 50vh;
 }
 
 .section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 var(--space-md) var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--border-hairline);
+    background: var(--bg-app);
+    flex-shrink: 0;
+}
+
+.change-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+.change-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.change-list::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+.change-list::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+}
+
+.change-list::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
 }
 
 .section-title {
@@ -314,7 +344,7 @@ html, body {
 }
 
 .change-item.selected {
-    background: rgba(10, 132, 255, 0.12);
+    background: rgba(58, 60, 255, 0.12);
     border-left-color: var(--accent-primary);
 }
 
@@ -414,7 +444,14 @@ html, body {
     display: flex;
     gap: var(--space-sm);
     padding: var(--space-md);
-    border-top: 1px solid var(--border-hairline);
+    border-bottom: 1px solid var(--border-hairline);
+    flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+    .navigation-controls {
+        padding: var(--space-sm);
+    }
 }
 
 .nav-btn {
@@ -512,7 +549,7 @@ html, body {
 }
 
 .filter-btn.active {
-    background: rgba(10, 132, 255, 0.15);
+    background: rgba(58, 60, 255, 0.15);
     border-color: var(--accent-primary);
     color: var(--accent-primary);
 }
@@ -614,7 +651,7 @@ html, body {
 
 .component-card.selected {
     border-color: var(--accent-primary);
-    background: rgba(10, 132, 255, 0.08);
+    background: rgba(58, 60, 255, 0.08);
 }
 
 .component-card-header {
