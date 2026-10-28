@@ -78,4 +78,33 @@ public class DiffOutputGeneratorTests
             ["A"] = new Node { Id = "A", Name = "Slider v2", X = 15, Y = 25 }
         }
     };
+
+    [Fact]
+    public void Generate_Json_PreservesNodeWidthAndHeight()
+    {
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new Node { Id = "A", Name = "Slider", X = 10, Y = 20, W = 100, H = 50 }
+            }
+        };
+
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["A"] = new Node { Id = "A", Name = "Slider", X = 15, Y = 25, W = 120, H = 60 }
+            }
+        };
+
+        var diff = _differ.DiffDetailed(oldGraph, newGraph);
+        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Json);
+
+        // Verify W and H are in the JSON output (camelCase)
+        Assert.Contains("\"w\"", json);
+        Assert.Contains("\"h\"", json);
+        Assert.Contains("120", json); // New width
+        Assert.Contains("60", json); // New height
+    }
 }
