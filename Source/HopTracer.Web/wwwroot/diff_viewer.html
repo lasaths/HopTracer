@@ -1018,6 +1018,19 @@
             letter-spacing: 0.25px;
         }
 
+        .component-result-risk {
+            font-size: 10px;
+            line-height: 1;
+            padding: 4px 8px;
+            border-radius: 6px;
+            flex: 0 0 auto;
+            margin-top: 1px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            letter-spacing: -0.02em;
+            margin-right: 6px;
+        }
+
         /* Node List / Details */
         #details-panel {
             width: 420px;
@@ -2210,6 +2223,7 @@
                     <div class="component-sort-row">
                         <label for="component-sort">Sort</label>
                         <select id="component-sort" class="component-sort-select">
+                            <option value="risk">Risk</option>
                             <option value="az">A-Z</option>
                             <option value="za">Z-A</option>
                             <option value="dist">Dist</option>
@@ -3315,7 +3329,14 @@
         }
 
         function compareNodesForComponentSort(a, b) {
-            const sort = state.componentSort || 'az';
+            const sort = state.componentSort || 'risk';
+
+            if (sort === 'risk') {
+                const ar = Number(a.risk || a.RiskScore || 0);
+                const br = Number(b.risk || b.RiskScore || 0);
+                if (ar !== br) return br - ar; // Higher risk first
+                return compareNodesAlphabetical(a, b, false);
+            }
 
             if (sort === 'za') {
                 return compareNodesAlphabetical(a, b, true);
@@ -3425,8 +3446,32 @@
                 status.style.background = CONFIG.colors[node.status] || CONFIG.colors.same;
                 status.textContent = String(node.status || 'same');
 
-                item.appendChild(main);
-                item.appendChild(status);
+                // Add risk score badge
+                const riskScore = Number(node.risk || node.RiskScore || 0);
+                if (riskScore > 0) {
+                    const riskBadge = document.createElement('span');
+                    riskBadge.className = 'component-result-risk';
+                    riskBadge.textContent = String(Math.round(riskScore));
+                    
+                    // Color code by risk level
+                    if (riskScore >= 70) {
+                        riskBadge.style.background = 'var(--removed-dim)';
+                        riskBadge.style.color = 'var(--removed)';
+                    } else if (riskScore >= 40) {
+                        riskBadge.style.background = 'var(--modified-dim)';
+                        riskBadge.style.color = 'var(--modified)';
+                    } else {
+                        riskBadge.style.background = 'var(--surface-2)';
+                        riskBadge.style.color = 'var(--text-secondary)';
+                    }
+                    
+                    item.appendChild(main);
+                    item.appendChild(riskBadge);
+                    item.appendChild(status);
+                } else {
+                    item.appendChild(main);
+                    item.appendChild(status);
+                }
                 fragment.appendChild(item);
             });
 
@@ -5624,9 +5669,9 @@
             renderComponentResultsList();
 
             if (componentSortSelect) {
-                componentSortSelect.value = state.componentSort || 'az';
+                componentSortSelect.value = state.componentSort || 'risk';
                 componentSortSelect.addEventListener('change', (e) => {
-                    const nextSort = String(e.target.value || 'az').toLowerCase();
+                    const nextSort = String(e.target.value || 'risk').toLowerCase();
                     state.componentSort = nextSort;
                     renderComponentResultsList();
                 });
