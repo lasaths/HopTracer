@@ -47,7 +47,7 @@
             spotlightOpen: false,
             spotlightResults: [],
             spotlightActiveIndex: 0,
-            componentSort: 'az',
+            componentSort: 'risk',
             bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
             showPortDetails: true,
             showGroups: true,
@@ -997,8 +997,13 @@
         }
 
         function getRiskReason(node) {
-            // Generate a one-line reason for the risk/change
+            // Use real riskReasons array if available
             if (!node) return '';
+            
+            // First priority: use actual riskReasons array from diff computation
+            if (Array.isArray(node.riskReasons) && node.riskReasons.length > 0) {
+                return node.riskReasons[0]; // Show first/primary reason
+            }
             
             const status = node.status || 'same';
             const riskScoreRaw = node.riskScore ?? node.risk ?? node.RiskScore;
@@ -1007,19 +1012,30 @@
             if (status === 'added') return 'Component added to definition';
             if (status === 'removed') return 'Component removed from definition';
             if (status === 'modified') {
-                // Try to get real changed fields
-                const changed = [];
+                // Build reason from actual changed fields
+                const parts = [];
+                
+                // Check for position change
+                const hasMoved = node.dx != null && node.dy != null && (node.dx !== 0 || node.dy !== 0);
+                if (hasMoved) {
+                    parts.push('Moved');
+                }
+                
+                // Check for changed inputs/outputs
                 if (node.changedInputs && node.changedInputs.length > 0) {
-                    changed.push(`${node.changedInputs.length} input${node.changedInputs.length > 1 ? 's' : ''}`);
+                    parts.push(`${node.changedInputs.length} input${node.changedInputs.length > 1 ? 's' : ''} changed`);
                 }
                 if (node.changedOutputs && node.changedOutputs.length > 0) {
-                    changed.push(`${node.changedOutputs.length} output${node.changedOutputs.length > 1 ? 's' : ''}`);
+                    parts.push(`${node.changedOutputs.length} output${node.changedOutputs.length > 1 ? 's' : ''} changed`);
                 }
+                
+                // Check for script change
                 if (node.scriptChanged) {
-                    changed.push('script');
+                    parts.push('Script changed');
                 }
-                if (changed.length > 0) {
-                    return `Changed: ${changed.join(', ')}`;
+                
+                if (parts.length > 0) {
+                    return parts.join(', ');
                 }
                 
                 // Fall back to risk-based message
@@ -2968,7 +2984,7 @@
 
             const radius = Math.max(2.4 / state.view.scale, 1.4);
             const borderWidth = Math.max(1 / state.view.scale, 0.55);
-            const showLabels = state.view.scale >= 1.25 || state.selected === node.id;
+            const showLabels = state.view.scale >= 1.2 || state.selected === node.id;
             const labelOffset = radius + (6 / state.view.scale);
             const labelFontSize = Math.max(9, 11 / state.view.scale);
             const labelMax = 22;
@@ -3799,16 +3815,16 @@
                     return;
                 }
 
-                // Node Body
-                ctx.fillStyle = CONFIG.colors.nodeBg;
-                ctx.strokeStyle = CONFIG.colors[n.status] || CONFIG.colors.same;
+                // Node Body - ANDURA dark fill with status-colored hairline
+                ctx.fillStyle = CONFIG.colors.surface;
+                ctx.strokeStyle = CONFIG.colors[n.status] || CONFIG.colors.line;
 
                 if (state.selected === n.id) {
                     ctx.strokeStyle = CONFIG.colors.selection;
                     ctx.lineWidth = 2 / state.view.scale;
                     ctx.shadowBlur = 0;
                 } else if (state.selected && connectedIds.has(n.id)) {
-                    ctx.strokeStyle = CONFIG.colors.text; // Highlight connected nodes slightly
+                    ctx.strokeStyle = CONFIG.colors.text;
                     ctx.lineWidth = 1.5 / state.view.scale;
                     ctx.shadowBlur = 0;
                 } else {
@@ -3819,33 +3835,31 @@
                 roundRect(ctx, n.x, n.y, n.w, n.h, CONFIG.node.radius);
                 ctx.fill();
                 ctx.stroke();
-                ctx.shadowBlur = 0; // Reset shadow
+                ctx.shadowBlur = 0;
 
-                // Header / Status Bar
-                ctx.fillStyle = ctx.strokeStyle;
-                ctx.beginPath();
-                ctx.moveTo(n.x + CONFIG.node.radius, n.y);
-                ctx.lineTo(n.x + n.w - CONFIG.node.radius, n.y);
-                ctx.quadraticCurveTo(n.x + n.w, n.y, n.x + n.w, n.y + CONFIG.node.radius);
-                ctx.lineTo(n.x + n.w, n.y + 4); // Small header strip
-                ctx.lineTo(n.x, n.y + 4);
-                ctx.lineTo(n.x, n.y + CONFIG.node.radius);
-                ctx.quadraticCurveTo(n.x, n.y, n.x + CONFIG.node.radius, n.y);
-                ctx.fill();
-
-                // Port sockets (input/output circles)
-                drawNodePortSockets(n);
-
-                // Text
+                // Text label - use node nickname or name
                 if (state.view.scale > 0.4 || state.selected === n.id) {
+                    const label = n.nickname || n.name || 'Unnamed';
                     ctx.fillStyle = CONFIG.colors.text;
-                    ctx.font = '12px "Geist Sans", ui-sans-serif, system-ui, sans-serif';
-                    ctx.fillText(n.nickname || n.name, n.x + 8, n.y + 24);
-
-                    ctx.fillStyle = CONFIG.colors.textMuted;
-                    ctx.font = '10px "Geist Sans", ui-sans-serif, system-ui, sans-serif';
-                    const sub = n.name.length > 15 ? n.name.substring(0, 14) + '...' : n.name;
-                    ctx.fillText(sub, n.x + 8, n.y + 38);
+                    ctx.font = '12px "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Center text in node
+                    const maxWidth = n.w - 16;
+                    const tx = n.x + n.w / 2;
+                    const ty = n.y + n.h / 2;
+                    
+                    // Truncate if needed
+                    let displayLabel = label;
+                    if (ctx.measureText(label).width > maxWidth) {
+                        while (displayLabel.length > 3 && ctx.measureText(displayLabel + '…').width > maxWidth) {
+                            displayLabel = displayLabel.slice(0, -1);
+                        }
+                        displayLabel += '…';
+                    }
+                    
+                    ctx.fillText(displayLabel, tx, ty);
                 }
 
                 // Cluster indicator: draw a special double-border and icon

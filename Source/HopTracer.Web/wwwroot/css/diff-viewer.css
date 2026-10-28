@@ -559,6 +559,7 @@ html, body {
     border-color: var(--accent-primary);
     color: #ffffff;
     font-weight: 500;
+    text-decoration: none;
 }
 
 .sidebar-primary-action:hover {
@@ -848,7 +849,8 @@ html, body {
     z-index: 10;
 }
 
-.graph-tab {
+.graph-tab,
+.graph-tab-btn {
     height: 40px;
     padding: 0 var(--space-md);
     background: none;
@@ -862,14 +864,23 @@ html, body {
     transition: all var(--transition-base);
 }
 
-.graph-tab:hover {
+.graph-tab:hover,
+.graph-tab-btn:hover {
     color: var(--text-primary);
     background: var(--interactive-hover);
 }
 
-.graph-tab.active {
+.graph-tab.active,
+.graph-tab-btn.active {
     color: var(--accent-primary);
     border-bottom-color: var(--accent-primary);
+}
+
+/* Focus visible for keyboard navigation (UI/UX Pro Max: Priority 1 Accessibility) */
+.graph-tab:focus-visible,
+.graph-tab-btn:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
 }
 
 /* Top Right Tools */
@@ -1547,6 +1558,65 @@ input[type="range"]::-moz-range-thumb {
     font-size: 12px;
 }
 
+/* Spotlight Results Items - Hairline rows, not cards (UI/UX Pro Max) */
+.spotlight-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    border-bottom: 1px solid var(--border-hairline);
+    background: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background var(--transition-base);
+    min-height: 48px;
+}
+
+.spotlight-item:hover {
+    background: var(--interactive-hover);
+}
+
+.spotlight-item.active {
+    background: var(--interactive-active);
+    border-left: 2px solid var(--accent-primary);
+    padding-left: calc(var(--space-md) - 2px);
+}
+
+.spotlight-item:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: -2px;
+}
+
+.spotlight-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.spotlight-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.spotlight-item-category {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.spotlight-item-preview,
+.spotlight-item-preview-meta {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
 /* Loading Overlay */
 #loadingOverlay {
     display: none;
@@ -1640,4 +1710,194 @@ input[type="range"]::-moz-range-thumb {
 .dark .no-glow * {
     box-shadow: none !important;
     text-shadow: none !important;
+}
+
+/* Inspector & Details Panel - Hairline rows (UI/UX Pro Max) */
+.detail-card {
+    border-bottom: 1px solid var(--border-hairline);
+    padding: var(--space-md);
+}
+
+.detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+}
+
+.node-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.node-type {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.prop-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-hairline);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.prop-row:last-child {
+    border-bottom: none;
+}
+
+.prop-label {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 90px;
+    flex-shrink: 0;
+}
+
+.prop-value {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-align: right;
+    word-break: break-word;
+    margin-left: var(--space-md);
+}
+
+.script-diff-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    min-height: 32px;
+}
+
+.script-diff-open:hover {
+    background: var(--interactive-hover);
+    border-color: var(--accent-primary);
+}
+
+.script-diff-open:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* Script Diff Modal - Two-column line-numbered mono table */
+.diff-table {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    border-collapse: collapse;
+}
+
+.diff-line {
+    display: flex;
+    align-items: stretch;
+}
+
+.diff-num {
+    display: inline-block;
+    width: 40px;
+    padding: 2px 8px;
+    text-align: right;
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-hairline);
+    user-select: none;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.diff-line.added {
+    background: rgba(48, 209, 88, 0.08);
+}
+
+.diff-line.removed {
+    background: rgba(255, 69, 58, 0.08);
+}
+
+.diff-line.added .diff-num {
+    background: rgba(48, 209, 88, 0.12);
+    color: #30d158;
+}
+
+.diff-line.removed .diff-num {
+    background: rgba(255, 69, 58, 0.12);
+    color: #ff453a;
+}
+
+.script-pane-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--border-hairline);
+    background: var(--bg-surface);
+}
+
+.script-pane-toolbar button {
+    min-height: 32px;
+}
+
+/* Reduced Motion Support (UI/UX Pro Max: Priority 1 Accessibility) */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Focus Visible for All Interactive Elements (UI/UX Pro Max: Priority 1 Accessibility) */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* Minimum Touch Target Size for Desktop (UI/UX Pro Max: Priority 2 Interaction) */
+button,
+a.button,
+.btn,
+[role="button"] {
+    min-height: 32px;
+    min-width: 32px;
+    cursor: pointer;
 }
