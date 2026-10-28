@@ -8,19 +8,19 @@
             }
         })();
 
-        // Configuration
+        // Configuration - ANDURA Colors
         const CONFIG = {
             colors: {
-                added: '#2e7d32',
-                removed: '#c62828',
-                modified: '#f57f17',
-                same: '#424242',
-                edgeSame: '#8f98ae',
-                bg: '#0f1115',
-                nodeBg: '#1c1e24',
-                text: '#eceef5',
-                textMuted: '#949aa5',
-                selection: '#5c80f7'
+                added: '#30d158',
+                removed: '#ff453a',
+                modified: '#ff9f0a',
+                same: '#636366',
+                edgeSame: '#636366',
+                bg: '#000000',
+                nodeBg: '#0a0a0a',
+                text: '#ffffff',
+                textMuted: 'rgba(255,255,255,0.5)',
+                selection: '#0a84ff'
             },
             node: {
                 width: 120,
@@ -884,100 +884,128 @@
         }
 
         function renderComponentResultsList() {
-            if (!componentResultsList || !componentResultsCount) return;
+            // Render ANDURA-style risk-ordered change list
+            const changeList = document.getElementById('change-list');
+            const changeListCount = document.getElementById('change-list-count');
+            
+            if (!changeList || !changeListCount) return;
 
             const filtered = getFilteredNodes();
             const total = filtered.length;
-            const visible = filtered;
 
-            componentResultsCount.textContent = total.toLocaleString();
-            componentResultsList.innerHTML = '';
+            changeListCount.textContent = total.toLocaleString();
+            changeList.innerHTML = '';
 
             if (total === 0) {
                 const empty = document.createElement('div');
                 empty.className = 'component-results-empty';
-                empty.textContent = 'No components match the current search/filter.';
-                componentResultsList.appendChild(empty);
+                empty.textContent = 'No changes to review.';
+                changeList.appendChild(empty);
                 return;
             }
 
             const fragment = document.createDocumentFragment();
 
-            const searchQuery = String(state.search || '').trim();
-
-            visible.forEach(node => {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'component-result-item';
-                if (state.selected === node.id) item.classList.add('active');
+            filtered.forEach(node => {
+                const item = document.createElement('div');
+                item.className = 'change-item';
+                if (state.selected === node.id) item.classList.add('selected');
                 item.dataset.nodeId = String(node.id);
 
-                const main = document.createElement('div');
-                main.className = 'component-result-main';
+                // Header: status glyph + text
+                const header = document.createElement('div');
+                header.className = 'change-item-header';
 
-                const title = document.createElement('div');
-                title.className = 'component-result-title';
-                title.textContent = String(node.nickname || node.name || 'Unnamed Component');
+                const statusGlyph = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                statusGlyph.setAttribute('class', 'change-status-glyph');
+                statusGlyph.setAttribute('viewBox', '0 0 16 16');
+                statusGlyph.setAttribute('fill', 'currentColor');
+                
+                const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                const status = node.status || 'same';
+                const glyphMap = {
+                    added: '#ph-plus-circle',
+                    removed: '#ph-minus-circle',
+                    modified: '#ph-gear-six',
+                    same: '#ph-minus-circle'
+                };
+                use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `/vendor/phosphor/icons.svg${glyphMap[status] || glyphMap.same}`);
+                statusGlyph.appendChild(use);
 
-                const subtitle = document.createElement('div');
-                subtitle.className = 'component-result-subtitle';
-                subtitle.textContent = String(node.name || '');
+                const statusText = document.createElement('span');
+                statusText.className = `change-status-text ${status}`;
+                statusText.textContent = status.toUpperCase();
 
-                main.appendChild(title);
-                main.appendChild(subtitle);
+                header.appendChild(statusGlyph);
+                header.appendChild(statusText);
 
-                if (searchQuery) {
-                    const internal = getInternalSearchPreview(node, searchQuery);
-                    if (internal && internal.snippet) {
-                        const preview = document.createElement('div');
-                        preview.className = 'component-result-preview';
-                        preview.title = internal.snippet;
+                // Component name
+                const name = document.createElement('div');
+                name.className = 'change-component-name';
+                name.textContent = String(node.nickname || node.name || 'Unnamed Component');
 
-                        const label = document.createElement('span');
-                        label.className = 'component-result-preview-label';
-                        label.textContent = `${internal.label} ·`;
+                // Reason (one-line description)
+                const reason = document.createElement('div');
+                reason.className = 'change-reason';
+                reason.textContent = getRiskReason(node) || 'No changes detected';
 
-                        preview.appendChild(label);
-                        preview.appendChild(document.createTextNode(internal.snippet));
-                        main.appendChild(preview);
-                    }
-                }
+                // Risk row
+                const riskRow = document.createElement('div');
+                riskRow.className = 'change-risk-row';
 
-                const status = document.createElement('span');
-                status.className = 'component-result-status';
-                status.style.background = CONFIG.colors[node.status] || CONFIG.colors.same;
-                status.textContent = String(node.status || 'same');
+                const riskLabel = document.createElement('span');
+                riskLabel.className = 'change-risk-label';
+                riskLabel.textContent = 'Risk';
 
-                // Add risk score badge
+                const riskValue = document.createElement('span');
+                riskValue.className = 'change-risk-value';
                 const riskScore = Number(node.risk || node.RiskScore || 0);
-                if (riskScore > 0) {
-                    const riskBadge = document.createElement('span');
-                    riskBadge.className = 'component-result-risk';
-                    riskBadge.textContent = String(Math.round(riskScore));
-                    
-                    // Color code by risk level
-                    if (riskScore >= 70) {
-                        riskBadge.style.background = 'var(--removed-dim)';
-                        riskBadge.style.color = 'var(--removed)';
-                    } else if (riskScore >= 40) {
-                        riskBadge.style.background = 'var(--modified-dim)';
-                        riskBadge.style.color = 'var(--modified)';
-                    } else {
-                        riskBadge.style.background = 'var(--surface-2)';
-                        riskBadge.style.color = 'var(--text-secondary)';
-                    }
-                    
-                    item.appendChild(main);
-                    item.appendChild(riskBadge);
-                    item.appendChild(status);
-                } else {
-                    item.appendChild(main);
-                    item.appendChild(status);
-                }
+                riskValue.textContent = Math.round(riskScore);
+
+                const riskBar = document.createElement('div');
+                riskBar.className = 'change-risk-bar';
+                
+                const riskFill = document.createElement('div');
+                riskFill.className = 'change-risk-fill';
+                riskFill.style.width = `${Math.min(100, riskScore)}%`;
+                
+                riskBar.appendChild(riskFill);
+
+                riskRow.appendChild(riskLabel);
+                riskRow.appendChild(riskValue);
+                riskRow.appendChild(riskBar);
+
+                item.appendChild(header);
+                item.appendChild(name);
+                item.appendChild(reason);
+                item.appendChild(riskRow);
+
+                // Click handler
+                item.addEventListener('click', () => {
+                    zoomToNode(node.id);
+                });
+
                 fragment.appendChild(item);
             });
 
-            componentResultsList.appendChild(fragment);
+            changeList.appendChild(fragment);
+        }
+
+        function getRiskReason(node) {
+            // Generate a one-line reason for the risk/change
+            if (!node) return '';
+            
+            const status = node.status || 'same';
+            const riskScore = Number(node.risk || node.RiskScore || 0);
+            
+            if (status === 'added') return 'Component added to definition';
+            if (status === 'removed') return 'Component removed from definition';
+            if (status === 'modified') {
+                if (riskScore >= 70) return 'High-risk modifications detected';
+                if (riskScore >= 40) return 'Moderate changes to parameters';
+                return 'Minor parameter adjustments';
+            }
+            return 'No changes';
         }
 
         function zoomToNode(nodeId) {
@@ -3191,6 +3219,18 @@
             });
             syncStatusFilterButtons();
             renderComponentResultsList();
+
+            // Navigation controls
+            const btnNextChange = document.getElementById('btn-next-change');
+            const btnPrevChange = document.getElementById('btn-prev-change');
+            
+            if (btnNextChange) {
+                btnNextChange.addEventListener('click', () => navigateToNext());
+            }
+            
+            if (btnPrevChange) {
+                btnPrevChange.addEventListener('click', () => navigateToPrevious());
+            }
 
             if (componentSortSelect) {
                 componentSortSelect.value = state.componentSort || 'risk';
