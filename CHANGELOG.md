@@ -42,13 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **UI restyle with ANDURA tokens**:
-  - All web views (`diff_viewer.html`, `index.html`, `selection.html`, `error.html`) now use ANDURA color palette v2.2
-  - Status mapping: unchanged = Muted grey, added = Ultramarine blue, modified = Caution yellow, removed = Emergency red
-  - IBM Plex Sans (UI text) and IBM Plex Mono (values, labels) replace previous fonts
-  - No rounded corners, no box shadows (ANDURA: whitespace before lines before boxes)
-  - Focus ring: 2px Text (#DADADD) with 2px gap (ANDURA rule: never Ultramarine for focus)
+- **Comprehensive UI redesign**:
+  - Complete redesign of all HTML pages (`diff_viewer.html`, `index.html`, `selection.html`, `error.html`)
+  - New design system: `hoptracer-design-system.css` with Apple pro app aesthetic
+  - Status colors: Added=#30d158 (green), Modified=#ffd60a (yellow), Removed=#ff453a (red), Unchanged=#636366 (grey)
+  - Fixed hard-coded colors in JavaScript - now reads from CSS custom properties
+  - Start page (`index.html`) completely redesigned with spring animations, drop zones, and feature cards
+  - System font stack (-apple-system, etc.) for native feel
+  - Subtle shadows and elevation for depth
+  - MAUI Colors.xaml updated to match web design system
 - **Agent formatter improvements**: Better neighbor resolution includes both changed and unchanged connections for complete topology context
+- **Motion system**: Spring easings, interruptible transitions, respects `prefers-reduced-motion`
 
 ### Fixed
 
