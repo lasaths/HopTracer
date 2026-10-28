@@ -1,0 +1,13 @@
+/**
+ * ANDURA Design System - Font Loading
+ * IBM Plex Sans and Mono from Google Fonts
+ * Weights: 400 (regular), 500 (medium)
+ * License: SIL OFL 1.1
+ * Source: https://github.com/lasaths/andura-skill
+ */
+
+/* IBM Plex Mono - 400, 500 */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* IBM Plex Sans - 400, 500 */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&display=swap');

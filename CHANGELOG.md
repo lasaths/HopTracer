@@ -22,6 +22,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Apple-inspired design system**: Comprehensive redesign following Apple pro app principles (Xcode, Final Cut, Logic dark mode)
+  - True dark mode: Pure black (#000) base with subtle elevated surfaces
+  - System font stack with precise typography scale
+  - Spring-based, interruptible motion with `prefers-reduced-motion` support
+  - Single source of truth for all colors (no hard-coded values)
+- **Enhanced agent diff output** (`--format agent`):
+  - Component category classification (Params, Maths, Script, etc.) for better semantic context
+  - Group context: detects group nodes and includes member count and color
+  - Position and movement: absolute (X, Y) coordinates and movement deltas (Dx, Dy)
+  - Connection change details: per-node in/out connection add/remove counts
+  - Enhanced topology: includes both changed wires and existing unchanged connections for full upstream/downstream neighbor view
+  - Deterministic ordering: nodes consistently sorted by risk score (descending), then status, then label
+  - Improved summary: structured, token-efficient summary highlighting risk levels, script changes, wire changes, and geometry updates
+- **Updated JSON schema**: `skills/hoptracer/references/agent-schema.json` reflects new agent output fields
+- **Comprehensive documentation**: Updated `skills/hoptracer/references/output-formats.md` with detailed field descriptions and changelog
+
+### Changed
+
+- **Comprehensive UI redesign**:
+  - Complete redesign of all HTML pages (`diff_viewer.html`, `index.html`, `selection.html`, `error.html`)
+  - New design system: `hoptracer-design-system.css` with Apple pro app aesthetic
+  - Status colors: Added=#30d158 (green), Modified=#ffd60a (yellow), Removed=#ff453a (red), Unchanged=#636366 (grey)
+  - Fixed hard-coded colors in JavaScript - now reads from CSS custom properties
+  - Start page (`index.html`) completely redesigned with spring animations, drop zones, and feature cards
+  - System font stack (-apple-system, etc.) for native feel
+  - Subtle shadows and elevation for depth
+  - MAUI Colors.xaml updated to match web design system
+- **Agent formatter improvements**: Better neighbor resolution includes both changed and unchanged connections for complete topology context
+- **Motion system**: Spring easings, interruptible transitions, respects `prefers-reduced-motion`
+
+### Fixed
+
+- Agent output now includes all necessary context for LLM agents to understand graph topology, change location, and risk assessment
+
 ## [1.2.1] - 2026-07-10
 
 ### Added
