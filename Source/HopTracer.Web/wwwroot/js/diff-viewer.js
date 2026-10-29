@@ -1123,11 +1123,15 @@
             const node = state.nodes.find(n => String(n.id) === needle);
             if (!node) return;
 
+            const dpr = window.devicePixelRatio || 1;
+            const canvasWidth = canvas.width / dpr;
+            const canvasHeight = canvas.height / dpr;
+            
             const rect = getRenderedNodeRect(node);
             const targetScale = Math.max(state.view.scale, 1.15);
             state.view.scale = targetScale;
-            state.view.x = (canvas.width / 2) - (rect.x + rect.w / 2) * targetScale;
-            state.view.y = (canvas.height / 2) - (rect.y + rect.h / 2) * targetScale;
+            state.view.x = (canvasWidth / 2) - (rect.x + rect.w / 2) * targetScale;
+            state.view.y = (canvasHeight / 2) - (rect.y + rect.h / 2) * targetScale;
             state.selected = node.id;
 
             updateDetailsPanel(node);
@@ -3289,6 +3293,14 @@
                 }
                 resize();
             });
+            
+            // Monitor DPR changes (e.g., moving window to different display)
+            let currentDpr = window.devicePixelRatio || 1;
+            const dprQuery = matchMedia(`(resolution: ${currentDpr}dppx)`);
+            dprQuery.addEventListener('change', () => {
+                currentDpr = window.devicePixelRatio || 1;
+                resize();
+            });
 
             // Canvas interactions
             canvas.addEventListener('mousedown', onMouseDown);
@@ -3727,8 +3739,14 @@
         }
 
         function resize() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+            const dpr = window.devicePixelRatio || 1;
+            const clientWidth = canvas.parentElement.clientWidth;
+            const clientHeight = canvas.parentElement.clientHeight;
+            
+            canvas.width = clientWidth * dpr;
+            canvas.height = clientHeight * dpr;
+            canvas.style.width = clientWidth + 'px';
+            canvas.style.height = clientHeight + 'px';
 
             const miniContainer = document.getElementById('minimap-container');
             minimap.width = miniContainer.clientWidth;
@@ -3741,6 +3759,10 @@
             updateBounds();
             if (state.nodes.length === 0) return;
 
+            const dpr = window.devicePixelRatio || 1;
+            const canvasWidth = canvas.width / dpr;
+            const canvasHeight = canvas.height / dpr;
+            
             const padding = 50;
             const w = state.bounds.maxX - state.bounds.minX;
             const h = state.bounds.maxY - state.bounds.minY;
@@ -3748,19 +3770,20 @@
             // Prevent division by zero
             if (w === 0 || h === 0) return;
 
-            const scaleX = (canvas.width - padding * 2) / w;
-            const scaleY = (canvas.height - padding * 2) / h;
+            const scaleX = (canvasWidth - padding * 2) / w;
+            const scaleY = (canvasHeight - padding * 2) / h;
 
             state.view.scale = Math.min(scaleX, scaleY, 1); // Cap scale at 1
-            state.view.x = (canvas.width - w * state.view.scale) / 2 - state.bounds.minX * state.view.scale;
-            state.view.y = (canvas.height - h * state.view.scale) / 2 - state.bounds.minY * state.view.scale;
+            state.view.x = (canvasWidth - w * state.view.scale) / 2 - state.bounds.minX * state.view.scale;
+            state.view.y = (canvasHeight - h * state.view.scale) / 2 - state.bounds.minY * state.view.scale;
 
             scheduleDraw();
         }
 
         function zoom(factor) {
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
+            const dpr = window.devicePixelRatio || 1;
+            const cx = (canvas.width / dpr) / 2;
+            const cy = (canvas.height / dpr) / 2;
 
             const newScale = state.view.scale * factor;
             state.view.x = cx - (cx - state.view.x) * (newScale / state.view.scale);
@@ -3778,9 +3801,14 @@
         }
 
         function draw() {
+            const dpr = window.devicePixelRatio || 1;
+            
             // Clear
             ctx.fillStyle = CONFIG.colors.surface;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Set DPR transform
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
             // Transform
             ctx.save();
@@ -3810,10 +3838,14 @@
                 });
             });
 
+            const dpr = window.devicePixelRatio || 1;
+            const canvasWidth = canvas.width / dpr;
+            const canvasHeight = canvas.height / dpr;
+            
             const viewLeft = (-state.view.x / state.view.scale) - 200;
             const viewTop = (-state.view.y / state.view.scale) - 200;
-            const viewRight = ((canvas.width - state.view.x) / state.view.scale) + 200;
-            const viewBottom = ((canvas.height - state.view.y) / state.view.scale) + 200;
+            const viewRight = ((canvasWidth - state.view.x) / state.view.scale) + 200;
+            const viewBottom = ((canvasHeight - state.view.y) / state.view.scale) + 200;
             const renderNodeLookup = buildNodeLookupMap(Array.from(renderNodes.values()));
 
             // Determine visibility/dimming
@@ -3880,48 +3912,96 @@
 
                 if (isLong && !isConnected) return;
 
-                // Highlight logic
-                if (state.selected) {
-                    if (isConnected) {
-                        isDimmed = false; // Force visible
-                        ctx.lineWidth = Math.max(1.2 / state.view.scale, 0.8) * wireStyle.widthFactor;
-                        ctx.globalAlpha = 1.0;
-                    } else {
-                        isDimmed = true; // Dim unrelated
-                        ctx.lineWidth = Math.max(0.9 / state.view.scale, 0.65) * wireStyle.widthFactor;
-                        ctx.globalAlpha = 0.18;
+                // Derive effective wire status
+                let effectiveStatus = e.status;
+                if (effectiveStatus === 'same') {
+                    // Check if source or target is modified
+                    const srcNode = state.nodes.find(n => n.id === e.source);
+                    const tgtNode = state.nodes.find(n => n.id === e.target);
+                    if ((srcNode && srcNode.status === 'modified') || (tgtNode && tgtNode.status === 'modified')) {
+                        effectiveStatus = 'modified';
                     }
-                } else {
-                    ctx.lineWidth = Math.max(1.0 / state.view.scale, 0.7) * wireStyle.widthFactor;
-                    ctx.globalAlpha = isDimmed ? 0.28 : 0.9;
                 }
 
-                // Apply version alpha to edges too
-                let edgeAlpha = 1.0;
-                if (e.status === 'added') edgeAlpha = mix;
-                if (e.status === 'removed') edgeAlpha = 1.0 - mix;
+                // Determine base width (screen px, so divide by scale)
+                let baseWidth = 1.0;
+                if (effectiveStatus === 'added' || effectiveStatus === 'removed' || effectiveStatus === 'modified') {
+                    baseWidth = 2.0;
+                }
+                
+                // Selection highlight multiplier
+                let widthMultiplier = 1.0;
+                if (state.selected) {
+                    if (isConnected) {
+                        isDimmed = false;
+                        widthMultiplier = 1.2;
+                    } else {
+                        isDimmed = true;
+                    }
+                }
+                
+                ctx.lineWidth = Math.max(baseWidth * widthMultiplier / state.view.scale, 0.6) * wireStyle.widthFactor;
 
-                ctx.globalAlpha *= edgeAlpha * wireStyle.alphaFactor;
+                // Dash pattern for removed wires (screen px, so divide by scale)
+                if (effectiveStatus === 'removed') {
+                    ctx.setLineDash([6 / state.view.scale, 4 / state.view.scale]);
+                    ctx.lineCap = 'butt';
+                } else {
+                    ctx.setLineDash([]);
+                    ctx.lineCap = 'round';
+                }
+                ctx.lineJoin = 'round';
+
+                // Base alpha
+                let baseAlpha = 0.9;
+                
+                // Selection dimming
+                if (state.selected) {
+                    if (isConnected) {
+                        baseAlpha = 1.0;
+                    } else {
+                        baseAlpha = 0.18;
+                    }
+                } else {
+                    if (isDimmed) {
+                        baseAlpha = 0.28;
+                    }
+                }
+
+                // Version mix: only fade at extremes (0 or 1), not at 0.5
+                let versionAlpha = 1.0;
+                if (effectiveStatus === 'added') {
+                    // Fade to 0 when mix approaches 0 (Old version)
+                    versionAlpha = mix;
+                }
+                if (effectiveStatus === 'removed') {
+                    // Fade to 0 when mix approaches 1 (New version)
+                    versionAlpha = 1.0 - mix;
+                }
+
+                ctx.globalAlpha = baseAlpha * versionAlpha * wireStyle.alphaFactor;
                 if (ctx.globalAlpha < 0.01) return; // Skip invisible
 
                 ctx.beginPath();
                 ctx.moveTo(start.x, start.y);
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
 
                 // Bezier curve
                 const cp1 = { x: start.x + (end.x - start.x) / 2, y: start.y };
                 const cp2 = { x: end.x - (end.x - start.x) / 2, y: end.y };
                 ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y);
 
+                // Stroke color
                 ctx.strokeStyle = CONFIG.colors.edgeSame;
-                if (e.status === 'added') ctx.strokeStyle = CONFIG.colors.added;
-                if (e.status === 'removed') ctx.strokeStyle = CONFIG.colors.removed;
+                if (effectiveStatus === 'added') ctx.strokeStyle = CONFIG.colors.added;
+                if (effectiveStatus === 'removed') ctx.strokeStyle = CONFIG.colors.removed;
 
-                // Override color if selected
+                // Override color for selected (but keep dash)
                 if (isConnected) ctx.strokeStyle = CONFIG.colors.selection;
 
                 ctx.stroke();
+                
+                // Reset state
+                ctx.setLineDash([]);
                 ctx.globalAlpha = 1.0;
             });
 
@@ -4379,10 +4459,13 @@
             miniCtx.globalAlpha = 1.0;
 
             // Draw Viewport Rect
+            const dpr = window.devicePixelRatio || 1;
+            const canvasWidth = canvas.width / dpr;
+            const canvasHeight = canvas.height / dpr;
             const vx = (-state.view.x / state.view.scale) * scale + offsetX;
             const vy = (-state.view.y / state.view.scale) * scale + offsetY;
-            const vw = (canvas.width / state.view.scale) * scale;
-            const vh = (canvas.height / state.view.scale) * scale;
+            const vw = (canvasWidth / state.view.scale) * scale;
+            const vh = (canvasHeight / state.view.scale) * scale;
 
             miniCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             miniCtx.lineWidth = 1;
@@ -4406,12 +4489,13 @@
          * differs from canvas.width/height (WebView/DPI/layout), or clicks miss drawn nodes.
          */
         function canvasClientToBitmap(clientX, clientY) {
+            const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
             const rw = rect.width || 1;
             const rh = rect.height || 1;
             return {
-                x: (clientX - rect.left) * (canvas.width / rw),
-                y: (clientY - rect.top) * (canvas.height / rh)
+                x: (clientX - rect.left) * (canvas.width / dpr / rw),
+                y: (clientY - rect.top) * (canvas.height / dpr / rh)
             };
         }
 
@@ -4454,9 +4538,10 @@
 
         function onMouseMove(e) {
             if (state.dragging) {
+                const dpr = window.devicePixelRatio || 1;
                 const rect = canvas.getBoundingClientRect();
-                const sx = canvas.width / (rect.width || 1);
-                const sy = canvas.height / (rect.height || 1);
+                const sx = (canvas.width / dpr) / (rect.width || 1);
+                const sy = (canvas.height / dpr) / (rect.height || 1);
                 const dx = (e.clientX - state.lastPos.x) * sx;
                 const dy = (e.clientY - state.lastPos.y) * sy;
                 if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
@@ -4514,8 +4599,11 @@
 
             // Center view on worldX, worldY
             // view.x = canvas.width/2 - worldX * view.scale
-            state.view.x = canvas.width / 2 - worldX * state.view.scale;
-            state.view.y = canvas.height / 2 - worldY * state.view.scale;
+            const dpr = window.devicePixelRatio || 1;
+            const canvasWidth = canvas.width / dpr;
+            const canvasHeight = canvas.height / dpr;
+            state.view.x = canvasWidth / 2 - worldX * state.view.scale;
+            state.view.y = canvasHeight / 2 - worldY * state.view.scale;
 
             scheduleDraw();
         }
