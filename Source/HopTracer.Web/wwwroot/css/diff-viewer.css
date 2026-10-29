@@ -2131,6 +2131,7 @@ a.button,
     flex: 1;
     min-width: 0;
     white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 #viewer-toast-dismiss {

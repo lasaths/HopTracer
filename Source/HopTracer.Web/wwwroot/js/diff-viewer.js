@@ -3252,9 +3252,16 @@
         let viewerToastSticky = false;
         let viewerToastReturnFocus = null;
 
-        function hideViewerToast() {
+        function hideViewerToast(options = {}) {
+            const restoreFocus = !!options.restoreFocus;
             const toast = document.getElementById('viewer-toast');
             const dismissBtn = document.getElementById('viewer-toast-dismiss');
+            const wasVisible = !!(toast && !toast.hidden);
+            const active = document.activeElement;
+            const activeInsideToast = !!(toast && active && toast.contains(active));
+            const activeIsBody = !active || active === document.body || active === document.documentElement;
+            const shouldRestore = restoreFocus && wasVisible && (activeInsideToast || activeIsBody);
+
             if (toast) toast.hidden = true;
             if (dismissBtn) dismissBtn.hidden = true;
             viewerToastSticky = false;
@@ -3262,15 +3269,26 @@
                 clearTimeout(viewerToastTimer);
                 viewerToastTimer = null;
             }
+
             const prev = viewerToastReturnFocus;
             viewerToastReturnFocus = null;
-            const canvasEl = document.getElementById('graph-canvas');
-            if (canvasEl && canvasEl.tabIndex < 0 && !canvasEl.hasAttribute('tabindex')) {
-                canvasEl.tabIndex = -1;
+            if (!shouldRestore) return;
+
+            const prevUsable = prev &&
+                prev !== document.body &&
+                prev !== document.documentElement &&
+                prev !== dismissBtn &&
+                document.contains(prev);
+            let target = prevUsable ? prev : null;
+            if (!target && prev && prev !== document.body && prev !== document.documentElement) {
+                const canvasEl = document.getElementById('graph-canvas');
+                if (canvasEl) {
+                    if (canvasEl.tabIndex < 0 && !canvasEl.hasAttribute('tabindex')) {
+                        canvasEl.tabIndex = -1;
+                    }
+                    target = canvasEl;
+                }
             }
-            const target = prev && prev !== document.body && document.contains(prev) && prev !== dismissBtn
-                ? prev
-                : canvasEl;
             if (target && typeof target.focus === 'function') {
                 target.focus({ preventScroll: true });
             }
@@ -3291,20 +3309,27 @@
             }
             const text = String(message);
             if (/^Preparing /i.test(text) || /^Large-model mode/i.test(text)) return;
+            const isError = isPerfError(text);
+            if (viewerToastSticky && !isError) return;
             if (!toast || !msgEl) return;
             if (toast.hidden) {
                 const active = document.activeElement;
-                viewerToastReturnFocus = active && active !== document.body && active !== dismissBtn
-                    ? active
-                    : document.getElementById('graph-canvas');
+                viewerToastReturnFocus = active && active !== dismissBtn ? active : null;
             }
-            msgEl.textContent = text;
+            msgEl.replaceChildren();
+            if (isError) {
+                const kicker = document.createElement('span');
+                kicker.className = 'em';
+                kicker.textContent = 'ERROR';
+                msgEl.append(kicker, ' ', text);
+            } else {
+                msgEl.textContent = text;
+            }
             toast.hidden = false;
             if (viewerToastTimer) {
                 clearTimeout(viewerToastTimer);
                 viewerToastTimer = null;
             }
-            const isError = isPerfError(text);
             viewerToastSticky = isError;
             toast.setAttribute('role', isError ? 'alert' : 'status');
             toast.setAttribute('aria-live', isError ? 'assertive' : 'polite');
@@ -3312,6 +3337,12 @@
             if (icon) {
                 icon.classList.toggle('em', isError);
                 icon.classList.toggle('ca', !isError);
+                const use = icon.querySelector('use');
+                if (use) {
+                    const href = `/vendor/phosphor/icons.svg#${isError ? 'ph-warning-octagon' : 'ph-warning'}`;
+                    use.setAttribute('href', href);
+                    use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', href);
+                }
             }
             if (dismissBtn) dismissBtn.hidden = !isError;
             if (!isError) {
@@ -3323,7 +3354,7 @@
         if (viewerToastDismiss) {
             viewerToastDismiss.addEventListener('click', (e) => {
                 e.preventDefault();
-                hideViewerToast();
+                hideViewerToast({ restoreFocus: true });
             });
         }
 
@@ -3415,6 +3446,7 @@
                 if (state.spotlightOpen) {
                     if (key === 'escape') {
                         e.preventDefault();
+                        e.stopPropagation();
                         closeSpotlight();
                     }
                     return;
@@ -3423,7 +3455,7 @@
                 if (isTypingTarget) {
                     if (key === 'escape' && viewerToastSticky) {
                         e.preventDefault();
-                        hideViewerToast();
+                        hideViewerToast({ restoreFocus: true });
                     }
                     return;
                 }
@@ -3447,7 +3479,7 @@
                     case 'escape':
                         if (viewerToastSticky) {
                             e.preventDefault();
-                            hideViewerToast();
+                            hideViewerToast({ restoreFocus: true });
                             break;
                         }
                         state.selected = null;
@@ -3495,6 +3527,7 @@
                             break;
                         case 'escape':
                             e.preventDefault();
+                            e.stopPropagation();
                             closeSpotlight();
                             break;
                     }
