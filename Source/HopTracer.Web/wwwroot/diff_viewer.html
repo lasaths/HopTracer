@@ -55,14 +55,27 @@
             </div>
 
             <div class="controls">
-                <!-- Risk-Ordered Change List -->
+                <!-- Risk-Ordered Change Queue -->
                 <div class="change-list-section">
-                    <div class="section-header">
-                        <span class="section-title">Changes</span>
-                        <span id="change-list-count" class="section-count">0</span>
+                    <div class="queue-head">
+                        <span class="queue-head-label">CHANGES</span>
+                        <span id="change-list-count" class="queue-head-count">0</span>
                     </div>
                     <div id="change-list" class="change-list">
                         <div class="component-results-empty">No changes to review.</div>
+                    </div>
+                    <div class="queue-foot">
+                        <div class="queue-foot-left">
+                            <label class="unchanged-toggle">
+                                <input type="checkbox" id="toggle-unchanged" checked />
+                                <span id="unchanged-toggle-text">hide unchanged</span>
+                            </label>
+                        </div>
+                        <div class="queue-foot-right">
+                            <kbd class="keycap">J</kbd>
+                            <kbd class="keycap">K</kbd>
+                            <kbd class="keycap">F</kbd>
+                        </div>
                     </div>
                 </div>
 

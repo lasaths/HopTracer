@@ -918,7 +918,7 @@
             filtered.forEach(node => {
                 const item = document.createElement('button');
                 item.className = 'qrow change-item';
-                if (state.selected === node.id) item.classList.add('selected sel');
+                if (state.selected === node.id) item.classList.add('selected', 'sel');
                 item.dataset.nodeId = String(node.id);
                 item.tabIndex = 0;
                 item.type = 'button';
@@ -1036,17 +1036,11 @@
                     zoomToNode(node.id);
                 });
                 
-                // Keyboard handler for accessibility
+                // Keyboard handler for accessibility - only Enter and Space, not J/K
                 item.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         zoomToNode(node.id);
-                    } else if (e.key.toLowerCase() === 'j') {
-                        e.preventDefault();
-                        navigateToNext();
-                    } else if (e.key.toLowerCase() === 'k') {
-                        e.preventDefault();
-                        navigateToPrevious();
                     }
                 });
 
@@ -1054,6 +1048,20 @@
             });
 
             changeList.appendChild(fragment);
+            
+            // Update unchanged toggle text
+            const unchangedToggle = document.getElementById('toggle-unchanged');
+            const unchangedToggleText = document.getElementById('unchanged-toggle-text');
+            if (unchangedToggle && unchangedToggleText) {
+                const hideUnchanged = unchangedToggle.checked;
+                const unchangedCount = state.nodes.filter(n => n.status === 'same').length;
+                
+                if (hideUnchanged && unchangedCount > 0) {
+                    unchangedToggleText.textContent = `${unchangedCount} unchanged hidden`;
+                } else {
+                    unchangedToggleText.textContent = 'hide unchanged';
+                }
+            }
         }
 
         function getRiskReason(node) {
@@ -3374,6 +3382,42 @@
             });
             syncStatusFilterButtons();
             renderComponentResultsList();
+            
+            // Wire unchanged toggle
+            const unchangedToggle = document.getElementById('toggle-unchanged');
+            const unchangedToggleText = document.getElementById('unchanged-toggle-text');
+            
+            function updateUnchangedToggle() {
+                if (!unchangedToggle || !unchangedToggleText) return;
+                
+                const hideUnchanged = unchangedToggle.checked;
+                const unchangedCount = state.nodes.filter(n => n.status === 'same').length;
+                
+                if (hideUnchanged && unchangedCount > 0) {
+                    unchangedToggleText.textContent = `${unchangedCount} unchanged hidden`;
+                } else {
+                    unchangedToggleText.textContent = 'hide unchanged';
+                }
+            }
+            
+            if (unchangedToggle) {
+                unchangedToggle.addEventListener('change', () => {
+                    if (unchangedToggle.checked) {
+                        state.filterStatuses.delete('same');
+                    } else {
+                        state.filterStatuses.add('same');
+                    }
+                    updateUnchangedToggle();
+                    syncStatusFilterButtons();
+                    applySearchQuery(state.search, { refreshView: false, syncInput: false });
+                    renderComponentResultsList();
+                    scheduleDraw();
+                });
+                
+                // Initialize: hide unchanged by default
+                state.filterStatuses.delete('same');
+                updateUnchangedToggle();
+            }
 
             // Navigation controls
             const btnNextChange = document.getElementById('btn-next-change');
@@ -4103,7 +4147,17 @@
                                 if (fullyInside) {
                                     // Calculate same alpha factor as group rendering
                                     const memberIds = getGroupMemberIdsForMix(group, state.versionMix);
-                                    const connectedIds = getConnectedNodeIds();
+                                    
+                                    // Calculate connected nodes
+                                    const connectedIds = new Set();
+                                    if (state.selected) {
+                                        connectedIds.add(state.selected);
+                                        state.edges.forEach(e => {
+                                            if (e.source === state.selected) connectedIds.add(e.target);
+                                            if (e.target === state.selected) connectedIds.add(e.source);
+                                        });
+                                    }
+                                    
                                     const connectedCanonical = new Set(Array.from(connectedIds).map(canonicalizeId));
                                     const matchingCanonical = new Set((state.matchingNodes || []).map(n => canonicalizeId(n.id)));
                                     const matchingNodeSet = state.matchingNodes ? new Set(state.matchingNodes.map(n => n.id)) : null;
@@ -6082,9 +6136,13 @@
                 if (counts[n.status] !== undefined) counts[n.status]++;
             });
 
-            document.getElementById('stat-added').textContent = counts.added;
-            document.getElementById('stat-removed').textContent = counts.removed;
-            document.getElementById('stat-modified').textContent = counts.modified;
+            const statAdded = document.getElementById('stat-added');
+            const statRemoved = document.getElementById('stat-removed');
+            const statModified = document.getElementById('stat-modified');
+            
+            if (statAdded) statAdded.textContent = counts.added;
+            if (statRemoved) statRemoved.textContent = counts.removed;
+            if (statModified) statModified.textContent = counts.modified;
         }
 
         function escapeHtml(text) {

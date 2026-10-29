@@ -386,9 +386,6 @@ html, body {
         display: none;
     }
 }
-    border-bottom: 1px solid var(--border-hairline);
-    max-height: 50vh;
-}
 
 .section-header {
     display: flex;
@@ -398,6 +395,90 @@ html, body {
     border-bottom: 1px solid var(--border-hairline);
     background: var(--bg-app);
     flex-shrink: 0;
+}
+
+/* Queue Head (ANDURA Changes header) */
+.queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--c-line);
+    background: var(--c-surface-canvas);
+    flex-shrink: 0;
+}
+
+.queue-head-label {
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--c-muted);
+}
+
+.queue-head-count {
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--c-text);
+}
+
+/* Queue Footer (unchanged toggle + keycaps) */
+.queue-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    padding: 0 8px;
+    border-top: 1px solid var(--c-line);
+    background: var(--c-surface-canvas);
+    flex-shrink: 0;
+}
+
+.queue-foot-left {
+    display: flex;
+    align-items: center;
+}
+
+.unchanged-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--c-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.unchanged-toggle input[type="checkbox"] {
+    margin: 0;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.queue-foot-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.keycap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--c-muted);
+    background: transparent;
+    border: 1px solid var(--c-muted);
+    border-radius: 2px;
 }
 
 .change-list {
