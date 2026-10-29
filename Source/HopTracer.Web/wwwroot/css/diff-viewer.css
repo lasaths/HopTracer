@@ -1266,7 +1266,19 @@ html, body {
 .strip .s-tr {
     position: relative;
     height: 24px;
+    z-index: 1;
+}
+
+.strip .s-tr::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -4px;
+    height: 32px;
     cursor: pointer;
+    pointer-events: auto;
+    z-index: 4;
 }
 
 .strip .s-tr::before {
@@ -1349,7 +1361,6 @@ html, body {
 .strip .s-tl span.on { color: var(--c-text); }
 
 .strip .s-tr:hover::before,
-.strip .sld.is-hover .s-tr::before,
 .strip .sld.is-drag .s-tr::before {
     background: var(--c-muted);
 }
@@ -1358,7 +1369,7 @@ html, body {
     background: var(--c-ultra);
 }
 
-.strip .sld:has(input:focus-visible) .s-th {
+.strip .sld.is-key-focus .s-th {
     outline: 2px solid var(--c-ultra);
     outline-offset: 2px;
 }

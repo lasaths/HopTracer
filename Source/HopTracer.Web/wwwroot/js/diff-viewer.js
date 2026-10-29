@@ -3839,14 +3839,9 @@
             function bindStripSlider(input, sld, { snap = false, onChange } = {}) {
                 if (!input || !sld) return;
                 const tr = sld.querySelector('.s-tr');
-                const syncHover = () => {
-                    if (sld.classList.contains('is-drag')) return;
-                    sld.classList.toggle('is-hover', sld.matches(':hover'));
-                };
-                sld.addEventListener('pointerenter', syncHover);
-                sld.addEventListener('pointerleave', syncHover);
 
                 let dragging = false;
+                let pointerFocus = false;
                 const commitPointer = (clientX) => {
                     let val = valueFromPointer(input, clientX);
                     if (snap) val = snapShowValue(val);
@@ -3855,14 +3850,21 @@
                     return val;
                 };
 
+                const focusFromPointer = () => {
+                    pointerFocus = true;
+                    sld.classList.remove('is-key-focus');
+                    input.focus({ preventScroll: true, focusVisible: false });
+                    pointerFocus = false;
+                };
+
                 tr.addEventListener('pointerdown', (e) => {
                     if (e.button !== 0) return;
                     e.preventDefault();
                     dragging = true;
-                    sld.classList.remove('is-hover');
+                    sld.classList.remove('is-key-focus');
                     sld.classList.add('is-drag');
                     tr.setPointerCapture(e.pointerId);
-                    input.focus({ preventScroll: true });
+                    focusFromPointer();
                     commitPointer(e.clientX);
                 });
                 tr.addEventListener('pointermove', (e) => {
@@ -3873,11 +3875,39 @@
                     if (!dragging) return;
                     dragging = false;
                     sld.classList.remove('is-drag');
-                    syncHover();
                 };
                 tr.addEventListener('pointerup', endDrag);
                 tr.addEventListener('pointercancel', endDrag);
 
+                input.addEventListener('focus', () => {
+                    if (pointerFocus) {
+                        sld.classList.remove('is-key-focus');
+                        return;
+                    }
+                    if (input.matches(':focus-visible')) {
+                        sld.classList.add('is-key-focus');
+                    }
+                });
+                input.addEventListener('blur', () => {
+                    sld.classList.remove('is-key-focus');
+                });
+                input.addEventListener('keydown', (e) => {
+                    const key = e.key;
+                    const isArrow = key === 'ArrowLeft' || key === 'ArrowRight' ||
+                        key === 'ArrowUp' || key === 'ArrowDown';
+                    if (isArrow || key === 'PageUp' || key === 'PageDown' ||
+                        key === 'Home' || key === 'End') {
+                        sld.classList.add('is-key-focus');
+                    }
+                    if (!isArrow || !e.shiftKey) return;
+                    e.preventDefault();
+                    const cur = Number.parseInt(input.value, 10);
+                    const base = Number.isFinite(cur) ? cur : 0;
+                    const step = (key === 'ArrowRight' || key === 'ArrowUp') ? 10 : -10;
+                    const next = Math.max(0, Math.min(100, base + step));
+                    input.value = String(next);
+                    onChange(next);
+                });
                 input.addEventListener('input', () => {
                     if (dragging) return;
                     onChange(parseInt(input.value, 10));
