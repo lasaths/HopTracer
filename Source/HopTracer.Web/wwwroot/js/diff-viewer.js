@@ -3024,40 +3024,41 @@
                     if (showLabels && labelsToCollect) {
                         const rawLabel = getPortDisplayLabel(port, index, isOutput ? 'output' : 'input', node.id);
                         
-                        // Draw outside node, like Grasshopper wire-end labels
-                        const gap = 4 / state.view.scale;
+                        // Measure in screen space with screen font
+                        ctx.font = `${screenPx}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
                         const maxScreenWidth = 80; // px on screen
-                        const maxWidth = maxScreenWidth / state.view.scale;
-                        
-                        ctx.font = `${labelFontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
                         let displayLabel = rawLabel;
-                        if (ctx.measureText(displayLabel).width > maxWidth) {
-                            while (displayLabel.length > 1 && ctx.measureText(displayLabel + '…').width > maxWidth) {
+                        if (ctx.measureText(displayLabel).width > maxScreenWidth) {
+                            while (displayLabel.length > 1 && ctx.measureText(displayLabel + '…').width > maxScreenWidth) {
                                 displayLabel = displayLabel.slice(0, -1);
                             }
                             displayLabel += '…';
                         }
                         
                         const textWidth = ctx.measureText(displayLabel).width;
-                        const labelX = isOutput ? (node.x + node.w + gap) : (node.x - gap - textWidth);
-                        const labelY = y;
+                        const gap = 4; // screen pixels
                         
-                        // Convert to screen coordinates for collision rect
+                        // Compute screen coordinates
+                        const worldX = isOutput ? node.x + node.w : node.x;
+                        const worldY = y;
+                        const screenPortX = (worldX * state.view.scale) + state.view.x;
+                        const screenPortY = (worldY * state.view.scale) + state.view.y;
+                        
+                        const screenX = isOutput ? (screenPortX + gap) : (screenPortX - gap - textWidth);
+                        const screenY = screenPortY - (screenPx / 2);
+                        
                         const padding = 2; // screen pixels
-                        const screenX = (labelX * state.view.scale) + state.view.x;
-                        const screenY = (labelY * state.view.scale) + state.view.y - (screenPx / 2);
-                        const screenW = textWidth * state.view.scale + padding * 2;
-                        const screenH = screenPx + padding * 2;
                         
                         labelsToCollect.push({
                             node,
                             text: displayLabel,
-                            x: labelX,
-                            y: labelY,
-                            width: textWidth,
-                            fontSize: labelFontSize,
+                            screenX,
+                            screenY,
+                            screenW: textWidth,
+                            screenH: screenPx,
+                            screenFontSize: screenPx,
                             isOutput,
-                            screenRect: { x: screenX, y: screenY, w: screenW, h: screenH },
+                            screenRect: { x: screenX - padding, y: screenY - padding, w: textWidth + padding * 2, h: screenPx + padding * 2 },
                             priority: (state.selected === node.id || state.hovered === node.id) ? 1 : 0
                         });
                     }
@@ -3953,10 +3954,24 @@
             if (state.showPortDetails && state.view.scale >= 1.2) {
                 const portLabels = [];
                 
+                // Create lookup for node alpha
+                const nodeAlphaMap = new Map();
+                nodesToDraw.forEach(item => {
+                    const finalAlpha = (item.dimmed ? 0.1 : 1.0) * item.alpha;
+                    if (state.selected) {
+                        const n = item.node;
+                        const isConnected = connectedIds.has(n.id);
+                        nodeAlphaMap.set(n.id, isConnected ? item.alpha : 0.1 * item.alpha);
+                    } else {
+                        nodeAlphaMap.set(item.node.id, finalAlpha);
+                    }
+                });
+                
                 // Collect all port labels, prioritizing selected/hovered nodes
                 nodesToDraw.forEach(item => {
                     const n = item.node;
-                    if (ctx.globalAlpha < 0.01) return;
+                    const nodeAlpha = nodeAlphaMap.get(n.id) || 0;
+                    if (nodeAlpha < 0.5) return; // Skip dimmed nodes
                     drawNodePortSockets(n, true, portLabels);
                 });
                 
@@ -3980,7 +3995,7 @@
                              r1.y + r1.h < r2.y || r2.y + r2.h < r1.y);
                 };
                 
-                // Draw labels, skipping collisions
+                // Draw labels in screen space, skipping collisions
                 portLabels.forEach(label => {
                     // Check collision with nodes
                     let collides = nodeRects.some(nr => rectsCollide(label.screenRect, nr));
@@ -3991,18 +4006,18 @@
                     }
                     
                     if (!collides) {
-                        // Draw black background rect
-                        const padding = 2 / state.view.scale;
+                        // Draw black background rect (screen coordinates)
+                        const padding = 2; // screen pixels
                         ctx.fillStyle = '#000';
-                        ctx.fillRect(label.x - padding, label.y - label.fontSize / 2 - padding,
-                                     label.width + padding * 2, label.fontSize + padding * 2);
+                        ctx.fillRect(label.screenX - padding, label.screenY - padding,
+                                     label.screenW + padding * 2, label.screenH + padding * 2);
                         
-                        // Draw text
+                        // Draw text (screen coordinates)
                         ctx.fillStyle = CONFIG.colors.textMuted;
-                        ctx.font = `${label.fontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
-                        ctx.textBaseline = 'middle';
+                        ctx.font = `${label.screenFontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                        ctx.textBaseline = 'top';
                         ctx.textAlign = 'left';
-                        ctx.fillText(label.text, label.x, label.y);
+                        ctx.fillText(label.text, label.screenX, label.screenY);
                         
                         drawnRects.push(label.screenRect);
                     }
