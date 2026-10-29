@@ -734,34 +734,11 @@ html, body {
     margin-bottom: var(--space-sm);
 }
 
-.filter-btn {
-    height: 32px;
-    padding: 0 12px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-hairline);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all var(--transition-base);
-    white-space: nowrap;
-}
-
-.filter-btn:hover {
-    background: var(--interactive-hover);
-    border-color: var(--border-hairline-strong);
-}
-
-.filter-btn.active {
-    background: rgba(58, 60, 255, 0.15);
-    border-color: var(--accent-primary);
-    color: var(--text-primary);
-}
-
 footer .filter-btn[data-filter] {
     height: 100%;
     min-height: 0;
-    min-width: 152px;
+    width: var(--filter-tab);
+    min-width: var(--filter-tab);
     flex: none;
     padding: 0 var(--s16) 0 0;
     background: none;

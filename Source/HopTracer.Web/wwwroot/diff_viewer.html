@@ -278,27 +278,29 @@
         </div>
     </main>
 
-    <footer role="tablist" aria-label="Filter changes">
-        <button type="button" class="filter-btn tab label" data-filter="all" role="tab" aria-current="true">
-            <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-squares-four"></use></svg>
-            <span class="w">All <span id="stat-all">0</span></span>
-        </button>
-        <button type="button" class="filter-btn tab label" data-filter="added" role="tab">
-            <svg class="ico ad" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-plus-circle"></use></svg>
-            <span class="w">Added <span id="stat-added">0</span></span>
-        </button>
-        <button type="button" class="filter-btn tab label" data-filter="removed" role="tab">
-            <svg class="ico em" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-minus-circle"></use></svg>
-            <span class="w">Removed <span id="stat-removed">0</span></span>
-        </button>
-        <button type="button" class="filter-btn tab label" data-filter="modified" role="tab">
-            <svg class="ico ca" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-pencil-simple-line"></use></svg>
-            <span class="w">Modified <span id="stat-modified">0</span></span>
-        </button>
-        <button type="button" class="filter-btn tab label" data-filter="same" role="tab">
-            <svg class="ico muted" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-circle-dashed"></use></svg>
-            <span class="w">Unchanged <span id="stat-same">0</span></span>
-        </button>
+    <footer>
+        <div role="tablist" aria-label="Filter">
+            <button type="button" class="filter-btn tab label" data-filter="all" role="tab" aria-selected="true" aria-current="true" tabindex="0">
+                <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-squares-four"></use></svg>
+                <span class="w">All <span id="stat-all">0</span></span>
+            </button>
+            <button type="button" class="filter-btn tab label" data-filter="added" role="tab" aria-selected="false" tabindex="-1">
+                <svg class="ico ad" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-plus-circle"></use></svg>
+                <span class="w">Added <span id="stat-added">0</span></span>
+            </button>
+            <button type="button" class="filter-btn tab label" data-filter="removed" role="tab" aria-selected="false" tabindex="-1">
+                <svg class="ico em" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-minus-circle"></use></svg>
+                <span class="w">Removed <span id="stat-removed">0</span></span>
+            </button>
+            <button type="button" class="filter-btn tab label" data-filter="modified" role="tab" aria-selected="false" tabindex="-1">
+                <svg class="ico ca" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-pencil-simple-line"></use></svg>
+                <span class="w">Modified <span id="stat-modified">0</span></span>
+            </button>
+            <button type="button" class="filter-btn tab label" data-filter="same" role="tab" aria-selected="false" tabindex="-1">
+                <svg class="ico muted" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-circle-dashed"></use></svg>
+                <span class="w">Unchanged <span id="stat-same">0</span></span>
+            </button>
+        </div>
         <div class="right">
             <button type="button" id="btn-check-baseline" class="btn ghost" title="Compare current file against a saved baseline">
                 <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-check"></use></svg>

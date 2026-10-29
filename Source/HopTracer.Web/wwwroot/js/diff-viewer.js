@@ -245,13 +245,34 @@
             return status === state.filterStatus;
         }
 
+        function nodeCriteriaAlphaFactor(node) {
+            const filterFactor = doesNodeMatchStatusFilter(node.status) ? 1 : 0.38;
+            const searchFactor = nodeMatchesSearch(node) ? 1 : 0.1;
+            return Math.min(filterFactor, searchFactor);
+        }
+
+        function getStatusFilterTabs() {
+            return Array.from(document.querySelectorAll('footer [role="tablist"] [role="tab"]'));
+        }
+
         function syncStatusFilterButtons() {
-            document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+            const tabs = getStatusFilterTabs();
+            const focusWasOnTab = tabs.includes(document.activeElement);
+            let selectedTab = null;
+            tabs.forEach(btn => {
                 const on = btn.dataset.filter === state.filterStatus;
                 btn.classList.toggle('active', on);
-                if (on) btn.setAttribute('aria-current', 'true');
-                else btn.removeAttribute('aria-current');
+                btn.setAttribute('aria-selected', on ? 'true' : 'false');
+                if (on) {
+                    btn.setAttribute('aria-current', 'true');
+                    btn.tabIndex = 0;
+                    selectedTab = btn;
+                } else {
+                    btn.removeAttribute('aria-current');
+                    btn.tabIndex = -1;
+                }
             });
+            if (focusWasOnTab && selectedTab) selectedTab.focus();
         }
 
         function appendUnchangedHiddenRow(parent) {
@@ -270,6 +291,13 @@
         function setStatusFilter(key) {
             if (!STATUS_FILTER_KEYS.includes(key)) return;
             state.filterStatus = key;
+            if (state.selected) {
+                const selectedNode = state.nodes.find(n => n.id === state.selected);
+                if (!selectedNode || !doesNodeMatchStatusFilter(selectedNode.status)) {
+                    state.selected = null;
+                    updateDetailsPanel(null);
+                }
+            }
             syncStatusFilterButtons();
             applySearchQuery(state.search, { refreshView: false, syncInput: false });
             renderComponentResultsList();
@@ -3585,6 +3613,38 @@
                     setStatusFilter(key);
                 });
             });
+            const filterTablist = document.querySelector('footer [role="tablist"]');
+            if (filterTablist) {
+                filterTablist.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey || e.altKey) return;
+                    const tabs = getStatusFilterTabs();
+                    if (tabs.length === 0) return;
+                    const currentIndex = tabs.indexOf(document.activeElement);
+                    if (currentIndex < 0) return;
+                    let nextIndex = -1;
+                    switch (e.key) {
+                        case 'ArrowRight':
+                            nextIndex = (currentIndex + 1) % tabs.length;
+                            break;
+                        case 'ArrowLeft':
+                            nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                            break;
+                        case 'Home':
+                            nextIndex = 0;
+                            break;
+                        case 'End':
+                            nextIndex = tabs.length - 1;
+                            break;
+                        default:
+                            return;
+                    }
+                    e.preventDefault();
+                    const tab = tabs[nextIndex];
+                    const key = tab && tab.dataset.filter;
+                    if (key) setStatusFilter(key);
+                    if (tab) tab.focus();
+                });
+            }
             syncStatusFilterButtons();
             renderComponentResultsList();
 
@@ -4100,10 +4160,14 @@
                     if (outside) return;
                 }
 
-                const matchesFilter = doesNodeMatchStatusFilter(n.status) &&
-                    nodeMatchesSearch(n);
+                const matchesStatus = doesNodeMatchStatusFilter(n.status);
+                const matchesSearch = nodeMatchesSearch(n);
 
-                nodesToDraw.push({ node: n, dimmed: !matchesFilter, alpha: n.alpha });
+                nodesToDraw.push({
+                    node: n,
+                    dimmed: !matchesStatus || !matchesSearch,
+                    alpha: n.alpha
+                });
             });
 
             const matchingNodeSet = new Set(nodesToDraw.filter(n => !n.dimmed).map(n => n.node.id));
@@ -4195,9 +4259,13 @@
                         baseAlpha = 0.18;
                     }
                 } else {
-                    if (isDimmed) {
-                        baseAlpha = 0.28;
-                    }
+                    const filterDim = !doesNodeMatchStatusFilter(sourceNode.status) ||
+                        !doesNodeMatchStatusFilter(targetNode.status);
+                    const searchDim = !nodeMatchesSearch(sourceNode) ||
+                        !nodeMatchesSearch(targetNode);
+                    const versionHidden = sourceNode.alpha <= 0.05 || targetNode.alpha <= 0.05;
+                    if (filterDim) baseAlpha *= 0.38;
+                    if (searchDim || versionHidden) baseAlpha = Math.min(baseAlpha, 0.28);
                 }
 
                 // Version mix: fade at extremes
@@ -4254,8 +4322,8 @@
                 let drawAlpha = item.alpha;
                 if (state.selected) {
                     drawAlpha *= connectedIds.has(n.id) ? 1.0 : 0.1;
-                } else if (item.dimmed) {
-                    drawAlpha *= 0.38;
+                } else {
+                    drawAlpha *= nodeCriteriaAlphaFactor(n);
                 }
                 ctx.globalAlpha = drawAlpha;
                 if (ctx.globalAlpha < 0.01) return; // Skip invisible
@@ -4409,13 +4477,12 @@
                 // Create lookup for node alpha
                 const nodeAlphaMap = new Map();
                 nodesToDraw.forEach(item => {
-                    const finalAlpha = (item.dimmed ? 0.1 : 1.0) * item.alpha;
                     if (state.selected) {
                         const n = item.node;
                         const isConnected = connectedIds.has(n.id);
                         nodeAlphaMap.set(n.id, isConnected ? item.alpha : 0.1 * item.alpha);
                     } else {
-                        nodeAlphaMap.set(item.node.id, finalAlpha);
+                        nodeAlphaMap.set(item.node.id, nodeCriteriaAlphaFactor(item.node) * item.alpha);
                     }
                 });
                 
