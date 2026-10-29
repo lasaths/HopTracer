@@ -27,7 +27,8 @@
             }
         };
 
-        const CHANGED_STATUS_FILTERS = ['added', 'removed', 'modified'];
+        const STATUS_FILTER_KEYS = ['all', 'added', 'removed', 'modified', 'same'];
+        const STATUS_FILTER_BY_DIGIT = { '1': 'all', '2': 'added', '3': 'removed', '4': 'modified', '5': 'same' };
 
         // State
         let state = {
@@ -41,8 +42,7 @@
             lastPos: { x: 0, y: 0 },
             selected: null,
             hovered: null,
-            filterMode: 'all',
-            filterStatuses: new Set(CHANGED_STATUS_FILTERS),
+            filterStatus: 'all',
             search: '',
             searchMatches: new Set(),
             searchCatalog: [],
@@ -237,12 +237,43 @@
         }
 
         function isAllStatusFilterActive() {
-            return state.filterMode === 'all';
+            return state.filterStatus === 'all';
         }
 
         function doesNodeMatchStatusFilter(status) {
             if (isAllStatusFilterActive()) return true;
-            return state.filterStatuses.has(status);
+            return status === state.filterStatus;
+        }
+
+        function syncStatusFilterButtons() {
+            document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+                const on = btn.dataset.filter === state.filterStatus;
+                btn.classList.toggle('active', on);
+                if (on) btn.setAttribute('aria-current', 'true');
+                else btn.removeAttribute('aria-current');
+            });
+        }
+
+        function appendUnchangedHiddenRow(parent) {
+            if (!parent || state.filterStatus === 'same') return;
+            const unchanged = state.nodes.filter(n => n.status === 'same' && nodeMatchesSearch(n)).length;
+            if (unchanged === 0) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.id = 'btn-unchanged-hidden';
+            btn.className = 'q-hidden label';
+            btn.textContent = `${unchanged} UNCHANGED HIDDEN`;
+            btn.addEventListener('click', () => setStatusFilter('same'));
+            parent.appendChild(btn);
+        }
+
+        function setStatusFilter(key) {
+            if (!STATUS_FILTER_KEYS.includes(key)) return;
+            state.filterStatus = key;
+            syncStatusFilterButtons();
+            applySearchQuery(state.search, { refreshView: false, syncInput: false });
+            renderComponentResultsList();
+            scheduleDraw();
         }
 
         function normalizeSearchText(value, maxLength = 8000) {
@@ -757,9 +788,13 @@
 
             for (let i = 0; i < state.nodes.length; i++) {
                 const n = state.nodes[i];
-                if (doesNodeMatchStatusFilter(n.status) && nodeMatchesSearch(n)) {
-                    filtered.push(n);
+                if (!nodeMatchesSearch(n)) continue;
+                if (state.filterStatus === 'all') {
+                    if (n.status === 'same') continue;
+                } else if (n.status !== state.filterStatus) {
+                    continue;
                 }
+                filtered.push(n);
             }
 
             filtered.sort((a, b) => compareNodesForComponentSort(a, b));
@@ -916,6 +951,7 @@
                 empty.className = 'component-results-empty';
                 empty.textContent = 'No changes to review.';
                 changeList.appendChild(empty);
+                appendUnchangedHiddenRow(changeList);
                 return;
             }
 
@@ -1059,6 +1095,7 @@
             });
 
             changeList.appendChild(fragment);
+            appendUnchangedHiddenRow(changeList);
             
             // Restore focus to the same node if it had focus before
             if (focusedNodeId) {
@@ -1217,17 +1254,6 @@
             if (row) {
                 row.focus();
             }
-        }
-
-        function syncStatusFilterButtons() {
-            document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
-                const key = btn.dataset.filter;
-                if (key === 'all') {
-                    btn.classList.toggle('active', isAllStatusFilterActive());
-                } else {
-                    btn.classList.toggle('active', !isAllStatusFilterActive() && state.filterStatuses.has(key));
-                }
-            });
         }
 
         function setScriptTabVisibility(visible, count = 0) {
@@ -3487,6 +3513,14 @@
                         renderComponentResultsList();
                         scheduleDraw();
                         break;
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '5':
+                        if (e.ctrlKey || e.metaKey || e.altKey) break;
+                        setStatusFilter(STATUS_FILTER_BY_DIGIT[key]);
+                        break;
                     case '=':
                     case '+': zoom(1.2); break;
                     case '-': zoom(0.8); break;
@@ -3546,31 +3580,9 @@
 
             document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const key = e.target.dataset.filter;
+                    const key = e.currentTarget.dataset.filter;
                     if (!key) return;
-
-                    if (key === 'all') {
-                        state.filterMode = 'all';
-                        state.filterStatuses = new Set(CHANGED_STATUS_FILTERS);
-                    } else {
-                        if (state.filterMode === 'all') {
-                            state.filterMode = 'custom';
-                            state.filterStatuses = new Set([key]);
-                        } else if (state.filterStatuses.has(key)) {
-                            state.filterStatuses.delete(key);
-                            if (state.filterStatuses.size === 0) {
-                                state.filterMode = 'all';
-                                state.filterStatuses = new Set(CHANGED_STATUS_FILTERS);
-                            }
-                        } else {
-                            state.filterStatuses.add(key);
-                        }
-                    }
-
-                    syncStatusFilterButtons();
-                    applySearchQuery(state.search, { refreshView: false, syncInput: false });
-                    renderComponentResultsList();
-                    scheduleDraw();
+                    setStatusFilter(key);
                 });
             });
             syncStatusFilterButtons();
@@ -4239,17 +4251,13 @@
             // Draw Nodes
             nodesToDraw.forEach(item => {
                 const n = item.node;
-                let isDimmed = item.dimmed;
-
+                let drawAlpha = item.alpha;
                 if (state.selected) {
-                    if (connectedIds.has(n.id)) {
-                        isDimmed = false;
-                    } else {
-                        isDimmed = true;
-                    }
+                    drawAlpha *= connectedIds.has(n.id) ? 1.0 : 0.1;
+                } else if (item.dimmed) {
+                    drawAlpha *= 0.38;
                 }
-
-                ctx.globalAlpha = (isDimmed ? 0.1 : 1.0) * item.alpha;
+                ctx.globalAlpha = drawAlpha;
                 if (ctx.globalAlpha < 0.01) return; // Skip invisible
 
                 const isScribble = isScribbleLikeNode(n);
@@ -4508,7 +4516,7 @@
                                     const dimForSearch = !!state.search && !hasMatchingMember;
                                     const dimForStatusFilter = !isAllStatusFilterActive() && !hasMatchingMember;
                                     const selectionAlphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
-                                    const criteriaAlphaFactor = (dimForSearch || dimForStatusFilter) ? 0.1 : 1.0;
+                                    const criteriaAlphaFactor = dimForSearch ? 0.1 : (dimForStatusFilter ? 0.38 : 1.0);
                                     const alphaFactor = selectionAlphaFactor * criteriaAlphaFactor;
                                     
                                     // Blend group color with surface based on alpha
@@ -4630,7 +4638,7 @@
                 const dimForSearch = !!state.search && !hasMatchingMember;
                 const dimForStatusFilter = !isAllStatusFilterActive() && !hasMatchingMember;
                 const selectionAlphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
-                const criteriaAlphaFactor = (dimForSearch || dimForStatusFilter) ? 0.1 : 1.0;
+                const criteriaAlphaFactor = dimForSearch ? 0.1 : (dimForStatusFilter ? 0.38 : 1.0);
                 const alphaFactor = selectionAlphaFactor * criteriaAlphaFactor;
                 // Use fixed group color #141517 from CONFIG.colors.group
                 const color = { r: 20, g: 21, b: 23 };
@@ -6742,18 +6750,23 @@
         }
 
         function updateStats() {
-            const counts = { added: 0, removed: 0, modified: 0 };
+            const counts = { added: 0, removed: 0, modified: 0, same: 0 };
             state.nodes.forEach(n => {
                 if (counts[n.status] !== undefined) counts[n.status]++;
             });
+            const all = counts.added + counts.removed + counts.modified + counts.same;
 
+            const statAll = document.getElementById('stat-all');
             const statAdded = document.getElementById('stat-added');
             const statRemoved = document.getElementById('stat-removed');
             const statModified = document.getElementById('stat-modified');
-            
+            const statSame = document.getElementById('stat-same');
+
+            if (statAll) statAll.textContent = all;
             if (statAdded) statAdded.textContent = counts.added;
             if (statRemoved) statRemoved.textContent = counts.removed;
             if (statModified) statModified.textContent = counts.modified;
+            if (statSame) statSame.textContent = counts.same;
         }
 
         function escapeHtml(text) {

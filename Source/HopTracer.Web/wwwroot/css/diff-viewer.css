@@ -734,12 +734,6 @@ html, body {
     margin-bottom: var(--space-sm);
 }
 
-.filter-group {
-    display: flex;
-    gap: var(--space-sm);
-    flex-wrap: wrap;
-}
-
 .filter-btn {
     height: 32px;
     padding: 0 12px;
@@ -764,6 +758,27 @@ html, body {
     color: var(--text-primary);
 }
 
+footer .filter-btn[data-filter] {
+    height: 100%;
+    min-height: 0;
+    min-width: 152px;
+    flex: none;
+    padding: 0 var(--s16) 0 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    color: var(--c-muted);
+    transition: none;
+}
+
+footer .filter-btn[data-filter]:hover,
+footer .filter-btn[data-filter].active,
+footer .filter-btn[data-filter][aria-current="true"] {
+    background: none;
+    border: 0;
+    color: var(--c-text);
+}
+
 .sidebar-primary-action {
     background: var(--accent-primary);
     border-color: var(--accent-primary);
@@ -777,16 +792,25 @@ html, body {
     border-color: var(--accent-hover);
 }
 
-.review-action-stack {
+.q-hidden {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
+    align-items: center;
+    height: 32px;
+    width: 100%;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    color: var(--c-muted);
+    min-width: 0;
+    flex: none;
+    white-space: nowrap;
+    justify-content: flex-start;
+    text-align: left;
 }
 
-.review-action-btn {
-    width: 100%;
-    text-align: left;
-    font-size: 12px;
+.q-hidden:hover {
+    color: var(--c-text);
+    background: none;
 }
 
 /* Component Results */
@@ -2160,7 +2184,7 @@ a.button,
 .viewer-toast {
     position: fixed;
     left: var(--m);
-    bottom: var(--m);
+    bottom: calc(var(--foot) + 16px);
     transform: none;
     width: calc(var(--queue) - var(--m) - 16px);
     height: auto;
