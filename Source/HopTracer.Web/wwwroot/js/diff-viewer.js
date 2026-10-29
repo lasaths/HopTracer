@@ -2998,9 +2998,9 @@
             const radius = Math.max(2.4 / state.view.scale, 1.4);
             const borderWidth = Math.max(1 / state.view.scale, 0.55);
             const showLabels = state.view.scale >= 1.2 || state.selected === node.id;
-            const labelOffset = radius + (6 / state.view.scale);
-            const labelFontSize = Math.max(9, 11 / state.view.scale);
-            const labelMax = 22;
+            // Screen size = clamp(11, 12*scale, 14) px; world size = screen / scale
+            const screenPx = Math.max(11, Math.min(12 * state.view.scale, 14));
+            const labelFontSize = screenPx / state.view.scale;
 
             const drawSide = (ports, isOutput) => {
                 if (!Array.isArray(ports) || ports.length === 0) return;
@@ -3019,12 +3019,28 @@
 
                     if (showLabels) {
                         const rawLabel = getPortDisplayLabel(port, index, isOutput ? 'output' : 'input', node.id);
-                        const safeLabel = rawLabel.length > labelMax ? `${rawLabel.slice(0, labelMax - 1)}…` : rawLabel;
                         ctx.font = `${labelFontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
                         ctx.fillStyle = CONFIG.colors.textMuted;
                         ctx.textBaseline = 'middle';
-                        ctx.textAlign = isOutput ? 'left' : 'right';
-                        ctx.fillText(safeLabel, isOutput ? x + labelOffset : x - labelOffset, y);
+                        
+                        // Draw inside node, clipped to node width with ellipsis
+                        const padding = 6 / state.view.scale;
+                        const maxWidth = node.w - (2 * padding);
+                        let displayLabel = rawLabel;
+                        if (ctx.measureText(displayLabel).width > maxWidth) {
+                            while (displayLabel.length > 1 && ctx.measureText(displayLabel + '…').width > maxWidth) {
+                                displayLabel = displayLabel.slice(0, -1);
+                            }
+                            displayLabel += '…';
+                        }
+                        
+                        if (isOutput) {
+                            ctx.textAlign = 'right';
+                            ctx.fillText(displayLabel, node.x + node.w - padding, y);
+                        } else {
+                            ctx.textAlign = 'left';
+                            ctx.fillText(displayLabel, node.x + padding, y);
+                        }
                     }
                 });
             };
@@ -3773,11 +3789,12 @@
                 if (ctx.globalAlpha < 0.01) return; // Skip invisible
 
                 const isScribble = isScribbleLikeNode(n);
-                if (isScribble) {
+                if (isScribble && state.view.scale >= 0.5) {
                     const scribbleText = getScribbleText(n);
                     const maxWidth = Math.max(30, n.w - 8);
-                    // Bug fix #6: Labels >= 11px
-                    const fontSize = Math.max(11, 13 / state.view.scale);
+                    // Screen size = clamp(11, 12*scale, 14) px; world size = screen / scale
+                    const screenPx = Math.max(11, Math.min(13 * state.view.scale, 14));
+                    const fontSize = screenPx / state.view.scale;
                     const lineHeight = fontSize * 1.18;
 
                     ctx.fillStyle = CONFIG.colors[n.status] || CONFIG.colors.text;
@@ -3851,11 +3868,16 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // Text label - use node nickname or name
-                if (state.view.scale > 0.4 || state.selected === n.id) {
+                // Text label - use node nickname or name (skip if port labels are shown to avoid overlap)
+                const showPortLabels = state.showPortDetails && (state.view.scale >= 1.2 || state.selected === n.id);
+                // Hide labels below zoom 0.5 (11px would be too large in world space)
+                if (state.view.scale >= 0.5 && !showPortLabels) {
                     const label = n.nickname || n.name || 'Unnamed';
                     ctx.fillStyle = CONFIG.colors.text;
-                    ctx.font = '12px "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif';
+                    // Screen size = clamp(11, 12*scale, 14) px; world size = screen / scale
+                    const screenPx = Math.max(11, Math.min(12 * state.view.scale, 14));
+                    const fontSize = screenPx / state.view.scale;
+                    ctx.font = `${fontSize}px "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     
@@ -4014,11 +4036,16 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
 
+                // Draw group label above the rectangle to avoid overlap
                 const groupLabel = String(group.name || '').trim();
-                if (groupLabel && groupLabel.toLowerCase() !== 'group' && state.view.scale > 0.35) {
+                if (groupLabel && groupLabel.toLowerCase() !== 'group' && state.view.scale >= 0.5) {
+                    // Screen size = clamp(11, 12*scale, 14) px; world size = screen / scale
+                    const screenPx = Math.max(11, Math.min(12 * state.view.scale, 14));
+                    const fontSize = screenPx / state.view.scale;
                     ctx.fillStyle = CONFIG.colors.textMuted;
-                    ctx.font = `${Math.max(10, 11 / state.view.scale)}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
-                    ctx.fillText(groupLabel, rect.x + 8 / state.view.scale, rect.y + 14 / state.view.scale);
+                    ctx.font = `${fontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(groupLabel, rect.x + 8 / state.view.scale, rect.y - 4 / state.view.scale);
                 }
                 ctx.restore();
             }
@@ -5567,7 +5594,7 @@
                         </div>
                         <div class="prop-row">
                             <span class="prop-label">Size</span>
-                            <span class="prop-value">${sizeFormatted}</span>
+                            <span class="prop-value">${sizeFormatted || 'Unknown'}</span>
                         </div>
                         ${hashChanged ? `
                         <div style="margin-top: 8px; padding: 8px; background: rgba(245, 127, 23, 0.15); border: 1px solid rgba(245, 127, 23, 0.3); border-radius: 6px;">
@@ -5589,7 +5616,7 @@
                             </div>
                         </div>
                         ` : `
-                        <div style="margin-top: 8px; padding: 6px 8px; background: rgba(76, 175, 80, 0.1); border-radius: 4px; font-size: 11px; color: var(--success);">
+                        <div style="margin-top: 8px; padding: 6px 8px; background: rgba(68, 183, 130, 0.1); border-radius: 4px; font-size: 11px; color: var(--success);">
                             <svg class="ico" width="16" height="16" style="color:#44B782;"><use href="/vendor/phosphor/icons.svg#ph-check"></use></svg> Cluster internals unchanged
                         </div>
                         `}
@@ -5672,7 +5699,7 @@
                         <div class="prop-row" style="flex-direction: column; gap: 8px; align-items: flex-start; padding-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                                 <span class="prop-label">${escapeHtml(key)}</span>
-                                <span style="font-size: 10px; color: ${scriptChanged ? 'var(--modified)' : 'var(--text-secondary)'}; font-weight: 600;">
+                                <span style="font-size: 11px; color: ${scriptChanged ? 'var(--modified)' : 'var(--text-secondary)'}; font-weight: 600;">
                                     ${scriptChanged ? 'MODIFIED' : 'UNCHANGED'}
                                 </span>
                             </div>
@@ -5701,7 +5728,7 @@
                                 <span class="prop-label">${escapeHtml(key)}</span>
                                 <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
                                     <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${escapeHtml(oldValue)}</span>
-                                    <span style="color: var(--text-secondary);">→</span>
+                                    <svg class="ico" width="12" height="12" style="margin:0 4px; color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
                                     <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px;">${escapeHtml(newValue)}</span>
                                 </div>
                             </div>

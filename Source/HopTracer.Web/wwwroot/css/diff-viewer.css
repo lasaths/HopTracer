@@ -350,7 +350,8 @@ html, body {
 }
 
 /* Bug fix #8: Change-list focus ring Ultramarine */
-.change-item:focus-visible {
+/* Bug fix #4: Focus ring with enough specificity to beat global :focus-visible */
+.change-list .change-item:focus-visible {
     outline: 2px solid #3A3CFF;
     outline-offset: -2px;
 }
@@ -1046,6 +1047,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     margin-bottom: 6px;
     font-size: 11px;
 }
