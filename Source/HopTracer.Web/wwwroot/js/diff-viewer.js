@@ -3939,18 +3939,6 @@
                     }
                 }
                 
-                ctx.lineWidth = Math.max(baseWidth * widthMultiplier / state.view.scale, 0.6) * wireStyle.widthFactor;
-
-                // Dash pattern for removed wires (screen px, so divide by scale)
-                if (effectiveStatus === 'removed') {
-                    ctx.setLineDash([6 / state.view.scale, 4 / state.view.scale]);
-                    ctx.lineCap = 'butt';
-                } else {
-                    ctx.setLineDash([]);
-                    ctx.lineCap = 'round';
-                }
-                ctx.lineJoin = 'round';
-
                 // Base alpha
                 let baseAlpha = 0.9;
                 
@@ -3967,19 +3955,33 @@
                     }
                 }
 
-                // Version mix: only fade at extremes (0 or 1), not at 0.5
+                // Version mix: fade at extremes
                 let versionAlpha = 1.0;
                 if (effectiveStatus === 'added') {
-                    // Fade to 0 when mix approaches 0 (Old version)
-                    versionAlpha = mix;
+                    // At mix 0 (Old): hidden. At mix 0.5: full. At mix 1 (New): full.
+                    versionAlpha = Math.min(1.0, 2.0 * mix);
                 }
                 if (effectiveStatus === 'removed') {
-                    // Fade to 0 when mix approaches 1 (New version)
-                    versionAlpha = 1.0 - mix;
+                    // At mix 0 (Old): full. At mix 0.5: full. At mix 1 (New): hidden.
+                    versionAlpha = Math.min(1.0, 2.0 * (1.0 - mix));
                 }
 
-                ctx.globalAlpha = baseAlpha * versionAlpha * wireStyle.alphaFactor;
-                if (ctx.globalAlpha < 0.01) return; // Skip invisible
+                const wireAlpha = baseAlpha * versionAlpha * wireStyle.alphaFactor;
+                if (wireAlpha < 0.01) return;
+
+                ctx.save();
+                ctx.lineWidth = (baseWidth * widthMultiplier / state.view.scale) * wireStyle.widthFactor;
+                ctx.globalAlpha = wireAlpha;
+
+                // Dash pattern for removed wires (screen px, so divide by scale)
+                if (effectiveStatus === 'removed') {
+                    ctx.setLineDash([6 / state.view.scale, 4 / state.view.scale]);
+                    ctx.lineCap = 'butt';
+                } else {
+                    ctx.setLineDash([]);
+                    ctx.lineCap = 'round';
+                }
+                ctx.lineJoin = 'round';
 
                 ctx.beginPath();
                 ctx.moveTo(start.x, start.y);
@@ -3998,10 +4000,7 @@
                 if (isConnected) ctx.strokeStyle = CONFIG.colors.selection;
 
                 ctx.stroke();
-                
-                // Reset state
-                ctx.setLineDash([]);
-                ctx.globalAlpha = 1.0;
+                ctx.restore();
             });
 
             // Draw Nodes
