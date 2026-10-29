@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HopTracer</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/tokens.css">
     <link rel="stylesheet" href="/css/diff-viewer.css">
 </head>
 
@@ -15,29 +13,28 @@
 
     <div id="tooltip" class="tooltip"></div>
 
-    <!-- Quiet Top Line - ANDURA Style -->
-    <div id="file-metadata-header">
-        <div class="metadata-row">
-            <div class="metadata-logo">
-                <img src="/images/HopTrace_Logo.png" alt="HopTracer">
-                <span class="metadata-logo-text">HopTracer</span>
-            </div>
-            <div class="metadata-item">
-                <span class="metadata-label">Files</span>
-                <button type="button" class="metadata-value source-link" id="meta-file-old" data-side="old" title="Click to change old file">...</button>
-                <svg class="ico metadata-arrow" width="12" height="12" style="margin: 0 4px;"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
-                <button type="button" class="metadata-value source-link" id="meta-file-new" data-side="new" title="Click to change new file">...</button>
-            </div>
-            <div class="metadata-stats">
-                <div class="metadata-stat">
-                    <svg class="metadata-stat-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <use href="/vendor/phosphor/icons.svg#ph-clock"></use>
-                    </svg>
-                    <span id="meta-time-diff" class="metadata-stat-value">-</span>
-                </div>
-            </div>
+    <!-- Top Bar -->
+    <div class="top" id="file-metadata-header">
+        <div class="brand">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="currentColor" style="color: #DADADD">
+                <path d="M7 2C4.24 2 2 4.24 2 7v7c0 2.76 2.24 5 5 5h.5v7c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-7h1v7c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-7H21c2.76 0 5-2.24 5-5V7c0-2.76-2.24-5-5-5h-7C11.24 2 9 4.24 9 7v.5H7zm0 2h2V7c0 1.66 1.34 3 3 3h.5v2H7c-1.66 0-3-1.34-3-3V7c0-1.66 1.34-3 3-3zm7 0h7c1.66 0 3 1.34 3 3v7c0 1.66-1.34 3-3 3h-5.5v-2H21c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-7c-1.1 0-2 .9-2 2v3.5h-2V7c0-1.66 1.34-3 3-3zm-2.5 12h2v10h-2V16zm6 0h2v10h-2V16z"/>
+            </svg>
+            <b>HopTracer</b>
         </div>
+        <div class="breadcrumb mono small" style="display: flex; align-items: center; gap: 8px; color: var(--c-text);">
+            <span id="meta-file-old">...</span>
+            <svg class="ico" width="12" height="12"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
+            <span id="meta-file-new">...</span>
+        </div>
+        <div class="facts">
+            <span class="label" id="meta-time-diff">-</span>
+        </div>
+        <button type="button" id="btn-history" class="btn icon" title="History">
+            <svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-clock-counter-clockwise"></use></svg>
+        </button>
+        <a href="/" class="btn">New Comparison</a>
     </div>
+    <div class="hair"></div>
 
     <main id="main-container" aria-label="Comparison workspace">
         <!-- Left Panel: Risk-Ordered Change List -->
@@ -56,9 +53,6 @@
                         <span class="stat-label">Modified</span>
                         <span id="stat-modified" class="stat-number">0</span>
                     </div>
-                </div>
-                <div class="sidebar-header-actions">
-                    <a href="/" class="filter-btn sidebar-primary-action">New Comparison</a>
                 </div>
             </div>
 

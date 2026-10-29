@@ -5,12 +5,10 @@
         const CONFIG = {
             colors: {
                 added: '#44B782',
-                removed: '#ff453a',
-                modified: '#ff9f0a',
-                // Bug fix #7: Contrast >= 4.5:1 for SAME (was #636366)
-                // Bug fix #9: Added color #44B782
+                removed: '#F45536',
+                modified: '#F0963A',
                 same: '#8A8C91',
-                edgeSame: '#8A8C91',
+                edgeSame: '#55575C',
                 bg: '#000000',
                 surface: '#090A0C',
                 line: '#3C3D41',
@@ -18,7 +16,9 @@
                 textMuted: '#8A8C91',
                 text: '#DADADD',
                 selection: '#3A3CFF',
-                emergency: '#F45536'
+                emergency: '#F45536',
+                group: '#141517',
+                node: '#202125'
             },
             node: {
                 width: 120,
@@ -3025,7 +3025,7 @@
                         const rawLabel = getPortDisplayLabel(port, index, isOutput ? 'output' : 'input', node.id);
                         
                         // Measure in screen space with screen font
-                        ctx.font = `${screenPx}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                        ctx.font = `${screenPx}px "IBM Plex Mono", ui-monospace, monospace`;
                         const maxScreenWidth = 80; // px on screen
                         let displayLabel = rawLabel;
                         if (ctx.measureText(displayLabel).width > maxScreenWidth) {
@@ -4006,15 +4006,21 @@
                     }
                     
                     if (!collides) {
-                        // Draw black background rect (screen coordinates)
+                        // Draw background rect (screen coordinates)
+                        // Use group fill if node is in a group, otherwise surface
+                        const nodeGroups = state.groups.filter(g => {
+                            const members = g.members || g.Members || [];
+                            return members.includes(label.node.id);
+                        });
+                        const bgColor = nodeGroups.length > 0 ? CONFIG.colors.group : CONFIG.colors.surface;
                         const padding = 2; // screen pixels
-                        ctx.fillStyle = '#000';
+                        ctx.fillStyle = bgColor;
                         ctx.fillRect(label.screenX - padding, label.screenY - padding,
                                      label.screenW + padding * 2, label.screenH + padding * 2);
                         
                         // Draw text (screen coordinates)
                         ctx.fillStyle = CONFIG.colors.textMuted;
-                        ctx.font = `${label.screenFontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                        ctx.font = `${label.screenFontSize}px "IBM Plex Mono", ui-monospace, monospace`;
                         ctx.textBaseline = 'top';
                         ctx.textAlign = 'left';
                         ctx.fillText(label.text, label.screenX, label.screenY);
@@ -4136,7 +4142,7 @@
                     const screenPx = Math.max(11, Math.min(12 * state.view.scale, 14));
                     const fontSize = screenPx / state.view.scale;
                     ctx.fillStyle = CONFIG.colors.textMuted;
-                    ctx.font = `${fontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                    ctx.font = `500 ${fontSize}px "IBM Plex Mono", ui-monospace, monospace`;
                     ctx.textBaseline = 'bottom';
                     ctx.fillText(groupLabel, rect.x + 8 / state.view.scale, rect.y - 4 / state.view.scale);
                 }

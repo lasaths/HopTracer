@@ -26,20 +26,24 @@
     --accent-primary: #3A3CFF;
     --accent-hover: #2A2CDD;
     
-    /* Status Colors - ANDURA Semantics */
+    /* Status Colors - ANDURA Semantics - NO YELLOW */
     --status-added: #44B782;
     --status-added-dim: rgba(68, 183, 130, 0.15);
-    --status-removed: #ff453a;
-    --status-removed-dim: rgba(255, 69, 58, 0.15);
-    --status-modified: #ff9f0a;
-    --status-modified-dim: rgba(255, 159, 10, 0.15);
-    /* Bug fix #7: Contrast >= 4.5:1 for SAME (was #636366) */
+    --status-removed: #F45536;
+    --status-removed-dim: rgba(244, 85, 54, 0.15);
+    --status-modified: #F0963A;
+    --status-modified-dim: rgba(240, 150, 58, 0.15);
     --status-same: #8A8C91;
-    --status-same-dim: rgba(99, 99, 102, 0.15);
+    --status-same-dim: rgba(138, 140, 145, 0.15);
     --status-emergency: #F45536;
     
+    /* Canvas depth */
+    --canvas-group: #141517;
+    --canvas-node: #202125;
+    --canvas-edge: #55575C;
+    
     /* Interactive */
-    --interactive-hover: rgba(255, 255, 255, 0.08);
+    --interactive-hover: #141518;
     --interactive-active: rgba(255, 255, 255, 0.12);
     
     /* Scrollbar */
@@ -352,7 +356,7 @@ html, body {
 /* Bug fix #8: Change-list focus ring Ultramarine */
 /* Bug fix #4: Focus ring with enough specificity to beat global :focus-visible */
 .change-list .change-item:focus-visible {
-    outline: 2px solid #3A3CFF !important;
+    outline: 2px solid var(--accent-primary) !important;
     outline-offset: -2px !important;
 }
 
@@ -559,13 +563,13 @@ html, body {
 .filter-btn.active {
     background: rgba(58, 60, 255, 0.15);
     border-color: var(--accent-primary);
-    color: #DADADD;
+    color: var(--text-primary);
 }
 
 .sidebar-primary-action {
     background: var(--accent-primary);
     border-color: var(--accent-primary);
-    color: #ffffff;
+    color: var(--text-primary);
     font-weight: 500;
     text-decoration: none;
 }
@@ -880,7 +884,7 @@ html, body {
 
 .graph-tab.active,
 .graph-tab-btn.active {
-    color: #DADADD;
+    color: var(--text-primary);
     border-bottom-color: var(--accent-primary);
 }
 
@@ -1859,12 +1863,12 @@ input[type="range"]::-moz-range-thumb {
 
 .diff-line.added .diff-num {
     background: rgba(68, 183, 130, 0.12);
-    color: #44B782;
+    color: var(--status-added);
 }
 
 .diff-line.removed .diff-num {
     background: rgba(255, 69, 58, 0.12);
-    color: #ff453a;
+    color: var(--status-removed);
 }
 
 .script-pane-toolbar {
