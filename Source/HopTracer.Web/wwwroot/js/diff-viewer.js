@@ -2023,7 +2023,23 @@
                 metaFileNew.textContent = displayNew;
                 metaFileOld.title = sourcePathOld || displayOld;
                 metaFileNew.title = sourcePathNew || displayNew;
-                metaHeader.style.display = 'block';
+                metaHeader.style.display = 'flex';
+                
+                // Update time diff display
+                const metaTimeDiff = document.getElementById('meta-time-diff');
+                if (metaTimeDiff) {
+                    if (GRAPH_DATA.newMeta && GRAPH_DATA.oldMeta && GRAPH_DATA.newMeta.date && GRAPH_DATA.oldMeta.date) {
+                        const newDate = new Date(GRAPH_DATA.newMeta.date);
+                        const oldDate = new Date(GRAPH_DATA.oldMeta.date);
+                        const diffMs = Math.abs(newDate - oldDate);
+                        const timeDiffText = formatTimeDifference(diffMs);
+                        metaTimeDiff.textContent = timeDiffText;
+                        metaTimeDiff.style.display = 'inline-block';
+                    } else {
+                        metaTimeDiff.textContent = '-';
+                        metaTimeDiff.style.display = 'none';
+                    }
+                }
             }
         }
 
@@ -4009,7 +4025,7 @@
                         // Draw background rect (screen coordinates)
                         // Use group fill if node is in a group, otherwise surface
                         const nodeGroups = state.groups.filter(g => {
-                            const members = g.members || g.Members || [];
+                            const members = g.memberIds || g.MemberIds || g.memberIdsOld || g.memberIdsNew || [];
                             return members.includes(label.node.id);
                         });
                         const bgColor = nodeGroups.length > 0 ? CONFIG.colors.group : CONFIG.colors.surface;
@@ -4122,11 +4138,12 @@
                 const selectionAlphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
                 const criteriaAlphaFactor = (dimForSearch || dimForStatusFilter) ? 0.1 : 1.0;
                 const alphaFactor = selectionAlphaFactor * criteriaAlphaFactor;
-                const color = group.color || { r: 255, g: 255, b: 255, a: 0.18 };
+                // Use fixed group color #141517 from CONFIG.colors.group
+                const color = { r: 20, g: 21, b: 23 };
 
                 ctx.save();
                 ctx.globalAlpha = Math.max(0.05, groupAlpha * alphaFactor);
-                ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${Math.min(0.35, Math.max(0.08, color.a * 0.9))})`;
+                ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 1.0)`;
                 ctx.strokeStyle = CONFIG.colors[group.status] || CONFIG.colors.same;
                 ctx.lineWidth = (isSelectedGroup ? 2.0 : 1.2) / state.view.scale;
                 ctx.setLineDash([8 / state.view.scale, 6 / state.view.scale]);

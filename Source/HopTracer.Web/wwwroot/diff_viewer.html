@@ -16,9 +16,7 @@
     <!-- Top Bar -->
     <div class="top" id="file-metadata-header">
         <div class="brand">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="currentColor" style="color: #DADADD">
-                <path d="M7 2C4.24 2 2 4.24 2 7v7c0 2.76 2.24 5 5 5h.5v7c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-7h1v7c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-7H21c2.76 0 5-2.24 5-5V7c0-2.76-2.24-5-5-5h-7C11.24 2 9 4.24 9 7v.5H7zm0 2h2V7c0 1.66 1.34 3 3 3h.5v2H7c-1.66 0-3-1.34-3-3V7c0-1.66 1.34-3 3-3zm7 0h7c1.66 0 3 1.34 3 3v7c0 1.66-1.34 3-3 3h-5.5v-2H21c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-7c-1.1 0-2 .9-2 2v3.5h-2V7c0-1.66 1.34-3 3-3zm-2.5 12h2v10h-2V16zm6 0h2v10h-2V16z"/>
-            </svg>
+            <div class="brand-logo"></div>
             <b>HopTracer</b>
         </div>
         <div class="breadcrumb mono small" style="display: flex; align-items: center; gap: 8px; color: var(--c-text);">
@@ -26,15 +24,15 @@
             <svg class="ico" width="12" height="12"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
             <span id="meta-file-new">...</span>
         </div>
+        <div class="grow"></div>
         <div class="facts">
             <span class="label" id="meta-time-diff">-</span>
         </div>
         <button type="button" id="btn-history" class="btn icon" title="History">
-            <svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-clock-counter-clockwise"></use></svg>
+            <svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-clock"></use></svg>
         </button>
         <a href="/" class="btn">New Comparison</a>
     </div>
-    <div class="hair"></div>
 
     <main id="main-container" aria-label="Comparison workspace">
         <!-- Left Panel: Risk-Ordered Change List -->

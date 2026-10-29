@@ -96,19 +96,20 @@ html, body {
     border-width: 0;
 }
 
-/* Quiet Top Line - ANDURA Style */
-#file-metadata-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 48px;
-    background: var(--bg-app);
-    border-bottom: 1px solid var(--border-hairline);
-    display: flex;
-    align-items: center;
-    padding: 0 var(--space-md);
-    z-index: 100;
+/* Top Bar - already styled via tokens.css .top{} */
+.brand-logo {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    background: var(--c-text);
+    -webkit-mask-image: url(/img/logo-mono.png);
+    mask-image: url(/img/logo-mono.png);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
 }
 
 .metadata-row {
@@ -195,9 +196,15 @@ html, body {
     font-weight: 500;
 }
 
+/* Top bar additions */
+.top {
+    padding: 0 32px;
+    border-bottom: 1px solid var(--c-line);
+}
+
 /* Main Layout */
 #main-container {
-    position: fixed;
+    position: relative;
     top: 48px;
     left: 0;
     right: 0;
