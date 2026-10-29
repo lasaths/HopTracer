@@ -352,8 +352,8 @@ html, body {
 /* Bug fix #8: Change-list focus ring Ultramarine */
 /* Bug fix #4: Focus ring with enough specificity to beat global :focus-visible */
 .change-list .change-item:focus-visible {
-    outline: 2px solid #3A3CFF;
-    outline-offset: -2px;
+    outline: 2px solid #3A3CFF !important;
+    outline-offset: -2px !important;
 }
 
 .change-item-header {
@@ -371,7 +371,7 @@ html, body {
 
 .change-status-text {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 500;
@@ -707,7 +707,7 @@ html, body {
     display: flex;
     gap: var(--space-sm);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-secondary);
 }
 
@@ -787,7 +787,7 @@ html, body {
     align-items: center;
     gap: 6px;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .source-inline-label {
@@ -808,7 +808,7 @@ html, body {
 
 .time-diff-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted);
@@ -1057,12 +1057,14 @@ html, body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted);
+    white-space: nowrap;
 }
 
 .slider-value {
     font-family: var(--font-mono);
     color: var(--text-primary);
     font-weight: 500;
+    white-space: nowrap;
 }
 
 input[type="range"] {
@@ -1271,7 +1273,7 @@ input[type="range"]::-moz-range-thumb {
 
 .inspector-compare-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted);
@@ -1432,7 +1434,7 @@ input[type="range"]::-moz-range-thumb {
 
 .source-field-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted);
@@ -1611,7 +1613,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .spotlight-item-category {
-    font-size: 10px;
+    font-size: 11px;
     font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: 0.05em;

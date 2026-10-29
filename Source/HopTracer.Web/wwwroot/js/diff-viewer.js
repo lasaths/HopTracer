@@ -15,6 +15,7 @@
                 surface: '#090A0C',
                 line: '#3C3D41',
                 muted: '#8A8C91',
+                textMuted: '#8A8C91',
                 text: '#DADADD',
                 selection: '#3A3CFF',
                 emergency: '#F45536'
@@ -2997,7 +2998,7 @@
 
             const radius = Math.max(2.4 / state.view.scale, 1.4);
             const borderWidth = Math.max(1 / state.view.scale, 0.55);
-            const showLabels = state.view.scale >= 1.2 || state.selected === node.id;
+            const showLabels = state.view.scale >= 1.2;
             // Screen size = clamp(11, 12*scale, 14) px; world size = screen / scale
             const screenPx = Math.max(11, Math.min(12 * state.view.scale, 14));
             const labelFontSize = screenPx / state.view.scale;
@@ -3023,9 +3024,9 @@
                         ctx.fillStyle = CONFIG.colors.textMuted;
                         ctx.textBaseline = 'middle';
                         
-                        // Draw inside node, clipped to node width with ellipsis
+                        // Draw inside node, clipped to half width minus padding
                         const padding = 6 / state.view.scale;
-                        const maxWidth = node.w - (2 * padding);
+                        const maxWidth = (node.w / 2) - padding;
                         let displayLabel = rawLabel;
                         if (ctx.measureText(displayLabel).width > maxWidth) {
                             while (displayLabel.length > 1 && ctx.measureText(displayLabel + '…').width > maxWidth) {
@@ -3868,10 +3869,9 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // Text label - use node nickname or name (skip if port labels are shown to avoid overlap)
-                const showPortLabels = state.showPortDetails && (state.view.scale >= 1.2 || state.selected === n.id);
+                // Text label - always show node nickname or name
                 // Hide labels below zoom 0.5 (11px would be too large in world space)
-                if (state.view.scale >= 0.5 && !showPortLabels) {
+                if (state.view.scale >= 0.5) {
                     const label = n.nickname || n.name || 'Unnamed';
                     ctx.fillStyle = CONFIG.colors.text;
                     // Screen size = clamp(11, 12*scale, 14) px; world size = screen / scale
@@ -5539,8 +5539,17 @@
             }
 
             const clusterPreview = getClusterPreviewData(node);
-            if (clusterPreview.isCluster && clusterInternalsChanged(node, clusterPreview)) {
-                reasons.push('Cluster internals changed');
+            if (clusterPreview.isCluster) {
+                // Use same logic as cluster card: check size first, then hash
+                const clusterSize = node.properties?.clusterSize || node.properties?.ClusterSize;
+                const oldClusterSize = node.propertiesOld?.clusterSize || node.propertiesOld?.ClusterSize;
+                const clusterHash = node.properties?.clusterHash || node.properties?.ClusterHash;
+                const oldClusterHash = node.propertiesOld?.clusterHash || node.propertiesOld?.ClusterHash;
+                const clusterChanged = (clusterSize && oldClusterSize && clusterSize !== oldClusterSize) ||
+                                       (clusterHash && oldClusterHash && clusterHash !== oldClusterHash);
+                if (clusterChanged) {
+                    reasons.push('Cluster internals changed');
+                }
             }
 
             if (reasons.length === 0) {
@@ -5575,12 +5584,22 @@
             const clusterSize = node.properties.clusterSize || node.properties.ClusterSize;
             const oldClusterHash = node.propertiesOld && (node.propertiesOld.clusterHash || node.propertiesOld.ClusterHash);
             const oldClusterSize = node.propertiesOld && (node.propertiesOld.clusterSize || node.propertiesOld.ClusterSize);
+            
+            // Use clusterSize for change detection when available, otherwise fall back to hash
+            const clusterChanged = (clusterSize && oldClusterSize && clusterSize !== oldClusterSize) ||
+                                   (clusterHash && oldClusterHash && clusterHash !== oldClusterHash);
 
             let clusterSection = '';
             if (isCluster) {
-                const hashChanged = oldClusterHash && oldClusterHash !== clusterHash;
-                const sizeFormatted = clusterSize ? `${(parseInt(clusterSize) / 1024).toFixed(1)} KB` : 'Unknown';
-                const oldSizeFormatted = oldClusterSize ? `${(parseInt(oldClusterSize) / 1024).toFixed(1)} KB` : null;
+                // Format size in bytes to KB
+                const formatSize = (sizeBytes) => {
+                    if (!sizeBytes) return null;
+                    const bytes = parseInt(sizeBytes);
+                    if (bytes < 1024) return `${bytes} bytes`;
+                    return `${(bytes / 1024).toFixed(1)} KB`;
+                };
+                const sizeFormatted = formatSize(clusterSize) || 'Unknown';
+                const oldSizeFormatted = formatSize(oldClusterSize);
 
                 clusterSection = `
                     <div class="detail-card" style="border-left: 3px solid #7c4dff;">
@@ -5594,9 +5613,9 @@
                         </div>
                         <div class="prop-row">
                             <span class="prop-label">Size</span>
-                            <span class="prop-value">${sizeFormatted || 'Unknown'}</span>
+                            <span class="prop-value">${sizeFormatted}</span>
                         </div>
-                        ${hashChanged ? `
+                        ${clusterChanged ? `
                         <div style="margin-top: 8px; padding: 8px; background: rgba(245, 127, 23, 0.15); border: 1px solid rgba(245, 127, 23, 0.3); border-radius: 6px;">
                             <div style="font-size: 11px; font-weight: 600; color: var(--modified); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
                                 <svg class="ico" width="14" height="14"><use href="/vendor/phosphor/icons.svg#ph-warning"></use></svg>
