@@ -145,7 +145,7 @@
         const loadingSubtitle = document.getElementById('loadingSubtitle');
         const loadingPercent = document.getElementById('loadingPercent');
         const loadingProgressBar = document.getElementById('loadingProgressBar');
-        let sessionToken = "static-test-token"; // Modified for static testing
+        let sessionToken = null;
         let loadingProgressTimer = null;
         let loadingProgressValue = 0;
         let spotlightReturnFocus = null;
