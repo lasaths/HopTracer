@@ -398,10 +398,6 @@ html, body {
     flex: none;
 }
 
-#details-summary + .details-tabs {
-    display: none;
-}
-
 .col {
     display: flex;
     flex-direction: column;
@@ -1346,7 +1342,6 @@ input[type="range"]::-moz-range-thumb {
 
 /* Right Panel - Inspector (ANDURA Detail Pane) */
 #details-panel {
-    width: 360px;
     min-width: 280px;
     max-width: 600px;
     background: var(--bg-app);
