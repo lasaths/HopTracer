@@ -100,7 +100,6 @@
         const resizer = document.getElementById('resizer');
         const detailsPanel = document.getElementById('details-panel');
         const detailsResizer = document.getElementById('details-resizer');
-        const perfIndicator = document.getElementById('perf-indicator');
         const mainContainer = document.getElementById('main-container');
         const metaFileOldElem = document.getElementById('meta-file-old');
         const metaFileNewElem = document.getElementById('meta-file-new');
@@ -3246,13 +3245,8 @@
         }
 
         function showPerf(message) {
-            if (!perfIndicator) return;
-            if (!message) {
-                perfIndicator.style.display = 'none';
-                return;
-            }
-            perfIndicator.textContent = message;
-            perfIndicator.style.display = 'block';
+            if (!message) return;
+            showToast(message);
         }
 
         function updateBounds() {
@@ -4671,6 +4665,7 @@
                     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                     svg.setAttribute('class', `ico ${node.status === 'added' ? 'ad' : node.status === 'removed' ? 'em' : 'ca'}`);
                     svg.setAttribute('viewBox', '0 0 16 16');
+                    svg.setAttribute('fill', 'currentColor');
                     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
                     const iconMap = {
                         added: '#ph-plus-circle',
@@ -4689,7 +4684,6 @@
                     name.textContent = node.nickname || node.name || 'Unnamed';
                     const reason = document.createElement('span');
                     reason.className = 'muted small';
-                    reason.style.display = 'block';
                     reason.textContent = getRiskReason(node) || 'No details';
                     content.appendChild(name);
                     content.appendChild(reason);
@@ -4702,6 +4696,7 @@
                         const riskSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                         riskSvg.setAttribute('class', 'ico em');
                         riskSvg.setAttribute('viewBox', '0 0 16 16');
+                        riskSvg.setAttribute('fill', 'currentColor');
                         const riskUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
                         riskUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/vendor/phosphor/icons.svg#ph-warning-octagon');
                         riskSvg.appendChild(riskUse);
@@ -4710,10 +4705,11 @@
                         const riskSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                         riskSvg.setAttribute('class', 'ico ca');
                         riskSvg.setAttribute('viewBox', '0 0 16 16');
+                        riskSvg.setAttribute('fill', 'currentColor');
                         const riskUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
                         riskUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/vendor/phosphor/icons.svg#ph-warning');
                         riskSvg.appendChild(riskUse);
-                        riskSpan.appendChild(riskUse);
+                        riskSpan.appendChild(riskSvg);
                     }
                     riskSpan.appendChild(document.createTextNode(Math.round(riskScore)));
                     
@@ -4724,6 +4720,7 @@
                     // Click handler
                     btn.addEventListener('click', () => {
                         zoomToNode(node.id);
+                        restoreFocusToRow(node.id);
                     });
                     
                     topRisksList.appendChild(btn);
@@ -4756,14 +4753,18 @@
                     }
                 };
                 
+                const meta = GRAPH_DATA.meta || {};
+                const fileOld = meta.fileOld || GRAPH_DATA.oldMeta?.name || '—';
+                const fileNew = meta.fileNew || GRAPH_DATA.newMeta?.name || '—';
+                
                 if (GRAPH_DATA.oldMeta) {
                     const label = document.createElement('span');
                     label.className = 'k label';
                     label.textContent = 'Old';
                     const name = document.createElement('span');
                     name.className = 'mono small trunc';
-                    name.textContent = GRAPH_DATA.oldMeta.name || '—';
-                    name.title = GRAPH_DATA.oldMeta.name || '';
+                    name.textContent = fileOld;
+                    name.title = fileOld;
                     const date = document.createElement('span');
                     date.className = 'label';
                     date.textContent = formatCETDate(GRAPH_DATA.oldMeta.date);
@@ -4778,14 +4779,35 @@
                     label.textContent = 'New';
                     const name = document.createElement('span');
                     name.className = 'mono small trunc';
-                    name.textContent = GRAPH_DATA.newMeta.name || '—';
-                    name.title = GRAPH_DATA.newMeta.name || '';
+                    name.textContent = fileNew;
+                    name.title = fileNew;
                     const date = document.createElement('span');
                     date.className = 'label';
                     date.textContent = formatCETDate(GRAPH_DATA.newMeta.date);
                     filesElem.appendChild(label);
                     filesElem.appendChild(name);
                     filesElem.appendChild(date);
+                }
+                
+                // Commit row
+                if (meta.commitHash) {
+                    const commitLabel = document.createElement('span');
+                    commitLabel.className = 'k label';
+                    commitLabel.textContent = 'Commit';
+                    const commitHash = document.createElement('span');
+                    commitHash.className = 'mono small';
+                    commitHash.textContent = meta.commitHash;
+                    const commitMessage = document.createElement('span');
+                    commitMessage.className = 'muted small trunc';
+                    commitMessage.textContent = meta.commitMessage || '';
+                    commitMessage.title = meta.commitMessage || '';
+                    const commitAuthor = document.createElement('span');
+                    commitAuthor.className = 'label';
+                    commitAuthor.textContent = meta.commitAuthor || '';
+                    filesElem.appendChild(commitLabel);
+                    filesElem.appendChild(commitHash);
+                    filesElem.appendChild(commitMessage);
+                    filesElem.appendChild(commitAuthor);
                 }
             }
             
@@ -4797,19 +4819,18 @@
             const perfElem = document.getElementById('summary-perf');
             if (!perfElem) return;
             
-            const parseTime = GRAPH_DATA?.parseTimeMs || 0;
-            const matchTime = GRAPH_DATA?.matchTimeMs || 0;
-            const diffTime = GRAPH_DATA?.diffTimeMs || 0;
+            const meta = GRAPH_DATA?.meta || {};
+            const timings = meta.stageTimings || {};
+            const parseTime = timings.parse || 0;
+            const matchTime = timings.match || 0;
+            const diffTime = timings.diff || 0;
             
             perfElem.textContent = `Parse ${parseTime} ms · match ${matchTime} · diff ${diffTime}`;
         }
 
-        function showHighLevelModificationDetails() {
-            return !!state.includeHighLevelModifications;
-        }
-
         function updateDetailsPanel(node) {
             const detailsSummary = document.getElementById('details-summary');
+            const detailsTabs = document.querySelector('.details-tabs');
             
             if (!node) {
                 // Show summary panel
@@ -4817,6 +4838,7 @@
                     detailsSummary.style.display = 'flex';
                     populateSummaryPanel();
                 }
+                if (detailsTabs) detailsTabs.style.display = 'none';
                 detailsPaneInspector.style.display = 'none';
                 setScriptTabVisibility(false);
                 state.scriptContext = null;
@@ -4826,7 +4848,8 @@
 
             // Show inspector panel
             if (detailsSummary) detailsSummary.style.display = 'none';
-            detailsPaneInspector.style.display = 'block';
+            if (detailsTabs) detailsTabs.style.display = '';
+            detailsPaneInspector.style.display = '';
 
             const togglePorts = document.getElementById('toggle-ports');
             const showPorts = togglePorts ? !!togglePorts.checked : !!state.showPortDetails;

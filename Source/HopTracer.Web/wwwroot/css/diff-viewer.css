@@ -390,12 +390,39 @@ html, body {
 }
 
 /* Summary panel (right column when no selection) */
+#details-panel {
+    width: var(--col);
+}
+
+.details-tabs {
+    flex: none;
+}
+
+#details-summary + .details-tabs {
+    display: none;
+}
+
 .col {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    padding: 16px 24px 24px;
+    flex: 1;
+    min-height: 0;
+    padding: 16px 32px 24px 32px;
     overflow-y: auto;
+}
+
+@media (max-width: 1439px) {
+    .col {
+        padding: 16px 24px 24px 24px;
+    }
+}
+
+#details-summary .ico {
+    fill: currentColor;
+}
+
+#details-summary .st.muted {
+    color: var(--c-muted);
 }
 
 .col section + section {
@@ -1386,13 +1413,6 @@ input[type="range"]::-moz-range-thumb {
 
 .details-pane::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
-}
-
-.empty-state {
-    padding: var(--space-xl);
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 12px;
 }
 
 /* Inspector Field Groups - ANDURA Style */
