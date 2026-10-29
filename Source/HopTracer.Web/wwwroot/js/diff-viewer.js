@@ -1186,8 +1186,18 @@
             return Number.isFinite(Number(raw)) ? Math.round(Number(raw)) : 0;
         }
 
+        let alarmBandSettled = false;
+
+        function getMainDiffNodes() {
+            const root = Array.isArray(state.graphTabs)
+                ? state.graphTabs.find(t => t.id === ROOT_GRAPH_TAB_ID)
+                : null;
+            if (root && Array.isArray(root.nodes)) return root.nodes;
+            return state.nodes || [];
+        }
+
         function getHighestRiskChange() {
-            const changed = (state.nodes || []).filter(n =>
+            const changed = getMainDiffNodes().filter(n =>
                 n.status === 'added' || n.status === 'removed' || n.status === 'modified'
             );
             const high = changed.filter(n => getNodeRiskScore(n) >= 70);
@@ -1202,15 +1212,12 @@
 
         function renderAlarmBand() {
             const band = document.getElementById('alarm-band');
-            if (!band) return;
+            if (!band || alarmBandSettled) return;
 
             const node = getHighestRiskChange();
-            const wasHidden = band.hidden;
-
             if (!node) {
                 band.hidden = true;
-                band.removeAttribute('data-node-id');
-                if (!wasHidden) resize();
+                alarmBandSettled = true;
                 return;
             }
 
@@ -1229,25 +1236,44 @@
             if (diffBtn) diffBtn.hidden = !isScriptComponent(node);
 
             band.hidden = false;
-            if (wasHidden) {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => band.classList.add('is-in'));
-                });
-                resize();
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => band.classList.add('is-in'));
+            });
+            resize();
+            alarmBandSettled = true;
+        }
+
+        function ensureAlarmBandTargetVisible() {
+            const id = document.getElementById('alarm-band')?.dataset.nodeId;
+            if (!id) return null;
+            const needle = String(id);
+            let node = state.nodes.find(n => String(n.id) === needle);
+            if (!node) {
+                const root = Array.isArray(state.graphTabs)
+                    ? state.graphTabs.find(t => t.id === ROOT_GRAPH_TAB_ID)
+                    : null;
+                node = root && root.nodes.find(n => String(n.id) === needle);
+                if (!node) return null;
+                if (state.activeGraphTabId !== ROOT_GRAPH_TAB_ID) {
+                    switchGraphTab(ROOT_GRAPH_TAB_ID);
+                    node = state.nodes.find(n => String(n.id) === needle) || node;
+                }
             }
+            if (!doesNodeMatchStatusFilter(node.status)) {
+                setStatusFilter('all');
+            }
+            return node;
         }
 
         function inspectAlarmBandNode() {
-            const id = document.getElementById('alarm-band')?.dataset.nodeId;
-            if (id) zoomToNode(id);
+            const node = ensureAlarmBandTargetVisible();
+            if (node) zoomToNode(node.id);
         }
 
         function openAlarmBandScriptDiff() {
-            const id = document.getElementById('alarm-band')?.dataset.nodeId;
-            if (!id) return;
-            zoomToNode(id);
-            const node = state.nodes.find(n => String(n.id) === String(id));
+            const node = ensureAlarmBandTargetVisible();
             if (!node) return;
+            zoomToNode(node.id);
             const entries = getScriptPropertyEntries(node);
             const key = (entries.find(e => e.isChanged) || entries[0] || {}).key;
             if (key) openScriptDiff(key, true);
@@ -1994,7 +2020,6 @@
 
             renderGraphTabs();
             renderComponentResultsList();
-            renderAlarmBand();
         }
 
         function closeGraphTab(tabId) {
@@ -2493,6 +2518,7 @@
                 perfMessage = `Large-model mode: viewport culling enabled (${state.nodes.length.toLocaleString()} nodes, ${state.edges.length.toLocaleString()} wires)`;
             }
             showPerf(perfMessage);
+            alarmBandSettled = false;
             renderAlarmBand();
         }
 

@@ -82,11 +82,12 @@ section.band{flex:none;background:var(--c-surface);position:relative;height:var(
 section.band[hidden]{display:none!important}
 section.band.is-in{opacity:1;transition:opacity var(--d-slow) var(--e-out)}
 section.band .edge{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c-emergency)}
-section.band .st{color:var(--c-emergency)}
-section.band .trunc{flex:1;min-width:0}
+section.band .st{color:var(--c-text);flex:none}
+section.band .band-copy{display:flex;align-items:center;gap:var(--s16);min-width:0;flex:0 1 auto;overflow:hidden}
+section.band .trunc{flex:1 1 auto;min-width:0}
 section.band .trunc b{font-weight:500;color:var(--c-text)}
 section.band #alarm-band-risk{flex:none;font-variant-numeric:tabular-nums}
-section.band .acts{margin-left:0;display:flex;gap:var(--s8);align-items:center;flex:none}
+section.band .acts{margin-left:auto;display:flex;gap:var(--s8);align-items:center;flex:none}
 main{flex:1;display:flex;min-height:0}
 footer{height:var(--foot);flex:none;display:flex;align-items:stretch;padding:0 var(--m);background:var(--c-void);z-index:12}
 footer [role="tablist"]{display:flex;align-items:stretch;min-width:0}
