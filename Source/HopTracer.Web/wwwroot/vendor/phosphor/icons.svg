@@ -83,4 +83,28 @@
   <symbol id="ph-triangle" viewBox="0 0 256 256">
     <path d="M236.66895,188l-96.00047-160a16,16,0,0,0-27.356,0l-95.99121,160A15.89017,15.89017,0,0,0,32.00013,212h192a15.89017,15.89017,0,0,0,14.67737-24Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
   </symbol>
+  <!-- Pencil Simple Line (modified) -->
+  <symbol id="ph-pencil-simple-line" viewBox="0 0 256 256">
+    <line x1="96" y1="216" x2="160" y2="216" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M157.65723,121.65723,216,180V216H180L121.65723,157.65723" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M136,64,192,120,92.68629,219.31371a8,8,0,0,1-5.65686,2.34315H48a8,8,0,0,1-8-8V174.62742a8,8,0,0,1,2.34315-5.65686Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M192,120,213.15723,98.84277a8,8,0,0,0,0-11.31371L181.47638,55.84277a8,8,0,0,0-11.31371,0L136,80" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Circle Dashed (unchanged) -->
+  <symbol id="ph-circle-dashed" viewBox="0 0 256 256">
+    <path d="M128,200a71.79,71.79,0,0,1-25.12-4.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M153.14,195.49A72,72,0,0,1,71.68,149" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M60.5,103.11A72,72,0,0,1,107,60.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M149,60.5a72,72,0,0,1,46.49,46.61" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M195.51,149A72,72,0,0,1,184.32,178.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M60.51,128.89a71.3,71.3,0,0,1,0-1.78" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M128.88,56A71.66,71.66,0,0,1,128,56" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <path d="M195.49,128.88a71.3,71.3,0,0,1,0,1.78" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  </symbol>
+  <!-- Warning Octagon (high risk) -->
+  <symbol id="ph-warning-octagon" viewBox="0 0 256 256">
+    <path d="M91.55,40h72.9a8,8,0,0,1,5.65,2.34l51.55,51.55A8,8,0,0,1,224,99.55v72.9a8,8,0,0,1-2.34,5.65l-51.55,51.55a8,8,0,0,1-5.65,2.34H91.55a8,8,0,0,1-5.65-2.34L34.34,178.1a8,8,0,0,1-2.34-5.65V91.55a8,8,0,0,1,2.34-5.65L85.9,34.34A8,8,0,0,1,91.55,40Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <line x1="128" y1="80" x2="128" y2="136" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+    <circle cx="128" cy="172" r="12"/>
+  </symbol>
 </svg>

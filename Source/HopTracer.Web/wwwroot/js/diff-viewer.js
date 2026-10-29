@@ -895,12 +895,14 @@
             const changeList = document.getElementById('change-list');
             const changeListCount = document.getElementById('change-list-count');
             
-            if (!changeList || !changeListCount) return;
+            if (!changeList) return;
 
             const filtered = getFilteredNodes();
             const total = filtered.length;
 
-            changeListCount.textContent = total.toLocaleString();
+            if (changeListCount) {
+                changeListCount.textContent = total.toLocaleString();
+            }
             changeList.innerHTML = '';
 
             if (total === 0) {
@@ -914,21 +916,24 @@
             const fragment = document.createDocumentFragment();
 
             filtered.forEach(node => {
-                const item = document.createElement('div');
-                item.className = 'change-item';
-                if (state.selected === node.id) item.classList.add('selected');
+                const item = document.createElement('button');
+                item.className = 'qrow change-item';
+                if (state.selected === node.id) item.classList.add('selected sel');
                 item.dataset.nodeId = String(node.id);
                 item.tabIndex = 0;
-                item.setAttribute('role', 'button');
-                item.setAttribute('aria-label', `${node.name || node.nickname || node.id} - ${node.status || 'same'} - ${node.risk || 'informational'}`);
+                item.type = 'button';
+                
+                const displayName = String(node.nickname || node.name || 'Unnamed Component');
+                const reason = getRiskReason(node) || 'No changes detected';
+                item.setAttribute('title', `${displayName} - ${reason}`);
 
-                // Header: status glyph + text
-                const header = document.createElement('div');
-                header.className = 'change-item-header';
-
+                // Status glyph column (.qg)
+                const glyphCol = document.createElement('span');
+                glyphCol.className = 'qg';
+                
                 const statusGlyph = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                statusGlyph.setAttribute('class', 'change-status-glyph');
-                statusGlyph.setAttribute('viewBox', '0 0 16 16');
+                statusGlyph.setAttribute('class', 'ico');
+                statusGlyph.setAttribute('viewBox', '0 0 256 256');
                 statusGlyph.setAttribute('fill', 'currentColor');
                 
                 const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
@@ -936,60 +941,95 @@
                 const glyphMap = {
                     added: '#ph-plus-circle',
                     removed: '#ph-minus-circle',
-                    modified: '#ph-gear-six',
-                    same: '#ph-minus-circle'
+                    modified: '#ph-pencil-simple-line',
+                    same: '#ph-circle-dashed'
                 };
+                
+                // Status color classes
+                const statusColorMap = {
+                    added: 'ad',
+                    removed: 'em',
+                    modified: 'ca',
+                    same: 'muted'
+                };
+                statusGlyph.classList.add(statusColorMap[status] || 'muted');
+                
                 use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `/vendor/phosphor/icons.svg${glyphMap[status] || glyphMap.same}`);
                 statusGlyph.appendChild(use);
+                glyphCol.appendChild(statusGlyph);
 
-                const statusText = document.createElement('span');
-                statusText.className = `change-status-text ${status}`;
-                statusText.textContent = status.toUpperCase();
+                // Content column (.grow)
+                const content = document.createElement('span');
+                content.className = 'grow';
+                
+                // Line 1: Name
+                const nameRow = document.createElement('span');
+                nameRow.className = 'row';
+                const name = document.createElement('span');
+                name.className = 'trunc qn';
+                name.textContent = displayName;
+                name.title = displayName;
+                nameRow.appendChild(name);
+                content.appendChild(nameRow);
+                
+                // Line 2: Status + reason
+                const reasonRow = document.createElement('div');
+                reasonRow.className = 'small muted trunc';
+                
+                const statusLabel = document.createElement('span');
+                statusLabel.className = 'label';
+                statusLabel.style.color = 'inherit';
+                statusLabel.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                
+                reasonRow.appendChild(statusLabel);
+                reasonRow.appendChild(document.createTextNode(' · ' + reason));
+                reasonRow.title = reason;
+                content.appendChild(reasonRow);
 
-                header.appendChild(statusGlyph);
-                header.appendChild(statusText);
-
-                // Component name
-                const name = document.createElement('div');
-                name.className = 'change-component-name';
-                name.textContent = String(node.nickname || node.name || 'Unnamed Component');
-
-                // Reason (one-line description)
-                const reason = document.createElement('div');
-                reason.className = 'change-reason';
-                reason.textContent = getRiskReason(node) || 'No changes detected';
-
-                // Risk row
-                const riskRow = document.createElement('div');
-                riskRow.className = 'change-risk-row';
-
-                const riskLabel = document.createElement('span');
-                riskLabel.className = 'change-risk-label';
-                riskLabel.textContent = 'Risk';
-
-                const riskValue = document.createElement('span');
-                riskValue.className = 'change-risk-value';
+                // Risk column (.qr)
+                const riskCol = document.createElement('span');
+                riskCol.className = 'qr';
+                
                 const riskScoreRaw = node.riskScore ?? node.risk ?? node.RiskScore;
                 const riskScore = Number.isFinite(Number(riskScoreRaw)) ? Number(riskScoreRaw) : 0;
-                riskValue.textContent = Math.round(riskScore);
-
-                const riskBar = document.createElement('div');
-                riskBar.className = 'change-risk-bar';
+                const roundedRisk = Math.round(riskScore);
                 
-                const riskFill = document.createElement('div');
-                riskFill.className = 'change-risk-fill';
-                riskFill.style.width = `${Math.min(100, riskScore)}%`;
+                // High risk: warning-octagon in Emergency
+                // Medium risk: warning in Caution
+                // Low risk: just the number
+                if (roundedRisk >= 70) {
+                    const highIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    highIcon.setAttribute('class', 'ico em');
+                    highIcon.setAttribute('viewBox', '0 0 256 256');
+                    highIcon.setAttribute('fill', 'currentColor');
+                    const highUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                    highUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/vendor/phosphor/icons.svg#ph-warning-octagon');
+                    highIcon.appendChild(highUse);
+                    riskCol.appendChild(highIcon);
+                } else if (roundedRisk >= 40) {
+                    const medIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    medIcon.setAttribute('class', 'ico ca');
+                    medIcon.setAttribute('viewBox', '0 0 256 256');
+                    medIcon.setAttribute('fill', 'currentColor');
+                    const medUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                    medUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/vendor/phosphor/icons.svg#ph-warning');
+                    medIcon.appendChild(medUse);
+                    riskCol.appendChild(medIcon);
+                } else {
+                    // Low risk: empty 16px space
+                    const spacer = document.createElement('span');
+                    spacer.style.width = '16px';
+                    riskCol.appendChild(spacer);
+                }
                 
-                riskBar.appendChild(riskFill);
+                const riskValue = document.createElement('span');
+                riskValue.className = 'mono';
+                riskValue.textContent = String(roundedRisk);
+                riskCol.appendChild(riskValue);
 
-                riskRow.appendChild(riskLabel);
-                riskRow.appendChild(riskValue);
-                riskRow.appendChild(riskBar);
-
-                item.appendChild(header);
-                item.appendChild(name);
-                item.appendChild(reason);
-                item.appendChild(riskRow);
+                item.appendChild(glyphCol);
+                item.appendChild(content);
+                item.appendChild(riskCol);
 
                 // Click handler
                 item.addEventListener('click', () => {
@@ -1001,6 +1041,12 @@
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         zoomToNode(node.id);
+                    } else if (e.key.toLowerCase() === 'j') {
+                        e.preventDefault();
+                        navigateToNext();
+                    } else if (e.key.toLowerCase() === 'k') {
+                        e.preventDefault();
+                        navigateToPrevious();
                     }
                 });
 
@@ -4030,6 +4076,7 @@
                         });
                         
                         let bgColor = CONFIG.colors.surface;
+                        let bgAlpha = 1.0;
                         
                         // Only use group color if label rect is fully inside group screen bounds
                         if (nodeGroups.length > 0) {
@@ -4054,15 +4101,40 @@
                                                    labelBottom <= groupScreenY + groupScreenH;
                                 
                                 if (fullyInside) {
+                                    // Calculate same alpha factor as group rendering
+                                    const memberIds = getGroupMemberIdsForMix(group, state.versionMix);
+                                    const connectedIds = getConnectedNodeIds();
+                                    const connectedCanonical = new Set(Array.from(connectedIds).map(canonicalizeId));
+                                    const matchingCanonical = new Set((state.matchingNodes || []).map(n => canonicalizeId(n.id)));
+                                    const matchingNodeSet = state.matchingNodes ? new Set(state.matchingNodes.map(n => n.id)) : null;
+                                    const isSelectedGroup = !!state.selected && memberIds.some(id => canonicalizeId(id) === canonicalizeId(state.selected));
+                                    const isConnectedGroup = !isSelectedGroup && !!state.selected && memberIds.some(id =>
+                                        connectedIds.has(id) || connectedCanonical.has(canonicalizeId(id)));
+                                    const dimUnrelated = !!state.selected && !isSelectedGroup && !isConnectedGroup;
+                                    const hasMatchingMember = memberIds.some(id =>
+                                        (matchingNodeSet && matchingNodeSet.has(id)) || matchingCanonical.has(canonicalizeId(id)));
+                                    const dimForSearch = !!state.search && !hasMatchingMember;
+                                    const dimForStatusFilter = !isAllStatusFilterActive() && !hasMatchingMember;
+                                    const selectionAlphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
+                                    const criteriaAlphaFactor = (dimForSearch || dimForStatusFilter) ? 0.1 : 1.0;
+                                    const alphaFactor = selectionAlphaFactor * criteriaAlphaFactor;
+                                    
+                                    // Blend group color with surface based on alpha
                                     bgColor = CONFIG.colors.group;
+                                    bgAlpha = alphaFactor;
                                 }
                             }
                         }
                         
                         const padding = 2; // screen pixels
+                        
+                        // Draw backing with proper alpha blending
+                        ctx.save();
+                        ctx.globalAlpha = bgAlpha;
                         ctx.fillStyle = bgColor;
                         ctx.fillRect(label.screenX - padding, label.screenY - padding,
                                      label.screenW + padding * 2, label.screenH + padding * 2);
+                        ctx.restore();
                         
                         // Draw text (screen coordinates)
                         ctx.fillStyle = CONFIG.colors.textMuted;
