@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HopTracer</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Shadcn Dark Theme (Zinc/Slate) */
@@ -68,37 +71,38 @@
         }
 
         .dark {
-            --background: oklch(0.141 0.005 285.823);
-            --foreground: oklch(0.985 0 0);
-            --card: oklch(0.21 0.006 285.885);
-            --card-foreground: oklch(0.985 0 0);
-            --popover: oklch(0.21 0.006 285.885);
-            --popover-foreground: oklch(0.985 0 0);
-            --primary: oklch(0.606 0.25 292.717);
-            --primary-foreground: oklch(0.969 0.016 293.756);
-            --secondary: oklch(0.274 0.006 286.033);
-            --secondary-foreground: oklch(0.985 0 0);
-            --muted: oklch(0.274 0.006 286.033);
-            --muted-foreground: oklch(0.705 0.015 286.067);
-            --accent: oklch(0.274 0.006 286.033);
-            --accent-foreground: oklch(0.985 0 0);
-            --destructive: oklch(0.704 0.191 22.216);
-            --border: oklch(1 0 0 / 10%);
-            --input: oklch(1 0 0 / 15%);
-            --ring: oklch(0.38 0.189 293.745);
+            /* True Dark Mode - Pure Black Base */
+            --background: #000000;
+            --foreground: #ffffff;
+            --card: #0a0a0a;
+            --card-foreground: #ffffff;
+            --popover: #141414;
+            --popover-foreground: #ffffff;
+            --primary: #0a84ff;
+            --primary-foreground: #ffffff;
+            --secondary: #1e1e1e;
+            --secondary-foreground: #ffffff;
+            --muted: #1e1e1e;
+            --muted-foreground: #8e8e93;
+            --accent: #282828;
+            --accent-foreground: #ffffff;
+            --destructive: #ff453a;
+            --border: rgba(255, 255, 255, 0.1);
+            --input: rgba(255, 255, 255, 0.15);
+            --ring: #0a84ff;
             --chart-1: oklch(0.811 0.111 293.571);
             --chart-2: oklch(0.606 0.25 292.717);
             --chart-3: oklch(0.541 0.281 293.009);
             --chart-4: oklch(0.491 0.27 292.581);
             --chart-5: oklch(0.432 0.232 292.759);
-            --sidebar: oklch(0.21 0.006 285.885);
-            --sidebar-foreground: oklch(0.985 0 0);
-            --sidebar-primary: oklch(0.606 0.25 292.717);
-            --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-            --sidebar-accent: oklch(0.274 0.006 286.033);
-            --sidebar-accent-foreground: oklch(0.985 0 0);
-            --sidebar-border: oklch(1 0 0 / 10%);
-            --sidebar-ring: oklch(0.38 0.189 293.745);
+            --sidebar: #0a0a0a;
+            --sidebar-foreground: #ffffff;
+            --sidebar-primary: #0a84ff;
+            --sidebar-primary-foreground: #ffffff;
+            --sidebar-accent: #1e1e1e;
+            --sidebar-accent-foreground: #ffffff;
+            --sidebar-border: rgba(255, 255, 255, 0.1);
+            --sidebar-ring: #0a84ff;
 
             /* App Mappings (Dark Mode Override) */
             --bg-app: var(--background);
@@ -109,11 +113,11 @@
             --text-secondary: var(--muted-foreground);
             --accent-color: var(--primary);
             --accent-hover: var(--ring);
-            --surface-1: color-mix(in oklch, var(--bg-panel) 92%, black 8%);
-            --surface-2: color-mix(in oklch, var(--bg-card) 88%, black 12%);
-            --focus-ring: color-mix(in oklch, var(--accent-color) 62%, white 38%);
-            --elev-1: 0 16px 42px rgba(0, 0, 0, 0.42);
-            --elev-2: 0 22px 54px rgba(0, 0, 0, 0.5);
+            --surface-1: #0a0a0a;
+            --surface-2: #141414;
+            --focus-ring: rgba(10, 132, 255, 0.6);
+            --elev-1: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --elev-2: 0 12px 40px rgba(0, 0, 0, 0.6);
         }
 
         * {
@@ -122,11 +126,8 @@
 
         body {
             margin: 0;
-            font-family: "Geist Sans", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-            background:
-                radial-gradient(1200px 620px at 12% -8%, color-mix(in oklch, var(--accent-color) 20%, transparent), transparent 58%),
-                radial-gradient(900px 520px at 85% 104%, color-mix(in oklch, var(--ring) 16%, transparent), transparent 60%),
-                var(--bg-app);
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-app);
             color: var(--text-primary);
             display: flex;
             flex-direction: column;
@@ -202,9 +203,9 @@
             text-align: center;
             padding: clamp(18px, 3vw, 30px);
             border-radius: 18px;
-            border: 1px solid color-mix(in oklch, var(--border-color) 78%, white 22%);
-            background: linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 90%, transparent), color-mix(in oklch, var(--surface-2) 92%, transparent));
-            box-shadow: var(--elev-1);
+            border: 1px solid var(--border-color);
+            background: var(--bg-panel);
+            box-shadow: none;
         }
 
         h1 {
@@ -275,7 +276,7 @@
         }
 
         .btn {
-            background: color-mix(in oklch, var(--accent-color) 84%, black 16%);
+            background: var(--accent-color);
             color: var(--primary-foreground);
             border: none;
             padding: 12px 32px;
@@ -283,19 +284,19 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-            box-shadow: 0 8px 20px rgba(92, 128, 247, 0.28);
+            transition: transform 0.18s ease, background 0.18s ease;
+            box-shadow: none;
         }
 
         .btn:hover {
             transform: translateY(-1px);
-            background: color-mix(in oklch, var(--accent-color) 78%, black 22%);
-            box-shadow: 0 12px 28px rgba(92, 128, 247, 0.34);
+            background: #0066cc;
+            box-shadow: none;
         }
 
         .btn:focus-visible {
             outline: none;
-            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 34%, transparent), 0 12px 28px rgba(92, 128, 247, 0.34);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4);
         }
 
         .btn:disabled {
@@ -415,7 +416,7 @@
         }
 
         .git-modal-card {
-            background: linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 90%, transparent), color-mix(in oklch, var(--surface-2) 92%, transparent));
+            background: var(--bg-panel);
             padding: 0;
             border-radius: 12px;
             width: min(800px, calc(100vw - 24px));
@@ -423,14 +424,14 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 1px solid color-mix(in oklch, var(--border-color) 80%, white 20%);
-            box-shadow: var(--elev-2);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
         }
 
         button:focus-visible,
         input:focus-visible {
             outline: none;
-            box-shadow: 0 0 0 3px color-mix(in oklch, var(--focus-ring) 34%, transparent);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4);
         }
 
         @media (prefers-reduced-motion: reduce) {

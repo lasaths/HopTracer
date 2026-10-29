@@ -8,26 +8,21 @@
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
     <style>
         :root {
-            /* Shadcn Dark Theme (Zinc/Slate) */
             --radius: 0.65rem;
-            --background: oklch(0.141 0.005 285.823);
-            --foreground: oklch(0.985 0 0);
-            --card: oklch(0.21 0.006 285.885);
-            --card-foreground: oklch(0.985 0 0);
-            --popover: oklch(0.21 0.006 285.885);
-            --popover-foreground: oklch(0.985 0 0);
-            --primary: oklch(0.606 0.25 292.717);
-            --primary-foreground: oklch(0.969 0.016 293.756);
-            --secondary: oklch(0.274 0.006 286.033);
-            --secondary-foreground: oklch(0.985 0 0);
-            --muted: oklch(0.274 0.006 286.033);
-            --muted-foreground: oklch(0.705 0.015 286.067);
-            --accent: oklch(0.274 0.006 286.033);
-            --accent-foreground: oklch(0.985 0 0);
-            --destructive: oklch(0.704 0.191 22.216);
-            --border: oklch(1 0 0 / 10%);
-            --input: oklch(1 0 0 / 15%);
-            --ring: oklch(0.38 0.189 293.745);
+            --background: #000000;
+            --foreground: #ffffff;
+            --card: #0a0a0a;
+            --card-foreground: #ffffff;
+            --primary: #0a84ff;
+            --primary-foreground: #000000;
+            --secondary: #1e1e1e;
+            --secondary-foreground: #ffffff;
+            --muted: #1e1e1e;
+            --muted-foreground: #8e8e93;
+            --accent: #282828;
+            --destructive: #ff453a;
+            --border: rgba(255, 255, 255, 0.1);
+            --ring: #0a84ff;
 
             --bg-app: var(--background);
             --bg-panel: var(--card);
@@ -35,7 +30,7 @@
             --text-secondary: var(--muted-foreground);
             --accent-color: var(--primary);
             --accent-hover: var(--ring);
-            --danger: #f44336;
+            --danger: #ff453a;
         }
 
         * {
@@ -44,7 +39,7 @@
 
         body {
             margin: 0;
-            font-family: "Geist Sans", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-app);
             color: var(--text-primary);
             display: flex;
