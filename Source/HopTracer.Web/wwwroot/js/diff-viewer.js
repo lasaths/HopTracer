@@ -3662,7 +3662,7 @@
 
         function draw() {
             // Clear
-            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillStyle = CONFIG.colors.surface;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Transform
@@ -4023,12 +4023,42 @@
                     
                     if (!collides) {
                         // Draw background rect (screen coordinates)
-                        // Use group fill if node is in a group, otherwise surface
+                        // Determine group membership and check if label is fully inside group bounds
                         const nodeGroups = state.groups.filter(g => {
                             const members = g.memberIds || g.MemberIds || g.memberIdsOld || g.memberIdsNew || [];
                             return members.includes(label.node.id);
                         });
-                        const bgColor = nodeGroups.length > 0 ? CONFIG.colors.group : CONFIG.colors.surface;
+                        
+                        let bgColor = CONFIG.colors.surface;
+                        
+                        // Only use group color if label rect is fully inside group screen bounds
+                        if (nodeGroups.length > 0) {
+                            const group = nodeGroups[0];
+                            const groupRect = computeGroupRenderRect(group, renderNodeLookup);
+                            if (groupRect) {
+                                // Transform group rect to screen coordinates
+                                const groupScreenX = groupRect.x * state.view.scale + state.view.x;
+                                const groupScreenY = groupRect.y * state.view.scale + state.view.y;
+                                const groupScreenW = groupRect.w * state.view.scale;
+                                const groupScreenH = groupRect.h * state.view.scale;
+                                
+                                // Check if label rect is fully inside group rect
+                                const labelLeft = label.screenX - 2;
+                                const labelRight = label.screenX + label.screenW + 2;
+                                const labelTop = label.screenY - 2;
+                                const labelBottom = label.screenY + label.screenH + 2;
+                                
+                                const fullyInside = labelLeft >= groupScreenX &&
+                                                   labelRight <= groupScreenX + groupScreenW &&
+                                                   labelTop >= groupScreenY &&
+                                                   labelBottom <= groupScreenY + groupScreenH;
+                                
+                                if (fullyInside) {
+                                    bgColor = CONFIG.colors.group;
+                                }
+                            }
+                        }
+                        
                         const padding = 2; // screen pixels
                         ctx.fillStyle = bgColor;
                         ctx.fillRect(label.screenX - padding, label.screenY - padding,
