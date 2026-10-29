@@ -145,7 +145,7 @@
         const loadingSubtitle = document.getElementById('loadingSubtitle');
         const loadingPercent = document.getElementById('loadingPercent');
         const loadingProgressBar = document.getElementById('loadingProgressBar');
-        let sessionToken = null;
+        let sessionToken = "static-test-token"; // Modified for static testing
         let loadingProgressTimer = null;
         let loadingProgressValue = 0;
         let spotlightReturnFocus = null;
@@ -3838,7 +3838,6 @@
                 });
             });
 
-            const dpr = window.devicePixelRatio || 1;
             const canvasWidth = canvas.width / dpr;
             const canvasHeight = canvas.height / dpr;
             
