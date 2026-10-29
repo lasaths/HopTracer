@@ -989,7 +989,12 @@
                 statusLabel.textContent = status.charAt(0).toUpperCase() + status.slice(1);
                 
                 reasonRow.appendChild(statusLabel);
-                reasonRow.appendChild(document.createTextNode(' · ' + reason));
+                
+                const reasonSpan = document.createElement('span');
+                reasonSpan.className = 'qreason';
+                reasonSpan.textContent = ' · ' + reason;
+                reasonRow.appendChild(reasonSpan);
+                
                 reasonRow.title = reason;
                 content.appendChild(reasonRow);
 

@@ -317,7 +317,7 @@ html, body {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0;
 }
 
 .qrow .row {
@@ -364,12 +364,13 @@ html, body {
         gap: 8px;
     }
     
-    .qrow .small.muted {
-        /* Show status word inline, clip after first word */
-        max-width: 8ch;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: clip;
+    .qrow .qr,
+    .qrow .qg {
+        padding-top: 0;
+    }
+    
+    .qrow .qreason {
+        display: none;
     }
 }
 
