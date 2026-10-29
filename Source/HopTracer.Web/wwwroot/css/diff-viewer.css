@@ -2094,17 +2094,19 @@ a.button,
 
 .viewer-toast {
     position: fixed;
-    left: 50%;
-    bottom: calc(var(--foot) + 16px);
-    transform: translateX(-50%);
+    left: var(--m);
+    bottom: var(--m);
+    transform: none;
+    width: 360px;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background: var(--c-surface);
-    border: 1px solid var(--c-line);
+    background: var(--c-surface-lift);
+    border: 0;
+    border-left: 2px solid var(--c-text);
     z-index: 40;
-    pointer-events: none;
 }
 
 .viewer-toast[hidden] {
@@ -2113,4 +2115,23 @@ a.button,
 
 .viewer-toast .ico {
     fill: currentColor;
+}
+
+#viewer-toast-msg {
+    flex: 1;
+    min-width: 0;
+}
+
+#viewer-toast-dismiss {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    flex: none;
+}
+
+#viewer-toast-dismiss .ico {
+    width: 16px;
+    height: 16px;
 }

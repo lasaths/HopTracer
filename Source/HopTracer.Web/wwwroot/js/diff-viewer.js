@@ -3249,18 +3249,30 @@
         }
 
         let viewerToastTimer = null;
+        let viewerToastSticky = false;
+
+        function hideViewerToast() {
+            const toast = document.getElementById('viewer-toast');
+            const dismissBtn = document.getElementById('viewer-toast-dismiss');
+            if (toast) toast.hidden = true;
+            if (dismissBtn) dismissBtn.hidden = true;
+            viewerToastSticky = false;
+            if (viewerToastTimer) {
+                clearTimeout(viewerToastTimer);
+                viewerToastTimer = null;
+            }
+        }
+
+        function isPerfError(text) {
+            return /failed|error|no wires could be mapped/i.test(text);
+        }
+
         function showPerf(message) {
             const toast = document.getElementById('viewer-toast');
             const msgEl = document.getElementById('viewer-toast-msg');
-            const hideToast = () => {
-                if (toast) toast.hidden = true;
-                if (viewerToastTimer) {
-                    clearTimeout(viewerToastTimer);
-                    viewerToastTimer = null;
-                }
-            };
+            const dismissBtn = document.getElementById('viewer-toast-dismiss');
             if (!message) {
-                hideToast();
+                hideViewerToast();
                 return;
             }
             const text = String(message);
@@ -3268,8 +3280,26 @@
             if (!toast || !msgEl) return;
             msgEl.textContent = text;
             toast.hidden = false;
-            if (viewerToastTimer) clearTimeout(viewerToastTimer);
-            viewerToastTimer = setTimeout(hideToast, 4000);
+            if (viewerToastTimer) {
+                clearTimeout(viewerToastTimer);
+                viewerToastTimer = null;
+            }
+            const isError = isPerfError(text);
+            viewerToastSticky = isError;
+            toast.setAttribute('role', isError ? 'alert' : 'status');
+            toast.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+            if (dismissBtn) dismissBtn.hidden = !isError;
+            if (!isError) {
+                viewerToastTimer = setTimeout(hideViewerToast, 4000);
+            }
+        }
+
+        const viewerToastDismiss = document.getElementById('viewer-toast-dismiss');
+        if (viewerToastDismiss) {
+            viewerToastDismiss.addEventListener('click', (e) => {
+                e.preventDefault();
+                hideViewerToast();
+            });
         }
 
         function updateBounds() {
@@ -3384,6 +3414,11 @@
                         moveFocusToPreviousRow();
                         break;
                     case 'escape':
+                        if (viewerToastSticky) {
+                            e.preventDefault();
+                            hideViewerToast();
+                            break;
+                        }
                         state.selected = null;
                         updateDetailsPanel(null);
                         renderComponentResultsList();
