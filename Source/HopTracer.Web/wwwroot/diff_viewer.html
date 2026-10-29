@@ -198,8 +198,6 @@
                 <svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-caret-left"></use></svg>
             </button>
 
-            <div id="perf-indicator">Initializing…</div>
-
             <canvas id="graph-canvas"></canvas>
 
             <div id="minimap-container">
@@ -258,11 +256,30 @@
                 <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
                 <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script</button>
             </div>
-            <div id="details-pane-inspector" class="details-pane active">
-                <div class="empty-state">
-                    Select a node in the graph<br>to view details
-                </div>
-            </div>
+            <aside class="col" id="details-summary" aria-label="Summary" style="display:none">
+                <section>
+                    <div class="label">Review</div>
+                    <div class="row" style="align-items:baseline;gap:12px;margin-top:8px">
+                        <span class="display" id="summary-changes-count">0</span>
+                        <span class="title muted" style="font-weight:400">changes to review</span>
+                    </div>
+                    <div class="rbar" role="img" aria-label="Risk split" id="summary-risk-bar"></div>
+                    <div class="row" style="gap:24px;margin-top:12px" id="summary-risk-counts"></div>
+                </section>
+                <section>
+                    <div class="row">
+                        <span class="label">Top risks</span>
+                        <span class="label" style="margin-left:auto">Risk</span>
+                    </div>
+                    <div class="risklist" style="margin-top:8px" id="summary-top-risks"></div>
+                </section>
+                <section>
+                    <div class="label">Files · times CET</div>
+                    <div class="files" style="margin-top:8px" id="summary-files"></div>
+                </section>
+                <div class="label" style="margin-top:auto" id="summary-perf">Parse — ms · match — · diff —</div>
+            </aside>
+            <div id="details-pane-inspector" class="details-pane active"></div>
             <div id="details-pane-script" class="details-pane"></div>
         </div>
     </main>

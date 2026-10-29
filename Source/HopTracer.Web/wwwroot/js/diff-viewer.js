@@ -4585,14 +4585,248 @@
             return !!state.includeHighLevelModifications;
         }
 
+        function populateSummaryPanel() {
+            // Count changed nodes
+            const changedNodes = state.nodes.filter(n => 
+                n.status === 'added' || n.status === 'removed' || n.status === 'modified'
+            );
+            const changeCount = changedNodes.length;
+            
+            // Risk bands
+            const highRisk = changedNodes.filter(n => (n.riskScore || 0) >= 70);
+            const mediumRisk = changedNodes.filter(n => (n.riskScore || 0) >= 40 && (n.riskScore || 0) < 70);
+            const lowRisk = changedNodes.filter(n => (n.riskScore || 0) < 40);
+            
+            // Update count
+            const countElem = document.getElementById('summary-changes-count');
+            if (countElem) countElem.textContent = changeCount.toLocaleString();
+            
+            // Update risk bar
+            const riskBar = document.getElementById('summary-risk-bar');
+            if (riskBar) {
+                riskBar.innerHTML = '';
+                if (highRisk.length > 0) {
+                    const segment = document.createElement('i');
+                    segment.style.flex = highRisk.length;
+                    segment.style.background = 'var(--c-emergency)';
+                    riskBar.appendChild(segment);
+                }
+                if (mediumRisk.length > 0) {
+                    const segment = document.createElement('i');
+                    segment.style.flex = mediumRisk.length;
+                    segment.style.background = 'var(--c-caution)';
+                    riskBar.appendChild(segment);
+                }
+                if (lowRisk.length > 0) {
+                    const segment = document.createElement('i');
+                    segment.style.flex = lowRisk.length;
+                    segment.style.background = 'var(--c-line)';
+                    riskBar.appendChild(segment);
+                }
+                riskBar.setAttribute('aria-label', `Risk split: ${highRisk.length} high, ${mediumRisk.length} medium, ${lowRisk.length} low`);
+            }
+            
+            // Update risk counts
+            const riskCounts = document.getElementById('summary-risk-counts');
+            if (riskCounts) {
+                riskCounts.innerHTML = '';
+                
+                if (highRisk.length > 0) {
+                    const span = document.createElement('span');
+                    span.className = 'st';
+                    span.innerHTML = '<svg class="ico em" viewBox="0 0 16 16"><use href="/vendor/phosphor/icons.svg#ph-warning-octagon"></use></svg>High ' + highRisk.length;
+                    riskCounts.appendChild(span);
+                }
+                
+                if (mediumRisk.length > 0) {
+                    const span = document.createElement('span');
+                    span.className = 'st';
+                    span.innerHTML = '<svg class="ico ca" viewBox="0 0 16 16"><use href="/vendor/phosphor/icons.svg#ph-warning"></use></svg>Medium ' + mediumRisk.length;
+                    riskCounts.appendChild(span);
+                }
+                
+                if (lowRisk.length > 0) {
+                    const span = document.createElement('span');
+                    span.className = 'st muted';
+                    span.textContent = 'Low ' + lowRisk.length;
+                    riskCounts.appendChild(span);
+                }
+            }
+            
+            // Top 3 risks
+            const topRisks = changedNodes
+                .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
+                .slice(0, 3);
+            
+            const topRisksList = document.getElementById('summary-top-risks');
+            if (topRisksList) {
+                topRisksList.innerHTML = '';
+                topRisks.forEach(node => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    
+                    // Status icon
+                    const statusIcon = document.createElement('span');
+                    statusIcon.style.paddingTop = '2px';
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('class', `ico ${node.status === 'added' ? 'ad' : node.status === 'removed' ? 'em' : 'ca'}`);
+                    svg.setAttribute('viewBox', '0 0 16 16');
+                    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                    const iconMap = {
+                        added: '#ph-plus-circle',
+                        removed: '#ph-minus-circle',
+                        modified: '#ph-pencil-simple-line'
+                    };
+                    use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `/vendor/phosphor/icons.svg${iconMap[node.status] || iconMap.modified}`);
+                    svg.appendChild(use);
+                    statusIcon.appendChild(svg);
+                    
+                    // Content
+                    const content = document.createElement('span');
+                    content.className = 'grow';
+                    const name = document.createElement('span');
+                    name.style.fontWeight = '500';
+                    name.textContent = node.nickname || node.name || 'Unnamed';
+                    const reason = document.createElement('span');
+                    reason.className = 'muted small';
+                    reason.style.display = 'block';
+                    reason.textContent = getRiskReason(node) || 'No details';
+                    content.appendChild(name);
+                    content.appendChild(reason);
+                    
+                    // Risk score
+                    const riskScore = node.riskScore || 0;
+                    const riskSpan = document.createElement('span');
+                    riskSpan.className = 'st';
+                    if (riskScore >= 70) {
+                        const riskSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        riskSvg.setAttribute('class', 'ico em');
+                        riskSvg.setAttribute('viewBox', '0 0 16 16');
+                        const riskUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                        riskUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/vendor/phosphor/icons.svg#ph-warning-octagon');
+                        riskSvg.appendChild(riskUse);
+                        riskSpan.appendChild(riskSvg);
+                    } else if (riskScore >= 40) {
+                        const riskSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        riskSvg.setAttribute('class', 'ico ca');
+                        riskSvg.setAttribute('viewBox', '0 0 16 16');
+                        const riskUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                        riskUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/vendor/phosphor/icons.svg#ph-warning');
+                        riskSvg.appendChild(riskUse);
+                        riskSpan.appendChild(riskUse);
+                    }
+                    riskSpan.appendChild(document.createTextNode(Math.round(riskScore)));
+                    
+                    btn.appendChild(statusIcon);
+                    btn.appendChild(content);
+                    btn.appendChild(riskSpan);
+                    
+                    // Click handler
+                    btn.addEventListener('click', () => {
+                        zoomToNode(node.id);
+                    });
+                    
+                    topRisksList.appendChild(btn);
+                });
+            }
+            
+            // Files
+            const filesElem = document.getElementById('summary-files');
+            if (filesElem && GRAPH_DATA) {
+                filesElem.innerHTML = '';
+                
+                // Format date in Europe/Berlin timezone
+                const formatCETDate = (dateStr) => {
+                    if (!dateStr) return '—';
+                    try {
+                        const date = new Date(dateStr);
+                        const options = { 
+                            day: 'numeric', 
+                            month: 'short', 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: false,
+                            timeZone: 'Europe/Berlin'
+                        };
+                        const formatted = date.toLocaleString('en-GB', options);
+                        // Format to "D Mon HH:MM"
+                        return formatted.replace(',', '');
+                    } catch {
+                        return '—';
+                    }
+                };
+                
+                if (GRAPH_DATA.oldMeta) {
+                    const label = document.createElement('span');
+                    label.className = 'k label';
+                    label.textContent = 'Old';
+                    const name = document.createElement('span');
+                    name.className = 'mono small trunc';
+                    name.textContent = GRAPH_DATA.oldMeta.name || '—';
+                    name.title = GRAPH_DATA.oldMeta.name || '';
+                    const date = document.createElement('span');
+                    date.className = 'label';
+                    date.textContent = formatCETDate(GRAPH_DATA.oldMeta.date);
+                    filesElem.appendChild(label);
+                    filesElem.appendChild(name);
+                    filesElem.appendChild(date);
+                }
+                
+                if (GRAPH_DATA.newMeta) {
+                    const label = document.createElement('span');
+                    label.className = 'k label';
+                    label.textContent = 'New';
+                    const name = document.createElement('span');
+                    name.className = 'mono small trunc';
+                    name.textContent = GRAPH_DATA.newMeta.name || '—';
+                    name.title = GRAPH_DATA.newMeta.name || '';
+                    const date = document.createElement('span');
+                    date.className = 'label';
+                    date.textContent = formatCETDate(GRAPH_DATA.newMeta.date);
+                    filesElem.appendChild(label);
+                    filesElem.appendChild(name);
+                    filesElem.appendChild(date);
+                }
+            }
+            
+            // Perf line - moved from old indicator
+            updateSummaryPerf();
+        }
+
+        function updateSummaryPerf() {
+            const perfElem = document.getElementById('summary-perf');
+            if (!perfElem) return;
+            
+            const parseTime = GRAPH_DATA?.parseTimeMs || 0;
+            const matchTime = GRAPH_DATA?.matchTimeMs || 0;
+            const diffTime = GRAPH_DATA?.diffTimeMs || 0;
+            
+            perfElem.textContent = `Parse ${parseTime} ms · match ${matchTime} · diff ${diffTime}`;
+        }
+
+        function showHighLevelModificationDetails() {
+            return !!state.includeHighLevelModifications;
+        }
+
         function updateDetailsPanel(node) {
+            const detailsSummary = document.getElementById('details-summary');
+            
             if (!node) {
-                detailsPaneInspector.innerHTML = '<div class="empty-state">Select a node in the graph<br>to view details</div>';
+                // Show summary panel
+                if (detailsSummary) {
+                    detailsSummary.style.display = 'flex';
+                    populateSummaryPanel();
+                }
+                detailsPaneInspector.style.display = 'none';
                 setScriptTabVisibility(false);
                 state.scriptContext = null;
                 renderEmptyScriptPane();
                 return;
             }
+
+            // Show inspector panel
+            if (detailsSummary) detailsSummary.style.display = 'none';
+            detailsPaneInspector.style.display = 'block';
 
             const togglePorts = document.getElementById('toggle-ports');
             const showPorts = togglePorts ? !!togglePorts.checked : !!state.showPortDetails;
