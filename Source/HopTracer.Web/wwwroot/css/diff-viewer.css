@@ -548,50 +548,6 @@
 .ad { color: var(--c-added); }
 .mu { color: var(--c-muted); }
 
-/* Diff lines (bug #3 fix) */
-.diff-line {
-    font-family: var(--f-mono);
-    font-size: 12px;
-    line-height: 18px;
-    padding: 0 8px;
-    display: grid;
-    grid-template-columns: 48px 1fr 48px 1fr;
-    gap: 0;
-}
-
-.diff-line.added {
-    background: var(--tint-added);
-}
-
-.diff-line.removed {
-    background: var(--tint-removed);
-}
-
-.diff-num {
-    color: var(--c-muted);
-    text-align: right;
-    padding-right: 12px;
-    user-select: none;
-    min-width: 48px;
-}
-
-.diff-code {
-    padding-left: 8px;
-    white-space: pre;
-    overflow-x: auto;
-}
-
-/* Script modal open state (bug #2: adapt to new sheet design) */
-#script-diff.open,
-#script-diff.visible {
-    display: flex !important;
-}
-
-/* Ensure minimum 11px labels (bug #6) */
-.label {
-    font-size: max(11px, var(--t-label));
-}
-
 /* Canvas tags - always show for nodes with status (accessibility: never color-only) */
 .tag {
     position: absolute;
