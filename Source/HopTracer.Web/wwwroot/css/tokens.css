@@ -35,7 +35,7 @@
   --d-instant:0ms; --d-fast:120ms; --d-fast-out:80ms; --d-base:200ms; --d-slow:400ms; --d-camera:300ms; --d-toast:4000ms; --d-peek:300ms;
   --e-out:cubic-bezier(.2,0,0,1); --e-camera:cubic-bezier(.4,0,.2,1);
 }
-@media (max-width:1439px){:root{--queue:256px}}
+@media (max-width:1439px){:root{--queue:256px;--col:344px}}
 @media (prefers-reduced-motion:reduce){:root{--d-fast:0ms;--d-fast-out:0ms;--d-base:0ms;--d-slow:0ms;--d-camera:0ms}}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--c-void);color:var(--c-text);font-family:var(--f-sans);font-size:var(--t-body);line-height:var(--t-body-lh);

@@ -3246,7 +3246,7 @@
 
         function showPerf(message) {
             if (!message) return;
-            showToast(message);
+            console.log(message);
         }
 
         function updateBounds() {
