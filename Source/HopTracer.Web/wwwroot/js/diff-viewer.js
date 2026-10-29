@@ -3862,6 +3862,9 @@
                     ctx.fillText(displayLabel, tx, ty);
                 }
 
+                // Draw ports (fix bug #1: ports weren't drawn after 1d6ae95 removed the call)
+                drawNodePortSockets(n);
+
                 // Cluster indicator: draw a special double-border and icon
                 const props = n.properties || n.Properties || {};
                 const isCluster = isTrueish(props.isCluster) || isTrueish(props.IsCluster) || /cluster/i.test(String(n.name || ''));
@@ -5889,11 +5892,11 @@
                     symbol = ' ';
                 } else if (change.type === 'added') {
                     newNumStr = newLineNum++;
-                    className = 'diff-added';
+                    className = 'diff-line added';
                     symbol = '+';
                 } else if (change.type === 'removed') {
                     oldNumStr = oldLineNum++;
-                    className = 'diff-removed';
+                    className = 'diff-line removed';
                     symbol = '-';
                 }
 

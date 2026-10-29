@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopTracer</title>
+    <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/diff-viewer.css">
+</head>
+
+<body class="dark no-glow">
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Quiet Top Line - ANDURA Style -->
+    <div id="file-metadata-header">
+        <div class="metadata-row">
+            <div class="metadata-logo">
+                <img src="/images/HopTrace_Logo.png" alt="HopTracer">
+                <span class="metadata-logo-text">HopTracer</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Files</span>
+                <button type="button" class="metadata-value source-link" id="meta-file-old" data-side="old" title="Click to change old file">...</button>
+                <span class="metadata-arrow">→</span>
+                <button type="button" class="metadata-value source-link" id="meta-file-new" data-side="new" title="Click to change new file">...</button>
+            </div>
+            <div class="metadata-stats">
+                <div class="metadata-stat">
+                    <svg class="metadata-stat-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <use href="/vendor/phosphor/icons.svg#ph-clock"></use>
+                    </svg>
+                    <span id="meta-time-diff" class="metadata-stat-value">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main id="main-container" aria-label="Comparison workspace">
+        <!-- Left Panel: Risk-Ordered Change List -->
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span class="stat-label">Added</span>
+                        <span id="stat-added" class="stat-number">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Removed</span>
+                        <span id="stat-removed" class="stat-number">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Modified</span>
+                        <span id="stat-modified" class="stat-number">0</span>
+                    </div>
+                </div>
+                <div class="sidebar-header-actions">
+                    <a href="/" class="filter-btn sidebar-primary-action">New Comparison</a>
+                </div>
+            </div>
+
+            <div class="controls">
+                <!-- Risk-Ordered Change List -->
+                <div class="change-list-section">
+                    <div class="section-header">
+                        <span class="section-title">Changes</span>
+                        <span id="change-list-count" class="section-count">0</span>
+                    </div>
+                    <div id="change-list" class="change-list">
+                        <div class="component-results-empty">No changes to review.</div>
+                    </div>
+                </div>
+
+                <!-- Navigation Controls -->
+                <div class="navigation-controls">
+                    <button type="button" id="btn-prev-change" class="nav-btn" title="Previous change (K)">
+                        <svg viewBox="0 0 16 16" fill="currentColor">
+                            <use href="/vendor/phosphor/icons.svg#ph-caret-left"></use>
+                        </svg>
+                        Prev
+                    </button>
+                    <button type="button" id="btn-next-change" class="nav-btn" title="Next change (J)">
+                        Next
+                        <svg viewBox="0 0 16 16" fill="currentColor">
+                            <use href="/vendor/phosphor/icons.svg#ph-caret-right"></use>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="sidebar-card">
+                    <div class="section-label">Status Filters</div>
+                    <div class="filter-group">
+                        <button class="filter-btn" data-filter="all">All</button>
+                        <button class="filter-btn active" data-filter="added">Added</button>
+                        <button class="filter-btn active" data-filter="removed">Removed</button>
+                        <button class="filter-btn active" data-filter="modified">Modified</button>
+                        <button class="filter-btn" data-filter="same">Unchanged</button>
+                    </div>
+                </div>
+
+                <!-- Export & Review -->
+                <div class="sidebar-card">
+                    <div class="section-label">Review & Export</div>
+                    <div class="review-action-stack">
+                        <button type="button" id="btn-export-forensic" class="filter-btn review-action-btn" title="Download forensic JSON and HTML report">
+                            <svg style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px;" viewBox="0 0 16 16" fill="currentColor">
+                                <use href="/vendor/phosphor/icons.svg#ph-download-simple"></use>
+                            </svg>
+                            Export Report
+                        </button>
+                        <button type="button" id="btn-save-baseline" class="filter-btn review-action-btn" title="Save current file as a known-good baseline">Save Baseline</button>
+                        <button type="button" id="btn-check-baseline" class="filter-btn review-action-btn" title="Compare current file against a saved baseline">Check Baseline</button>
+                    </div>
+                </div>
+
+                <!-- Sort & Components -->
+                <div class="sidebar-card">
+                    <div class="section-label">Component Sort</div>
+                    <div class="component-sort-row">
+                        <label for="component-sort">Sort by</label>
+                        <select id="component-sort" class="component-sort-select">
+                            <option value="risk">Risk</option>
+                            <option value="az">A-Z</option>
+                            <option value="za">Z-A</option>
+                            <option value="dist">Dist</option>
+                            <option value="data">Data Size</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- View Options -->
+                <details class="sidebar-collapsible">
+                    <summary>View Options</summary>
+                    <div class="sidebar-collapsible-body">
+                        <label for="toggle-ports" class="option-toggle">
+                            <input type="checkbox" id="toggle-ports" />
+                            <span>Show inputs/output details</span>
+                        </label>
+                        <label for="toggle-groups" class="option-toggle">
+                            <input type="checkbox" id="toggle-groups" checked />
+                            <span>Show groups</span>
+                        </label>
+                        <label for="toggle-high-level-mods" class="option-toggle">
+                            <input type="checkbox" id="toggle-high-level-mods" />
+                            <span>Include high-level modifications</span>
+                        </label>
+                        <label for="toggle-changed-edges" class="option-toggle">
+                            <input type="checkbox" id="toggle-changed-edges" />
+                            <span>Show changed wires only</span>
+                        </label>
+                    </div>
+                </details>
+
+                <!-- File Analytics -->
+                <details class="sidebar-collapsible">
+                    <summary>File Analytics</summary>
+                    <div class="sidebar-collapsible-body">
+                        <div class="analytics-source">
+                            <div class="source-side-label">Old File</div>
+                            <div id="meta-old-name" class="source-name">-</div>
+                            <div id="meta-old-date" class="source-date">-</div>
+                            <div class="source-version-row">
+                                <span class="source-inline-label">Version</span>
+                                <span id="meta-old-version" class="source-version">-</span>
+                            </div>
+                        </div>
+
+                        <div id="time-diff-container" class="time-diff-chip" style="display: none;">
+                            <div class="time-diff-label">Time Difference</div>
+                            <div id="time-diff-value" class="time-diff-value">-</div>
+                        </div>
+
+                        <div id="version-diff-container" class="time-diff-chip" style="display: none;">
+                            <div class="time-diff-label">Version Changed</div>
+                            <div id="version-diff-value" class="time-diff-value">-</div>
+                        </div>
+
+                        <div class="analytics-source">
+                            <div class="source-side-label">New File</div>
+                            <div id="meta-new-name" class="source-name">-</div>
+                            <div id="meta-new-date" class="source-date">-</div>
+                            <div class="source-version-row">
+                                <span class="source-inline-label">Version</span>
+                                <span id="meta-new-version" class="source-version">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <div id="resizer"></div>
+
+        <!-- Centre: Graph Canvas -->
+        <div id="main-view">
+            <div id="graph-tabs" class="graph-tabs"></div>
+            
+            <div class="top-right-tools">
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--status-added)"></div> Added
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--status-removed)"></div> Removed
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--status-modified)"></div> Modified
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--status-same)"></div> Unchanged
+                    </div>
+                </div>
+                
+                <button type="button" id="search-launcher" class="search-launcher" title="Search components + code (Ctrl+K)">
+                    <svg class="search-launcher-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <use href="/vendor/phosphor/icons.svg#ph-magnifying-glass"></use>
+                    </svg>
+                </button>
+            </div>
+
+            <button type="button" id="btn-sidebar-expand" class="panel-expand-btn left" title="Show left panel">▶</button>
+            <button type="button" id="btn-details-expand" class="panel-expand-btn right" title="Show right panel">◀</button>
+
+            <div id="perf-indicator">Initializing…</div>
+
+            <canvas id="graph-canvas"></canvas>
+
+            <div id="minimap-container">
+                <canvas id="minimap-canvas"></canvas>
+            </div>
+
+            <div class="bottom-controls">
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Wire Visibility</span>
+                        <span id="wire-label" class="slider-value">Show All</span>
+                    </div>
+                    <input type="range" id="wire-slider" min="0" max="100" value="0">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Version Compare</span>
+                        <span id="version-label" class="slider-value">Mixed</span>
+                    </div>
+                    <input type="range" id="version-slider" min="0" max="100" value="50">
+                    <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-secondary); margin-top: 2px;">
+                        <span>Old</span>
+                        <span>New</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overlay-controls">
+                <button class="icon-btn" id="btn-fit" title="Fit to View">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <use href="/vendor/phosphor/icons.svg#ph-arrows-out"></use>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="btn-zoom-in" title="Zoom In (+)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="btn-zoom-out" title="Zoom Out (-)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="details-resizer"></div>
+
+        <!-- Right Panel: Inspector (ANDURA Detail Pane) -->
+        <div id="details-panel">
+            <div class="details-tabs">
+                <button type="button" id="btn-details-collapse" class="panel-icon-btn" title="Hide right panel">▶</button>
+                <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
+                <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script</button>
+            </div>
+            <div id="details-pane-inspector" class="details-pane active">
+                <div class="empty-state">
+                    Select a node in the graph<br>to view details
+                </div>
+            </div>
+            <div id="details-pane-script" class="details-pane"></div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div id="loadingTitle">Converting & Comparing...</div>
+        <div style="width: 40px; height: 40px; border: 4px solid var(--border-hairline); border-top: 4px solid var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <div id="loadingPercent">0%</div>
+        <div style="width:min(360px, calc(100vw - 48px)); height:10px; background:rgba(255,255,255,0.08); border:1px solid var(--border-hairline); border-radius:999px; margin-top:10px; overflow:hidden;">
+            <div id="loadingProgressBar"></div>
+        </div>
+        <div id="loadingSubtitle">This may take a few moments for large files.</div>
+    </div>
+
+    <!-- Source Modal -->
+    <div id="source-modal" class="source-modal-backdrop">
+        <div class="source-modal">
+            <div class="source-modal-header">
+                <div class="source-modal-title" id="source-modal-title">Change Source</div>
+                <button type="button" id="btn-source-modal-close" class="panel-icon-btn" title="Close" aria-label="Close dialog">✕</button>
+            </div>
+            <div class="source-modal-body">
+                <div class="source-mode-row">
+                    <button type="button" id="source-mode-file" class="source-mode-btn active">File</button>
+                    <button type="button" id="source-mode-commit" class="source-mode-btn">Git Commit</button>
+                </div>
+
+                <div id="source-pane-file" class="source-pane">
+                    <div class="source-field-label">Selected File</div>
+                    <div id="source-file-path" class="source-path">No file selected</div>
+                    <div id="source-file-meta" class="source-path-meta"></div>
+                    <div class="source-actions">
+                        <button type="button" id="btn-source-pick-file" class="filter-btn">Choose File</button>
+                    </div>
+                </div>
+
+                <div id="source-pane-commit" class="source-pane" style="display:none;">
+                    <div class="source-field-label">Repository File</div>
+                    <div id="source-commit-path" class="source-path">No file selected</div>
+                    <div id="source-commit-meta" class="source-path-meta"></div>
+                    <div class="source-actions">
+                        <button type="button" id="btn-source-pick-commit-file" class="filter-btn">Choose File</button>
+                        <button type="button" id="btn-source-load-commits" class="filter-btn">Load Commits</button>
+                    </div>
+                    <div id="source-commit-list" class="source-commit-list"></div>
+                </div>
+
+                <div id="source-modal-status" class="source-modal-status" role="status" aria-live="polite" aria-atomic="true"></div>
+            </div>
+            <div class="source-modal-footer">
+                <button type="button" id="btn-source-cancel" class="filter-btn">Cancel</button>
+                <button type="button" id="btn-source-apply" class="filter-btn active">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Modal -->
+    <div id="script-modal" class="source-modal-backdrop">
+        <div class="source-modal script-diff-modal" role="dialog" aria-modal="true" aria-labelledby="script-modal-title">
+            <div class="source-modal-header">
+                <div class="script-modal-header-copy">
+                    <div class="source-modal-title" id="script-modal-title">Script</div>
+                    <div id="script-modal-subtitle" class="script-modal-subtitle"></div>
+                </div>
+                <button type="button" id="btn-script-modal-close" class="panel-icon-btn" title="Close" aria-label="Close script diff">✕</button>
+            </div>
+            <div id="script-modal-body" class="source-modal-body script-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Spotlight Search -->
+    <div id="spotlight-backdrop" class="spotlight-backdrop" aria-hidden="true">
+        <div class="spotlight-panel" role="dialog" aria-modal="true" aria-label="Search components and script code">
+            <div class="spotlight-input-row">
+                <input id="spotlight-input" class="spotlight-input" type="text" placeholder="Search components and C#/Python code..." autocomplete="off" spellcheck="false" />
+                <span class="spotlight-hint">ESC</span>
+            </div>
+            <div id="spotlight-results" class="spotlight-results">
+                <div class="spotlight-empty">Type to search C#/Python scripts and component names.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/vendor/fuse.min.js"></script>
+    <script>window.HOP_DATA = {json_data};</script>
+    <script src="/js/diff-viewer.js"></script>
+</body>
+</html>
