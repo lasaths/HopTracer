@@ -2091,3 +2091,26 @@ a.button,
     min-width: 32px;
     cursor: pointer;
 }
+
+.viewer-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--foot) + 16px);
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    z-index: 40;
+    pointer-events: none;
+}
+
+.viewer-toast[hidden] {
+    display: none;
+}
+
+.viewer-toast .ico {
+    fill: currentColor;
+}

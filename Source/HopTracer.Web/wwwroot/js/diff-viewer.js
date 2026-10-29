@@ -3248,9 +3248,28 @@
             });
         }
 
+        let viewerToastTimer = null;
         function showPerf(message) {
-            if (!message) return;
-            console.log(message);
+            const toast = document.getElementById('viewer-toast');
+            const msgEl = document.getElementById('viewer-toast-msg');
+            const hideToast = () => {
+                if (toast) toast.hidden = true;
+                if (viewerToastTimer) {
+                    clearTimeout(viewerToastTimer);
+                    viewerToastTimer = null;
+                }
+            };
+            if (!message) {
+                hideToast();
+                return;
+            }
+            const text = String(message);
+            if (/^Preparing /i.test(text) || /^Large-model mode/i.test(text)) return;
+            if (!toast || !msgEl) return;
+            msgEl.textContent = text;
+            toast.hidden = false;
+            if (viewerToastTimer) clearTimeout(viewerToastTimer);
+            viewerToastTimer = setTimeout(hideToast, 4000);
         }
 
         function updateBounds() {
