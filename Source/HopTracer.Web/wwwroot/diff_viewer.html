@@ -34,6 +34,23 @@
         <a href="/" class="btn">New Comparison</a>
     </div>
 
+    <section id="alarm-band" class="band" role="alert" hidden>
+        <span class="edge" aria-hidden="true"></span>
+        <span class="st" id="alarm-band-status">
+            <svg class="ico em" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-warning-octagon"></use></svg>
+            High risk
+        </span>
+        <span class="trunc" id="alarm-band-message">
+            <b id="alarm-band-name"></b>
+            <span class="muted" id="alarm-band-reason"></span>
+        </span>
+        <span class="label" id="alarm-band-risk">RISK 0</span>
+        <div class="acts">
+            <button type="button" class="btn band" id="btn-band-diff">View script diff</button>
+            <button type="button" class="btn band pri" id="btn-band-inspect">Inspect</button>
+        </div>
+    </section>
+
     <main id="main-container" aria-label="Comparison workspace">
         <!-- Left Panel: Risk-Ordered Change List -->
         <div id="sidebar">
@@ -281,7 +298,7 @@
     <footer>
         <div role="tablist" aria-label="Filter">
             <button type="button" class="filter-btn tab label" data-filter="all" role="tab" aria-selected="true" aria-current="true" tabindex="0">
-                <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-squares-four"></use></svg>
+                <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-list"></use></svg>
                 <span class="w">All <span id="stat-all">0</span></span>
             </button>
             <button type="button" class="filter-btn tab label" data-filter="added" role="tab" aria-selected="false" tabindex="-1">

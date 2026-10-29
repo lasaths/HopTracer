@@ -1181,6 +1181,79 @@
             return 'No changes';
         }
 
+        function getNodeRiskScore(node) {
+            const raw = node?.riskScore ?? node?.risk ?? node?.RiskScore;
+            return Number.isFinite(Number(raw)) ? Math.round(Number(raw)) : 0;
+        }
+
+        function getHighestRiskChange() {
+            const changed = (state.nodes || []).filter(n =>
+                n.status === 'added' || n.status === 'removed' || n.status === 'modified'
+            );
+            const high = changed.filter(n => getNodeRiskScore(n) >= 70);
+            if (high.length === 0) return null;
+            high.sort((a, b) => {
+                const d = getNodeRiskScore(b) - getNodeRiskScore(a);
+                if (d !== 0) return d;
+                return compareNodesAlphabetical(a, b);
+            });
+            return high[0];
+        }
+
+        function renderAlarmBand() {
+            const band = document.getElementById('alarm-band');
+            if (!band) return;
+
+            const node = getHighestRiskChange();
+            const wasHidden = band.hidden;
+
+            if (!node) {
+                band.hidden = true;
+                band.removeAttribute('data-node-id');
+                if (!wasHidden) resize();
+                return;
+            }
+
+            const nameEl = document.getElementById('alarm-band-name');
+            const reasonEl = document.getElementById('alarm-band-reason');
+            const riskEl = document.getElementById('alarm-band-risk');
+            const diffBtn = document.getElementById('btn-band-diff');
+            const displayName = String(node.nickname || node.name || 'Unnamed Component');
+            const reason = getRiskReason(node) || 'No changes detected';
+            const score = getNodeRiskScore(node);
+
+            band.dataset.nodeId = String(node.id);
+            if (nameEl) nameEl.textContent = displayName;
+            if (reasonEl) reasonEl.textContent = reason ? ` · ${reason}` : '';
+            if (riskEl) riskEl.textContent = `RISK ${score}`;
+            if (diffBtn) diffBtn.hidden = !isScriptComponent(node);
+
+            band.hidden = false;
+            if (wasHidden) {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => band.classList.add('is-in'));
+                });
+                resize();
+            }
+        }
+
+        function inspectAlarmBandNode() {
+            const id = document.getElementById('alarm-band')?.dataset.nodeId;
+            if (id) zoomToNode(id);
+        }
+
+        function openAlarmBandScriptDiff() {
+            const id = document.getElementById('alarm-band')?.dataset.nodeId;
+            if (!id) return;
+            zoomToNode(id);
+            const node = state.nodes.find(n => String(n.id) === String(id));
+            if (!node) return;
+            const entries = getScriptPropertyEntries(node);
+            const key = (entries.find(e => e.isChanged) || entries[0] || {}).key;
+            if (key) openScriptDiff(key, true);
+            else setDetailsTab('script');
+        }
+
         function zoomToNode(nodeId) {
             if (!nodeId) return;
 
@@ -1921,6 +1994,7 @@
 
             renderGraphTabs();
             renderComponentResultsList();
+            renderAlarmBand();
         }
 
         function closeGraphTab(tabId) {
@@ -2419,6 +2493,7 @@
                 perfMessage = `Large-model mode: viewport culling enabled (${state.nodes.length.toLocaleString()} nodes, ${state.edges.length.toLocaleString()} wires)`;
             }
             showPerf(perfMessage);
+            renderAlarmBand();
         }
 
         function normalizeNodeStatus(rawStatus) {
@@ -3635,6 +3710,11 @@
                         case 'End':
                             nextIndex = tabs.length - 1;
                             break;
+                        case 'ArrowUp':
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
                         default:
                             return;
                     }
@@ -3644,6 +3724,14 @@
                     if (key) setStatusFilter(key);
                     if (tab) tab.focus();
                 });
+            }
+            const btnBandInspect = document.getElementById('btn-band-inspect');
+            const btnBandDiff = document.getElementById('btn-band-diff');
+            if (btnBandInspect) {
+                btnBandInspect.addEventListener('click', () => inspectAlarmBandNode());
+            }
+            if (btnBandDiff) {
+                btnBandDiff.addEventListener('click', () => openAlarmBandScriptDiff());
             }
             syncStatusFilterButtons();
             renderComponentResultsList();
