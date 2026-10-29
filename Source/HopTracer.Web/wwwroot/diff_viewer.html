@@ -204,23 +204,44 @@
                 <canvas id="minimap-canvas"></canvas>
             </div>
 
-            <div class="bottom-controls">
-                <div class="slider-group">
-                    <div class="slider-header">
-                        <span>Wire Visibility</span>
-                        <span id="wire-label" class="slider-value">Show All</span>
+            <div class="strip" role="group" aria-label="View controls">
+                <div class="sld" data-sld="wires" style="--sld-w:184px; --sld-val:0">
+                    <div class="s-hd">
+                        <span class="label" id="wire-slider-name">Wires</span>
+                        <span class="label s-v" id="wire-label" aria-hidden="true">All</span>
                     </div>
-                    <input type="range" id="wire-slider" min="0" max="100" value="0">
+                    <div class="s-tr">
+                        <i class="s-tk" data-at="0"></i>
+                        <i class="s-tk" data-at="25"></i>
+                        <i class="s-tk" data-at="50"></i>
+                        <i class="s-tk" data-at="75"></i>
+                        <i class="s-tk" data-at="100"></i>
+                        <i class="s-th"></i>
+                        <input type="range" id="wire-slider" min="0" max="100" step="1" value="0"
+                            aria-labelledby="wire-slider-name" aria-valuetext="All" aria-orientation="horizontal">
+                    </div>
+                    <div class="s-tl" aria-hidden="true">
+                        <span class="label on" data-at="0">All</span>
+                        <span class="label" data-at="100">None</span>
+                    </div>
                 </div>
-                <div class="slider-group">
-                    <div class="slider-header">
-                        <span>Version Compare</span>
-                        <span id="version-label" class="slider-value">Mixed</span>
+                <div class="sld" data-sld="show" style="--sld-w:184px; --sld-val:50">
+                    <div class="s-hd">
+                        <span class="label" id="version-slider-name">Show</span>
+                        <span class="label s-v" id="version-label" aria-hidden="true">Both</span>
                     </div>
-                    <input type="range" id="version-slider" min="0" max="100" value="50">
-                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-                        <span>Old</span>
-                        <span>New</span>
+                    <div class="s-tr">
+                        <i class="s-tk" data-at="0"></i>
+                        <i class="s-tk" data-at="50"></i>
+                        <i class="s-tk" data-at="100"></i>
+                        <i class="s-th"></i>
+                        <input type="range" id="version-slider" min="0" max="100" step="1" value="50"
+                            aria-labelledby="version-slider-name" aria-valuetext="Both" aria-orientation="horizontal">
+                    </div>
+                    <div class="s-tl" aria-hidden="true">
+                        <span class="label" data-at="0">Old</span>
+                        <span class="label on" data-at="50">Both</span>
+                        <span class="label" data-at="100">New</span>
                     </div>
                 </div>
             </div>

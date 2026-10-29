@@ -1227,74 +1227,140 @@ html, body {
     height: 100%;
 }
 
-/* Bottom Controls */
-.bottom-controls {
+/* View sliders (.strip) */
+.strip {
     position: absolute;
-    bottom: var(--space-md);
-    left: 50%;
-    transform: translateX(-50%);
+    left: 16px;
+    top: 12px;
     display: flex;
-    gap: var(--space-lg);
-    padding: var(--space-md);
-    background: var(--bg-app);
-    border: 1px solid var(--border-hairline);
-    border-radius: var(--radius-sm);
-    z-index: 20;
+    align-items: flex-start;
+    gap: 32px;
+    width: 400px;
+    z-index: 12;
+    pointer-events: none;
 }
 
-.slider-group {
-    min-width: 160px;
+#graph-tabs:not(:empty) ~ .strip {
+    top: 52px;
 }
 
-.slider-header {
+.strip .sld {
+    width: var(--sld-w, 184px);
+    flex: none;
+    pointer-events: auto;
+}
+
+.strip .s-hd {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 6px;
-    font-size: 11px;
+    height: 16px;
 }
 
-.slider-header span:first-child {
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
+.strip .s-hd .s-v {
+    color: var(--c-text);
     white-space: nowrap;
 }
 
-.slider-value {
-    font-family: var(--font-mono);
-    color: var(--text-primary);
-    font-weight: 500;
-    white-space: nowrap;
+.strip .s-tr {
+    position: relative;
+    height: 24px;
+    cursor: pointer;
 }
 
-input[type="range"] {
+.strip .s-tr::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 11.5px;
+    height: 1px;
+    background: var(--c-line);
+    pointer-events: none;
+}
+
+.strip .s-th {
+    position: absolute;
+    top: 5px;
+    width: 6px;
+    height: 14px;
+    left: calc((var(--sld-w, 184px) - 6px) * var(--sld-val, 0) / 100);
+    background: var(--c-text);
+    border-radius: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.strip .s-tr input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    left: 0;
+    top: -4px;
     width: 100%;
-    height: 4px;
-    background: var(--border-hairline);
-    border-radius: 2px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    accent-color: transparent;
+    cursor: pointer;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.strip .s-tr input[type="range"]:focus {
     outline: none;
-    -webkit-appearance: none;
 }
 
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
-    background: var(--accent-primary);
-    border-radius: 50%;
-    cursor: pointer;
+.strip .s-tk {
+    position: absolute;
+    top: 15px;
+    width: 1px;
+    height: 5px;
+    background: var(--c-line);
+    pointer-events: none;
+    z-index: 1;
 }
 
-input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    background: var(--accent-primary);
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
+.strip .s-tk[data-at="0"] { left: 2.5px; }
+.strip .s-tk[data-at="25"] { left: 47px; }
+.strip .s-tk[data-at="50"] { left: 91.5px; }
+.strip .s-tk[data-at="75"] { left: 136px; }
+.strip .s-tk[data-at="100"] { left: 180.5px; }
+
+.strip .s-tl {
+    position: relative;
+    height: 16px;
+}
+
+.strip .s-tl span {
+    position: absolute;
+    top: 0;
+    white-space: nowrap;
+}
+
+.strip .s-tl span[data-at="0"] { left: 0; }
+.strip .s-tl span[data-at="50"] { left: 92px; transform: translateX(-50%); }
+.strip .s-tl span[data-at="100"] { right: 0; }
+.strip .s-tl span.on { color: var(--c-text); }
+
+.strip .s-tr:hover::before,
+.strip .sld.is-hover .s-tr::before,
+.strip .sld.is-drag .s-tr::before {
+    background: var(--c-muted);
+}
+
+.strip .sld.is-drag .s-th {
+    background: var(--c-ultra);
+}
+
+.strip .sld:has(input:focus-visible) .s-th {
+    outline: 2px solid var(--c-ultra);
+    outline-offset: 2px;
 }
 
 /* Overlay Controls */
@@ -1883,18 +1949,6 @@ input[type="range"]::-moz-range-thumb {
     }
 }
 
-@media (max-width: 768px) {
-    .bottom-controls {
-        flex-direction: column;
-        left: var(--space-md);
-        right: var(--space-md);
-        transform: none;
-    }
-    
-    .slider-group {
-        width: 100%;
-    }
-}
 
 /* Dark Mode Utilities */
 .dark .no-glow * {

@@ -3790,68 +3790,153 @@
             // Wire Slider
             const wireSlider = document.getElementById('wire-slider');
             const wireLabel = document.getElementById('wire-label');
+            const wireSld = wireSlider && wireSlider.closest('.sld');
 
-            function applyWireThreshold(val) {
-                if (!Number.isFinite(val)) {
-                    state.wireThreshold = Infinity;
-                    wireLabel.textContent = "Show All";
-                    return;
-                }
-
-                if (val === 0) {
-                    state.wireThreshold = Infinity; // Show all
-                    wireLabel.textContent = "Show All";
-                } else if (val === 100) {
-                    state.wireThreshold = 0; // Hide all (except connected)
-                    wireLabel.textContent = "Hide All";
-                } else {
-                    // Non-linear mapping for smoother control
-                    // val 0-100 -> threshold 20000-100
-                    const factor = (100 - val) / 100;
-                    state.wireThreshold = 20000 * (factor * factor);
-
-                    if (state.wireThreshold < 100) state.wireThreshold = 100;
-                    wireLabel.textContent = `> ${Math.round(state.wireThreshold)}px Hidden`;
-                }
+            function setDetentLabels(sld, value) {
+                if (!sld) return;
+                sld.querySelectorAll('.s-tl span').forEach(span => {
+                    const at = Number.parseInt(span.dataset.at || '', 10);
+                    span.classList.toggle('on', Number.isFinite(at) && at === value);
+                });
             }
 
-            wireSlider.addEventListener('input', (e) => {
-                applyWireThreshold(parseInt(e.target.value, 10));
-                scheduleDraw();
-            });
+            function wireReadout(val) {
+                if (val === 0) return { visible: 'All', aria: 'All', threshold: Infinity };
+                if (val === 100) return { visible: 'None', aria: 'None', threshold: 0 };
+                const factor = (100 - val) / 100;
+                let threshold = 20000 * (factor * factor);
+                if (threshold < 100) threshold = 100;
+                const px = Math.round(threshold);
+                return { visible: `Hide > ${px} px`, aria: `Hide > ${px} px`, threshold };
+            }
 
-            // Force predictable defaults on load (browser/webview can restore prior input states).
-            wireSlider.value = '0';
-            applyWireThreshold(parseInt(wireSlider.value, 10));
+            function applyWireThreshold(val) {
+                const parsed = Number.parseInt(val, 10);
+                const safe = Number.isFinite(parsed) ? parsed : 0;
+                const readout = wireReadout(safe);
+                state.wireThreshold = readout.threshold;
+                if (wireLabel) wireLabel.textContent = readout.visible;
+                if (wireSlider) wireSlider.setAttribute('aria-valuetext', readout.aria);
+                if (wireSld) wireSld.style.setProperty('--sld-val', String(safe));
+                setDetentLabels(wireSld, safe);
+            }
+
+            function snapShowValue(val) {
+                if (Math.abs(val - 0) <= 3) return 0;
+                if (Math.abs(val - 50) <= 3) return 50;
+                if (Math.abs(val - 100) <= 3) return 100;
+                return val;
+            }
+
+            function valueFromPointer(input, clientX) {
+                const rect = input.getBoundingClientRect();
+                const thumb = 6;
+                const travel = Math.max(1, rect.width - thumb);
+                const x = clientX - (rect.left + thumb / 2);
+                return Math.max(0, Math.min(100, Math.round((x / travel) * 100)));
+            }
+
+            function bindStripSlider(input, sld, { snap = false, onChange } = {}) {
+                if (!input || !sld) return;
+                const tr = sld.querySelector('.s-tr');
+                const syncHover = () => {
+                    if (sld.classList.contains('is-drag')) return;
+                    sld.classList.toggle('is-hover', sld.matches(':hover'));
+                };
+                sld.addEventListener('pointerenter', syncHover);
+                sld.addEventListener('pointerleave', syncHover);
+
+                let dragging = false;
+                const commitPointer = (clientX) => {
+                    let val = valueFromPointer(input, clientX);
+                    if (snap) val = snapShowValue(val);
+                    input.value = String(val);
+                    onChange(val);
+                    return val;
+                };
+
+                tr.addEventListener('pointerdown', (e) => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    dragging = true;
+                    sld.classList.remove('is-hover');
+                    sld.classList.add('is-drag');
+                    tr.setPointerCapture(e.pointerId);
+                    input.focus({ preventScroll: true });
+                    commitPointer(e.clientX);
+                });
+                tr.addEventListener('pointermove', (e) => {
+                    if (!dragging) return;
+                    commitPointer(e.clientX);
+                });
+                const endDrag = () => {
+                    if (!dragging) return;
+                    dragging = false;
+                    sld.classList.remove('is-drag');
+                    syncHover();
+                };
+                tr.addEventListener('pointerup', endDrag);
+                tr.addEventListener('pointercancel', endDrag);
+
+                input.addEventListener('input', () => {
+                    if (dragging) return;
+                    onChange(parseInt(input.value, 10));
+                });
+            }
+
+            if (wireSlider) {
+                bindStripSlider(wireSlider, wireSld, {
+                    onChange: (val) => {
+                        applyWireThreshold(val);
+                        scheduleDraw();
+                    }
+                });
+                wireSlider.value = '0';
+                applyWireThreshold(parseInt(wireSlider.value, 10));
+            }
 
             // Version Slider
             const verSlider = document.getElementById('version-slider');
             const verLabel = document.getElementById('version-label');
+            const verSld = verSlider && verSlider.closest('.sld');
 
-            verSlider.value = '50';
-            state.versionMix = 0.5;
-            verLabel.textContent = "Mixed";
+            function showReadout(val) {
+                if (val === 0) return { visible: 'Old only', aria: 'Old only' };
+                if (val === 100) return { visible: 'New only', aria: 'New only' };
+                if (val === 50) return { visible: 'Both', aria: 'Both' };
+                return { visible: `${100 - val}% old`, aria: `${100 - val}% old` };
+            }
+
+            function applyVersionMix(val) {
+                const parsed = Number.parseInt(val, 10);
+                const safe = Number.isFinite(parsed) ? parsed : 50;
+                state.versionMix = safe / 100.0;
+                const readout = showReadout(safe);
+                if (verLabel) verLabel.textContent = readout.visible;
+                if (verSlider) verSlider.setAttribute('aria-valuetext', readout.aria);
+                if (verSld) verSld.style.setProperty('--sld-val', String(safe));
+                setDetentLabels(verSld, safe);
+            }
 
             if (toggleChangedEdges) {
                 toggleChangedEdges.checked = false;
                 state.showChangedEdgesOnly = false;
             }
 
-            verSlider.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value);
-                // 0 = Old (left), 100 = New (right)
-                state.versionMix = val / 100.0;
-
-                if (val === 0) verLabel.textContent = "Old Only";
-                else if (val === 100) verLabel.textContent = "New Only";
-                else if (val === 50) verLabel.textContent = "Mixed";
-                else verLabel.textContent = `${100 - val}% Old`;
-
-                if (state.componentSort === 'dist') {
-                    renderComponentResultsList();
-                }
-                scheduleDraw();
-            });
+            if (verSlider) {
+                bindStripSlider(verSlider, verSld, {
+                    snap: true,
+                    onChange: (val) => {
+                        applyVersionMix(val);
+                        if (state.componentSort === 'dist') {
+                            renderComponentResultsList();
+                        }
+                        scheduleDraw();
+                    }
+                });
+                verSlider.value = '50';
+                applyVersionMix(parseInt(verSlider.value, 10));
+            }
 
             applyPanelVisibility();
         }
