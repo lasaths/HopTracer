@@ -1138,9 +1138,19 @@
             );
             if (filtered.length === 0) return;
 
+            // Check if a row had focus
+            const hadRowFocus = document.activeElement?.classList.contains('qrow');
+
             const currentIndex = filtered.findIndex(n => n.id === state.selected);
             const nextIndex = (currentIndex + 1) % filtered.length;
-            zoomToNode(filtered[nextIndex].id);
+            const nextNodeId = filtered[nextIndex].id;
+            
+            zoomToNode(nextNodeId);
+            
+            // Restore focus to the newly selected row if a row had focus
+            if (hadRowFocus) {
+                restoreFocusToRow(nextNodeId);
+            }
         }
 
         function navigateToPrevious() {
@@ -1150,9 +1160,19 @@
             );
             if (filtered.length === 0) return;
 
+            // Check if a row had focus
+            const hadRowFocus = document.activeElement?.classList.contains('qrow');
+
             const currentIndex = filtered.findIndex(n => n.id === state.selected);
             const prevIndex = currentIndex <= 0 ? filtered.length - 1 : currentIndex - 1;
-            zoomToNode(filtered[prevIndex].id);
+            const prevNodeId = filtered[prevIndex].id;
+            
+            zoomToNode(prevNodeId);
+            
+            // Restore focus to the newly selected row if a row had focus
+            if (hadRowFocus) {
+                restoreFocusToRow(prevNodeId);
+            }
         }
 
         function moveFocusToNextRow() {

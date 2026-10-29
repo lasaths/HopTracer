@@ -308,6 +308,8 @@ html, body {
 
 .qrow .qn {
     font-weight: 500;
+    font-size: 13px;
+    line-height: 20px;
 }
 
 .qrow .grow {
@@ -335,6 +337,7 @@ html, body {
 .qrow .small.muted {
     font-family: var(--f-mono);
     font-size: 11px;
+    line-height: 16px;
     color: var(--c-muted);
 }
 
@@ -362,8 +365,18 @@ html, body {
     }
     
     .qrow .small.muted {
-        display: none;
+        /* Show status word inline, clip after first word */
+        max-width: 8ch;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
     }
+}
+
+/* Focus ring fix: prevent global tabindex rule from leaking blue outline */
+#change-list .qrow:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--c-text);
 }
 
 .section-header {
