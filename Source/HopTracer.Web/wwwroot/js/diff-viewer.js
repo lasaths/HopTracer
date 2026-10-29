@@ -4,9 +4,9 @@
         // Configuration - ANDURA Colors (v2.2)
         const CONFIG = {
             colors: {
-                added: '#30d158',
+                added: '#44B782',
                 removed: '#ff453a',
-                modified: '#ff9f0a',
+                modified: '#F0963A',
                 same: '#636366',
                 edgeSame: '#636366',
                 bg: '#000000',
@@ -87,7 +87,7 @@
         const ctx = canvas.getContext('2d');
         const minimap = document.getElementById('minimap-canvas');
         const miniCtx = minimap.getContext('2d');
-        const detailsPaneInspector = document.getElementById('details-pane-inspector');
+        const detailsPaneInspector = document.getElementById('inspector-content');
         const detailsPaneScript = document.getElementById('details-pane-script');
         const detailsTabInspector = document.getElementById('details-tab-inspector');
         const detailsTabScript = document.getElementById('details-tab-script');
