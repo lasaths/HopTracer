@@ -341,6 +341,10 @@ html, body {
     color: var(--c-muted);
 }
 
+.qrow .qreason {
+    font-family: var(--f-sans);
+}
+
 .qrow .qr {
     display: flex;
     align-items: center;
@@ -362,6 +366,10 @@ html, body {
         flex-direction: row;
         align-items: center;
         gap: 8px;
+    }
+    
+    .qrow .grow > .small.muted {
+        flex: none;
     }
     
     .qrow .qr,
