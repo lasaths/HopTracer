@@ -4910,12 +4910,10 @@
             if (!perfElem) return;
             
             const meta = GRAPH_DATA?.meta || {};
-            const timings = meta.stageTimings || {};
-            const parseTime = timings.parse || 0;
-            const matchTime = timings.match || 0;
-            const diffTime = timings.diff || 0;
+            const timings = Array.isArray(meta.stageTimings) ? meta.stageTimings : [];
+            const t = n => (timings.find(s => s.name === n) || {}).durationMs || 0;
             
-            perfElem.textContent = `Parse ${parseTime} ms · match ${matchTime} · diff ${diffTime}`;
+            perfElem.textContent = `Parse ${t('parse')} ms · match ${t('match')} · diff ${t('diff')}`;
         }
 
         function updateDetailsPanel(node) {
