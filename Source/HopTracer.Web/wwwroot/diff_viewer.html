@@ -215,15 +215,19 @@
                     </div>
                 </div>
                 
-                <button type="button" id="search-launcher" class="search-launcher" title="Search components + code (Ctrl+K)">
+                <button type="button" id="search-launcher" class="search-launcher" title="Search components + code (Ctrl+K)" aria-label="Search components and code">
                     <svg class="search-launcher-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                         <use href="/vendor/phosphor/icons.svg#ph-magnifying-glass"></use>
                     </svg>
                 </button>
             </div>
 
-            <button type="button" id="btn-sidebar-expand" class="panel-expand-btn left" title="Show left panel">▶</button>
-            <button type="button" id="btn-details-expand" class="panel-expand-btn right" title="Show right panel">◀</button>
+            <button type="button" id="btn-sidebar-expand" class="panel-expand-btn left" title="Show left panel" aria-label="Show left panel">
+                <svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-caret-right"></use></svg>
+            </button>
+            <button type="button" id="btn-details-expand" class="panel-expand-btn right" title="Show right panel" aria-label="Show right panel">
+                <svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-caret-left"></use></svg>
+            </button>
 
             <div id="perf-indicator">Initializing…</div>
 
@@ -255,18 +259,18 @@
             </div>
 
             <div class="overlay-controls">
-                <button class="icon-btn" id="btn-fit" title="Fit to View">
+                <button class="icon-btn" id="btn-fit" title="Fit to View" aria-label="Fit graph to view">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <use href="/vendor/phosphor/icons.svg#ph-arrows-out"></use>
                     </svg>
                 </button>
-                <button class="icon-btn" id="btn-zoom-in" title="Zoom In (+)">
+                <button class="icon-btn" id="btn-zoom-in" title="Zoom In (+)" aria-label="Zoom in">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
                 </button>
-                <button class="icon-btn" id="btn-zoom-out" title="Zoom Out (-)">
+                <button class="icon-btn" id="btn-zoom-out" title="Zoom Out (-)" aria-label="Zoom out">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
@@ -279,7 +283,9 @@
         <!-- Right Panel: Inspector (ANDURA Detail Pane) -->
         <div id="details-panel">
             <div class="details-tabs">
-                <button type="button" id="btn-details-collapse" class="panel-icon-btn" title="Hide right panel">▶</button>
+                <button type="button" id="btn-details-collapse" class="panel-icon-btn" title="Hide right panel" aria-label="Hide right panel">
+                    <svg class="ico" width="20" height="20"><use href="/vendor/phosphor/icons.svg#ph-caret-right"></use></svg>
+                </button>
                 <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
                 <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script</button>
             </div>
@@ -308,7 +314,9 @@
         <div class="source-modal">
             <div class="source-modal-header">
                 <div class="source-modal-title" id="source-modal-title">Change Source</div>
-                <button type="button" id="btn-source-modal-close" class="panel-icon-btn" title="Close" aria-label="Close dialog">✕</button>
+                <button type="button" id="btn-source-modal-close" class="panel-icon-btn" title="Close" aria-label="Close dialog">
+                    <svg class="ico" width="20" height="20"><use href="/vendor/phosphor/icons.svg#ph-x"></use></svg>
+                </button>
             </div>
             <div class="source-modal-body">
                 <div class="source-mode-row">
@@ -353,7 +361,9 @@
                     <div class="source-modal-title" id="script-modal-title">Script</div>
                     <div id="script-modal-subtitle" class="script-modal-subtitle"></div>
                 </div>
-                <button type="button" id="btn-script-modal-close" class="panel-icon-btn" title="Close" aria-label="Close script diff">✕</button>
+                <button type="button" id="btn-script-modal-close" class="panel-icon-btn" title="Close" aria-label="Close script diff">
+                    <svg class="ico" width="20" height="20"><use href="/vendor/phosphor/icons.svg#ph-x"></use></svg>
+                </button>
             </div>
             <div id="script-modal-body" class="source-modal-body script-modal-body"></div>
         </div>

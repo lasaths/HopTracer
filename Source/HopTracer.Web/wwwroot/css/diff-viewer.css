@@ -27,13 +27,14 @@
     --accent-hover: #2A2CDD;
     
     /* Status Colors - ANDURA Semantics */
-    --status-added: #30d158;
-    --status-added-dim: rgba(48, 209, 88, 0.15);
+    --status-added: #44B782;
+    --status-added-dim: rgba(68, 183, 130, 0.15);
     --status-removed: #ff453a;
     --status-removed-dim: rgba(255, 69, 58, 0.15);
     --status-modified: #ff9f0a;
     --status-modified-dim: rgba(255, 159, 10, 0.15);
-    --status-same: #636366;
+    /* Bug fix #7: Contrast >= 4.5:1 for SAME (was #636366) */
+    --status-same: #8A8C91;
     --status-same-dim: rgba(99, 99, 102, 0.15);
     --status-emergency: #F45536;
     
@@ -346,6 +347,12 @@ html, body {
 .change-item.selected {
     background: rgba(58, 60, 255, 0.12);
     border-left-color: var(--accent-primary);
+}
+
+/* Bug fix #8: Change-list focus ring Ultramarine */
+.change-item:focus-visible {
+    outline: 2px solid #3A3CFF;
+    outline-offset: -2px;
 }
 
 .change-item-header {

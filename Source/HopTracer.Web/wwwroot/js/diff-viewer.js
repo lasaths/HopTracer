@@ -4,11 +4,13 @@
         // Configuration - ANDURA Colors (v2.2)
         const CONFIG = {
             colors: {
-                added: '#30d158',
+                added: '#44B782',
                 removed: '#ff453a',
                 modified: '#ff9f0a',
-                same: '#636366',
-                edgeSame: '#636366',
+                // Bug fix #7: Contrast >= 4.5:1 for SAME (was #636366)
+                // Bug fix #9: Added color #44B782
+                same: '#8A8C91',
+                edgeSame: '#8A8C91',
                 bg: '#000000',
                 surface: '#090A0C',
                 line: '#3C3D41',
@@ -1678,7 +1680,7 @@
                 const isActive = tab.id === state.activeGraphTabId;
                 const closable = tab.id !== ROOT_GRAPH_TAB_ID;
                 const closeButton = closable
-                    ? `<span class="graph-tab-close" data-close-tab-id="${escapeHtml(tab.id)}" title="Close tab">×</span>`
+                    ? `<span class="graph-tab-close" data-close-tab-id="${escapeHtml(tab.id)}" title="Close tab"><svg class="ico" width="12" height="12"><use href="/vendor/phosphor/icons.svg#ph-x"></use></svg></span>`
                     : '';
 
                 return `
@@ -3763,7 +3765,8 @@
                 if (isScribble) {
                     const scribbleText = getScribbleText(n);
                     const maxWidth = Math.max(30, n.w - 8);
-                    const fontSize = Math.max(10, 13 / state.view.scale);
+                    // Bug fix #6: Labels >= 11px
+                    const fontSize = Math.max(11, 13 / state.view.scale);
                     const lineHeight = fontSize * 1.18;
 
                     ctx.fillStyle = CONFIG.colors[n.status] || CONFIG.colors.text;
@@ -3861,6 +3864,9 @@
                     
                     ctx.fillText(displayLabel, tx, ty);
                 }
+
+                // Bug fix #1: Draw ports (call was removed in 1d6ae95)
+                drawNodePortSockets(n);
 
                 // Cluster indicator: draw a special double-border and icon
                 const props = n.properties || n.Properties || {};
@@ -4606,7 +4612,8 @@
             scriptModalReturnFocus = currentFocus instanceof HTMLElement ? currentFocus : null;
             renderExpandedScriptDiff(selectedNode, selectedEntry);
             if (mainContainer) mainContainer.setAttribute('inert', '');
-            scriptModal.classList.add('open');
+            // Bug fix #2: Use 'visible' to match CSS (was 'open')
+            scriptModal.classList.add('visible');
             document.body.style.overflow = 'hidden';
 
             window.setTimeout(() => {
@@ -5569,7 +5576,7 @@
                         </div>
                         ` : `
                         <div style="margin-top: 8px; padding: 6px 8px; background: rgba(76, 175, 80, 0.1); border-radius: 4px; font-size: 11px; color: var(--success);">
-                            ✓ Cluster internals unchanged
+                            <svg class="ico" width="16" height="16" style="color:#44B782;"><use href="/vendor/phosphor/icons.svg#ph-check"></use></svg> Cluster internals unchanged
                         </div>
                         `}
                         <button class="cluster-preview-open"
@@ -5889,11 +5896,13 @@
                     symbol = ' ';
                 } else if (change.type === 'added') {
                     newNumStr = newLineNum++;
-                    className = 'diff-added';
+                    // Bug fix #3: Use 'diff-line added' to match CSS (was 'diff-added')
+                    className = 'diff-line added';
                     symbol = '+';
                 } else if (change.type === 'removed') {
                     oldNumStr = oldLineNum++;
-                    className = 'diff-removed';
+                    // Bug fix #3: Use 'diff-line removed' to match CSS (was 'diff-removed')
+                    className = 'diff-line removed';
                     symbol = '-';
                 }
 
