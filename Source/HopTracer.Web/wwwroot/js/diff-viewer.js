@@ -3250,6 +3250,7 @@
 
         let viewerToastTimer = null;
         let viewerToastSticky = false;
+        let viewerToastReturnFocus = null;
 
         function hideViewerToast() {
             const toast = document.getElementById('viewer-toast');
@@ -3260,6 +3261,18 @@
             if (viewerToastTimer) {
                 clearTimeout(viewerToastTimer);
                 viewerToastTimer = null;
+            }
+            const prev = viewerToastReturnFocus;
+            viewerToastReturnFocus = null;
+            const canvasEl = document.getElementById('graph-canvas');
+            if (canvasEl && canvasEl.tabIndex < 0 && !canvasEl.hasAttribute('tabindex')) {
+                canvasEl.tabIndex = -1;
+            }
+            const target = prev && prev !== document.body && document.contains(prev) && prev !== dismissBtn
+                ? prev
+                : canvasEl;
+            if (target && typeof target.focus === 'function') {
+                target.focus({ preventScroll: true });
             }
         }
 
@@ -3272,12 +3285,19 @@
             const msgEl = document.getElementById('viewer-toast-msg');
             const dismissBtn = document.getElementById('viewer-toast-dismiss');
             if (!message) {
+                if (viewerToastSticky) return;
                 hideViewerToast();
                 return;
             }
             const text = String(message);
             if (/^Preparing /i.test(text) || /^Large-model mode/i.test(text)) return;
             if (!toast || !msgEl) return;
+            if (toast.hidden) {
+                const active = document.activeElement;
+                viewerToastReturnFocus = active && active !== document.body && active !== dismissBtn
+                    ? active
+                    : document.getElementById('graph-canvas');
+            }
             msgEl.textContent = text;
             toast.hidden = false;
             if (viewerToastTimer) {
@@ -3288,6 +3308,11 @@
             viewerToastSticky = isError;
             toast.setAttribute('role', isError ? 'alert' : 'status');
             toast.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+            const icon = toast.querySelector(':scope > svg.ico');
+            if (icon) {
+                icon.classList.toggle('em', isError);
+                icon.classList.toggle('ca', !isError);
+            }
             if (dismissBtn) dismissBtn.hidden = !isError;
             if (!isError) {
                 viewerToastTimer = setTimeout(hideViewerToast, 4000);
@@ -3395,7 +3420,13 @@
                     return;
                 }
 
-                if (isTypingTarget) return;
+                if (isTypingTarget) {
+                    if (key === 'escape' && viewerToastSticky) {
+                        e.preventDefault();
+                        hideViewerToast();
+                    }
+                    return;
+                }
 
                 switch (key) {
                     case 'f': fitView(); break;
