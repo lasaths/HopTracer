@@ -3024,9 +3024,10 @@
                         ctx.fillStyle = CONFIG.colors.textMuted;
                         ctx.textBaseline = 'middle';
                         
-                        // Draw inside node, clipped to half width minus padding
-                        const padding = 6 / state.view.scale;
-                        const maxWidth = (node.w / 2) - padding;
+                        // Draw outside node, like Grasshopper wire-end labels
+                        const gap = 4 / state.view.scale;
+                        const maxScreenWidth = 80; // px on screen
+                        const maxWidth = maxScreenWidth / state.view.scale;
                         let displayLabel = rawLabel;
                         if (ctx.measureText(displayLabel).width > maxWidth) {
                             while (displayLabel.length > 1 && ctx.measureText(displayLabel + '…').width > maxWidth) {
@@ -3036,11 +3037,13 @@
                         }
                         
                         if (isOutput) {
-                            ctx.textAlign = 'right';
-                            ctx.fillText(displayLabel, node.x + node.w - padding, y);
-                        } else {
+                            // Output labels: to the right of node, left-aligned
                             ctx.textAlign = 'left';
-                            ctx.fillText(displayLabel, node.x + padding, y);
+                            ctx.fillText(displayLabel, node.x + node.w + gap, y);
+                        } else {
+                            // Input labels: to the left of node, right-aligned
+                            ctx.textAlign = 'right';
+                            ctx.fillText(displayLabel, node.x - gap, y);
                         }
                     }
                 });
@@ -5502,6 +5505,46 @@
             return changed;
         }
 
+        function getClusterByteCount(node, useOld = false) {
+            // Helper to extract byte count from cluster properties
+            const props = useOld ? (node.propertiesOld || {}) : (node.properties || {});
+            
+            // Try ClusterSize first
+            const clusterSize = props.clusterSize || props.ClusterSize;
+            if (clusterSize) return parseInt(clusterSize);
+            
+            // Fallback: parse ClusterDocument string like "<8029 bytes>"
+            const clusterDoc = props.clusterDocument || props.ClusterDocument;
+            if (clusterDoc && typeof clusterDoc === 'string') {
+                const match = clusterDoc.match(/<(\d+)\s*bytes?>/i);
+                if (match) return parseInt(match[1]);
+            }
+            
+            return null;
+        }
+
+        function getClusterHash(node, useOld = false) {
+            const props = useOld ? (node.propertiesOld || {}) : (node.properties || {});
+            return props.clusterHash || props.ClusterHash || null;
+        }
+
+        function isClusterChanged(node) {
+            // Compare cluster using size first, then hash
+            const newBytes = getClusterByteCount(node, false);
+            const oldBytes = getClusterByteCount(node, true);
+            if (newBytes !== null && oldBytes !== null && newBytes !== oldBytes) {
+                return true;
+            }
+            
+            const newHash = getClusterHash(node, false);
+            const oldHash = getClusterHash(node, true);
+            if (newHash && oldHash && newHash !== oldHash) {
+                return true;
+            }
+            
+            return false;
+        }
+
         function renderChangeSummary(node) {
             if (!node || computeEffectiveNodeStatus(node) !== 'modified') return '';
 
@@ -5539,17 +5582,8 @@
             }
 
             const clusterPreview = getClusterPreviewData(node);
-            if (clusterPreview.isCluster) {
-                // Use same logic as cluster card: check size first, then hash
-                const clusterSize = node.properties?.clusterSize || node.properties?.ClusterSize;
-                const oldClusterSize = node.propertiesOld?.clusterSize || node.propertiesOld?.ClusterSize;
-                const clusterHash = node.properties?.clusterHash || node.properties?.ClusterHash;
-                const oldClusterHash = node.propertiesOld?.clusterHash || node.propertiesOld?.ClusterHash;
-                const clusterChanged = (clusterSize && oldClusterSize && clusterSize !== oldClusterSize) ||
-                                       (clusterHash && oldClusterHash && clusterHash !== oldClusterHash);
-                if (clusterChanged) {
-                    reasons.push('Cluster internals changed');
-                }
+            if (clusterPreview.isCluster && isClusterChanged(node)) {
+                reasons.push('Cluster internals changed');
             }
 
             if (reasons.length === 0) {
