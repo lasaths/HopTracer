@@ -2989,7 +2989,7 @@
             return `${kind === 'input' ? 'In' : 'Out'} ${index + 1}`;
         }
 
-        function drawNodePortSockets(node) {
+        function drawNodePortSockets(node, collectLabelsOnly = false, labelsToCollect = null) {
             if (!state.showPortDetails || !node) return;
 
             const inputs = Array.isArray(node.inputs) ? node.inputs : (Array.isArray(node.Inputs) ? node.Inputs : []);
@@ -3010,24 +3010,26 @@
 
                 ports.forEach((port, index) => {
                     const y = node.y + (index + 1) * step;
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = getPortStatusColor(port?.status || port?.Status);
-                    ctx.fill();
-                    ctx.lineWidth = borderWidth;
-                    ctx.strokeStyle = '#0f1115';
-                    ctx.stroke();
+                    
+                    if (!collectLabelsOnly) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, radius, 0, Math.PI * 2);
+                        ctx.fillStyle = getPortStatusColor(port?.status || port?.Status);
+                        ctx.fill();
+                        ctx.lineWidth = borderWidth;
+                        ctx.strokeStyle = '#0f1115';
+                        ctx.stroke();
+                    }
 
-                    if (showLabels) {
+                    if (showLabels && labelsToCollect) {
                         const rawLabel = getPortDisplayLabel(port, index, isOutput ? 'output' : 'input', node.id);
-                        ctx.font = `${labelFontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
-                        ctx.fillStyle = CONFIG.colors.textMuted;
-                        ctx.textBaseline = 'middle';
                         
                         // Draw outside node, like Grasshopper wire-end labels
                         const gap = 4 / state.view.scale;
                         const maxScreenWidth = 80; // px on screen
                         const maxWidth = maxScreenWidth / state.view.scale;
+                        
+                        ctx.font = `${labelFontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
                         let displayLabel = rawLabel;
                         if (ctx.measureText(displayLabel).width > maxWidth) {
                             while (displayLabel.length > 1 && ctx.measureText(displayLabel + '…').width > maxWidth) {
@@ -3036,15 +3038,28 @@
                             displayLabel += '…';
                         }
                         
-                        if (isOutput) {
-                            // Output labels: to the right of node, left-aligned
-                            ctx.textAlign = 'left';
-                            ctx.fillText(displayLabel, node.x + node.w + gap, y);
-                        } else {
-                            // Input labels: to the left of node, right-aligned
-                            ctx.textAlign = 'right';
-                            ctx.fillText(displayLabel, node.x - gap, y);
-                        }
+                        const textWidth = ctx.measureText(displayLabel).width;
+                        const labelX = isOutput ? (node.x + node.w + gap) : (node.x - gap - textWidth);
+                        const labelY = y;
+                        
+                        // Convert to screen coordinates for collision rect
+                        const padding = 2; // screen pixels
+                        const screenX = (labelX * state.view.scale) + state.view.x;
+                        const screenY = (labelY * state.view.scale) + state.view.y - (screenPx / 2);
+                        const screenW = textWidth * state.view.scale + padding * 2;
+                        const screenH = screenPx + padding * 2;
+                        
+                        labelsToCollect.push({
+                            node,
+                            text: displayLabel,
+                            x: labelX,
+                            y: labelY,
+                            width: textWidth,
+                            fontSize: labelFontSize,
+                            isOutput,
+                            screenRect: { x: screenX, y: screenY, w: screenW, h: screenH },
+                            priority: (state.selected === node.id || state.hovered === node.id) ? 1 : 0
+                        });
                     }
                 });
             };
@@ -3901,8 +3916,8 @@
                     ctx.fillText(displayLabel, tx, ty);
                 }
 
-                // Bug fix #1: Draw ports (call was removed in 1d6ae95)
-                drawNodePortSockets(n);
+                // Draw port sockets only (no labels yet)
+                drawNodePortSockets(n, false, null);
 
                 // Cluster indicator: draw a special double-border and icon
                 const props = n.properties || n.Properties || {};
@@ -3933,6 +3948,66 @@
             });
 
             ctx.restore();
+
+            // Draw port labels with collision detection (after wires and nodes)
+            if (state.showPortDetails && state.view.scale >= 1.2) {
+                const portLabels = [];
+                
+                // Collect all port labels, prioritizing selected/hovered nodes
+                nodesToDraw.forEach(item => {
+                    const n = item.node;
+                    if (ctx.globalAlpha < 0.01) return;
+                    drawNodePortSockets(n, true, portLabels);
+                });
+                
+                // Sort by priority (selected/hovered first)
+                portLabels.sort((a, b) => b.priority - a.priority);
+                
+                // Track node rects and drawn label rects for collision detection
+                const nodeRects = nodesToDraw.map(item => {
+                    const n = item.node;
+                    return {
+                        x: (n.x * state.view.scale) + state.view.x,
+                        y: (n.y * state.view.scale) + state.view.y,
+                        w: n.w * state.view.scale,
+                        h: n.h * state.view.scale
+                    };
+                });
+                const drawnRects = [];
+                
+                const rectsCollide = (r1, r2) => {
+                    return !(r1.x + r1.w < r2.x || r2.x + r2.w < r1.x ||
+                             r1.y + r1.h < r2.y || r2.y + r2.h < r1.y);
+                };
+                
+                // Draw labels, skipping collisions
+                portLabels.forEach(label => {
+                    // Check collision with nodes
+                    let collides = nodeRects.some(nr => rectsCollide(label.screenRect, nr));
+                    
+                    // Check collision with already drawn labels
+                    if (!collides) {
+                        collides = drawnRects.some(dr => rectsCollide(label.screenRect, dr));
+                    }
+                    
+                    if (!collides) {
+                        // Draw black background rect
+                        const padding = 2 / state.view.scale;
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(label.x - padding, label.y - label.fontSize / 2 - padding,
+                                     label.width + padding * 2, label.fontSize + padding * 2);
+                        
+                        // Draw text
+                        ctx.fillStyle = CONFIG.colors.textMuted;
+                        ctx.font = `${label.fontSize}px "Geist Sans", ui-sans-serif, system-ui, sans-serif`;
+                        ctx.textBaseline = 'middle';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(label.text, label.x, label.y);
+                        
+                        drawnRects.push(label.screenRect);
+                    }
+                });
+            }
 
             drawMinimap(nodesToDraw);
         }
@@ -5614,14 +5689,7 @@
             const isCluster = isClusterLikeNode(node);
             const isPanel = isPanelLikeNode(node);
             const panelValue = getPanelValueDetails(node);
-            const clusterHash = node.properties.clusterHash || node.properties.ClusterHash;
-            const clusterSize = node.properties.clusterSize || node.properties.ClusterSize;
-            const oldClusterHash = node.propertiesOld && (node.propertiesOld.clusterHash || node.propertiesOld.ClusterHash);
-            const oldClusterSize = node.propertiesOld && (node.propertiesOld.clusterSize || node.propertiesOld.ClusterSize);
-            
-            // Use clusterSize for change detection when available, otherwise fall back to hash
-            const clusterChanged = (clusterSize && oldClusterSize && clusterSize !== oldClusterSize) ||
-                                   (clusterHash && oldClusterHash && clusterHash !== oldClusterHash);
+            const clusterChanged = isClusterChanged(node);
 
             let clusterSection = '';
             if (isCluster) {
@@ -5632,8 +5700,14 @@
                     if (bytes < 1024) return `${bytes} bytes`;
                     return `${(bytes / 1024).toFixed(1)} KB`;
                 };
-                const sizeFormatted = formatSize(clusterSize) || 'Unknown';
-                const oldSizeFormatted = formatSize(oldClusterSize);
+                // Get byte counts with ClusterDocument fallback
+                const clusterBytes = getClusterByteCount(node, false);
+                const oldClusterBytes = getClusterByteCount(node, true);
+                const clusterHash = getClusterHash(node, false);
+                const oldClusterHash = getClusterHash(node, true);
+                
+                const sizeFormatted = formatSize(clusterBytes) || 'Unknown';
+                const oldSizeFormatted = formatSize(oldClusterBytes);
 
                 clusterSection = `
                     <div class="detail-card" style="border-left: 3px solid #7c4dff;">
@@ -5659,14 +5733,16 @@
                                 The embedded sub-definition has changed.
                                 ${oldSizeFormatted ? `<br>Size: ${oldSizeFormatted} <svg class="ico" width="10" height="10" style="margin:0 2px;"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg> ${sizeFormatted}` : ''}
                             </div>
+                            ${oldClusterHash && clusterHash ? `
                             <div class="prop-row" style="margin-top: 6px;">
                                 <span class="prop-label">Old Hash</span>
-                                <span class="prop-value" style="font-size: 11px;">${(oldClusterHash || '').substring(0, 12)}...</span>
+                                <span class="prop-value" style="font-size: 11px;">${oldClusterHash.substring(0, 12)}...</span>
                             </div>
                             <div class="prop-row">
                                 <span class="prop-label">New Hash</span>
-                                <span class="prop-value" style="font-size: 11px;">${(clusterHash || '').substring(0, 12)}...</span>
+                                <span class="prop-value" style="font-size: 11px;">${clusterHash.substring(0, 12)}...</span>
                             </div>
+                            ` : ''}
                         </div>
                         ` : `
                         <div style="margin-top: 8px; padding: 6px 8px; background: rgba(68, 183, 130, 0.1); border-radius: 4px; font-size: 11px; color: var(--success);">
