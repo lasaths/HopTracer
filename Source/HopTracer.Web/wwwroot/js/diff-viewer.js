@@ -917,6 +917,9 @@
                 item.className = 'change-item';
                 if (state.selected === node.id) item.classList.add('selected');
                 item.dataset.nodeId = String(node.id);
+                item.tabIndex = 0;
+                item.setAttribute('role', 'button');
+                item.setAttribute('aria-label', `${node.name || node.nickname || node.id} - ${node.status || 'same'} - ${node.risk || 'informational'}`);
 
                 // Header: status glyph + text
                 const header = document.createElement('div');
@@ -990,6 +993,14 @@
                 // Click handler
                 item.addEventListener('click', () => {
                     zoomToNode(node.id);
+                });
+                
+                // Keyboard handler for accessibility
+                item.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        zoomToNode(node.id);
+                    }
                 });
 
                 fragment.appendChild(item);
@@ -4305,7 +4316,7 @@
                     ${showHighLevelDetails && node.dx !== undefined ? `
                     <div class="prop-row">
                         <span class="prop-label">Movement</span>
-                        <span class="prop-value">Δ ${node.dx.toFixed(1)}, ${node.dy.toFixed(1)}</span>
+                        <span class="prop-value">Change: ${node.dx.toFixed(1)}, ${node.dy.toFixed(1)}</span>
                     </div>` : ''}
                 </div>
 
@@ -4525,7 +4536,7 @@
         }
 
         function isScriptModalOpen() {
-            return !!scriptModal && scriptModal.classList.contains('open');
+            return !!scriptModal && scriptModal.classList.contains('visible');
         }
 
         function renderExpandedScriptDiff(node, entry) {
@@ -4625,8 +4636,8 @@
             if (!scriptModal) return;
 
             const { restoreFocus = true } = options;
-            const wasOpen = scriptModal.classList.contains('open');
-            scriptModal.classList.remove('open');
+            const wasOpen = scriptModal.classList.contains('visible');
+            scriptModal.classList.remove('visible');
             if (scriptModalBody) {
                 scriptModalBody.innerHTML = '';
             }
@@ -5268,7 +5279,7 @@
                     const oldValue = getPortOptionDisplayValue(oldMap, key);
                     const newValue = getPortOptionDisplayValue(newMap, key);
                     if (oldValue === newValue) return '';
-                    return `${formatPortOptionToken(key, oldValue, true)} → ${formatPortOptionToken(key, newValue, true)}`;
+                    return `${formatPortOptionToken(key, oldValue, true)} <svg class="ico" width="12" height="12" style="margin:0 2px;"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg> ${formatPortOptionToken(key, newValue, true)}`;
                 })
                 .filter(Boolean)
                 .join(', ');
@@ -5418,7 +5429,7 @@
                             <span class="prop-label">${escapeHtml(entry.key)}</span>
                             <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
                                 <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7; white-space: pre-wrap;">${escapeHtml(entry.oldValue)}</span>
-                                <span style="color: var(--text-secondary);">→</span>
+                                <svg class="ico" width="12" height="12" style="margin:0 4px; color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
                                 <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; white-space: pre-wrap;">${escapeHtml(entry.newValue)}</span>
                             </div>
                         </div>
@@ -5485,7 +5496,7 @@
             if (includeHighLevel) {
                 const moved = Number(node.dx || 0) !== 0 || Number(node.dy || 0) !== 0;
                 if (moved) {
-                    reasons.push(`Moved by Δ ${Number(node.dx || 0).toFixed(1)}, ${Number(node.dy || 0).toFixed(1)}`);
+                    reasons.push(`Moved by ${Number(node.dx || 0).toFixed(1)}, ${Number(node.dy || 0).toFixed(1)}`);
                 }
 
                 const connChanges = Number(node.inAdded || 0) + Number(node.inRemoved || 0) + Number(node.outAdded || 0) + Number(node.outRemoved || 0);
@@ -5547,7 +5558,7 @@
                 clusterSection = `
                     <div class="detail-card" style="border-left: 3px solid #7c4dff;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                            <span style="font-size: 16px;">📦</span>
+                            <svg class="ico" width="20" height="20" style="color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-package"></use></svg>
                             <div class="node-name" style="font-size: 13px; margin-bottom: 0; color: #b388ff;">Cluster Component</div>
                         </div>
                         <div class="prop-row">
@@ -5560,18 +5571,21 @@
                         </div>
                         ${hashChanged ? `
                         <div style="margin-top: 8px; padding: 8px; background: rgba(245, 127, 23, 0.15); border: 1px solid rgba(245, 127, 23, 0.3); border-radius: 6px;">
-                            <div style="font-size: 11px; font-weight: 600; color: var(--modified); margin-bottom: 4px;">⚠ Cluster Internals Modified</div>
+                            <div style="font-size: 11px; font-weight: 600; color: var(--modified); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                                <svg class="ico" width="14" height="14"><use href="/vendor/phosphor/icons.svg#ph-warning"></use></svg>
+                                Cluster Internals Modified
+                            </div>
                             <div style="font-size: 11px; color: var(--text-secondary);">
                                 The embedded sub-definition has changed.
-                                ${oldSizeFormatted ? `<br>Size: ${oldSizeFormatted} → ${sizeFormatted}` : ''}
+                                ${oldSizeFormatted ? `<br>Size: ${oldSizeFormatted} <svg class="ico" width="10" height="10" style="margin:0 2px;"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg> ${sizeFormatted}` : ''}
                             </div>
                             <div class="prop-row" style="margin-top: 6px;">
                                 <span class="prop-label">Old Hash</span>
-                                <span class="prop-value" style="font-size: 10px;">${(oldClusterHash || '').substring(0, 12)}...</span>
+                                <span class="prop-value" style="font-size: 11px;">${(oldClusterHash || '').substring(0, 12)}...</span>
                             </div>
                             <div class="prop-row">
                                 <span class="prop-label">New Hash</span>
-                                <span class="prop-value" style="font-size: 10px;">${(clusterHash || '').substring(0, 12)}...</span>
+                                <span class="prop-value" style="font-size: 11px;">${(clusterHash || '').substring(0, 12)}...</span>
                             </div>
                         </div>
                         ` : `
@@ -5597,7 +5611,7 @@
                                 <span class="prop-label">UserText</span>
                                 <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
                                     <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7; white-space: pre-wrap;">${escapeHtml(panelValue.oldValue)}</span>
-                                    <span style="color: var(--text-secondary);">→</span>
+                                    <svg class="ico" width="12" height="12" style="margin:0 4px; color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
                                     <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; white-space: pre-wrap;">${escapeHtml(panelValue.newValue)}</span>
                                 </div>
                             </div>
@@ -5739,7 +5753,7 @@
                     ? `<div class="port-value">Options: ${escapeHtml(optionDiffText)}</div>`
                     : (optionText ? `<div class="port-value">Options: ${escapeHtml(optionText)}</div>` : '');
                 const valueLine = p.valueChanged
-                    ? `<div class="port-value">Δ ${escapeHtml(String(rawValueOld ?? ''))} → ${escapeHtml(String(rawValueNew ?? ''))}</div>`
+                    ? `<div class="port-value">Change: ${escapeHtml(String(rawValueOld ?? ''))} <svg class="ico" width="10" height="10" style="margin:0 2px;"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg> ${escapeHtml(String(rawValueNew ?? ''))}</div>`
                     : (hasValue ? `<div class="port-value">${escapeHtml(String(rawValue))}</div>` : '');
 
                 return `

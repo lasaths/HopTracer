@@ -254,7 +254,7 @@ html, body {
 
 .stat-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted);
@@ -419,7 +419,7 @@ html, body {
 
 .change-risk-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted);
@@ -558,7 +558,7 @@ html, body {
 .filter-btn.active {
     background: rgba(58, 60, 255, 0.15);
     border-color: var(--accent-primary);
-    color: var(--accent-primary);
+    color: #DADADD;
 }
 
 .sidebar-primary-action {
@@ -760,7 +760,7 @@ html, body {
 
 .source-side-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted);
@@ -879,7 +879,7 @@ html, body {
 
 .graph-tab.active,
 .graph-tab-btn.active {
-    color: var(--accent-primary);
+    color: #DADADD;
     border-bottom-color: var(--accent-primary);
 }
 
@@ -1752,7 +1752,7 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     padding: 4px 10px;
     border-radius: var(--radius-sm);
-    font-size: 10px;
+    font-size: 11px;
     font-family: var(--font-mono);
     font-weight: 600;
     text-transform: uppercase;
@@ -1846,7 +1846,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .diff-line.added {
-    background: rgba(48, 209, 88, 0.08);
+    background: rgba(68, 183, 130, 0.08);
 }
 
 .diff-line.removed {
@@ -1854,8 +1854,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .diff-line.added .diff-num {
-    background: rgba(48, 209, 88, 0.12);
-    color: #30d158;
+    background: rgba(68, 183, 130, 0.12);
+    color: #44B782;
 }
 
 .diff-line.removed .diff-num {
