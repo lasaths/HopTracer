@@ -4880,19 +4880,23 @@
                     const commitLabel = document.createElement('span');
                     commitLabel.className = 'k label';
                     commitLabel.textContent = 'Commit';
+                    const commitCell = document.createElement('span');
+                    commitCell.className = 'small trunc';
                     const commitHash = document.createElement('span');
-                    commitHash.className = 'mono small';
+                    commitHash.className = 'mono';
                     commitHash.textContent = meta.commitHash;
                     const commitMessage = document.createElement('span');
-                    commitMessage.className = 'muted small trunc';
+                    commitMessage.className = 'muted';
                     commitMessage.textContent = meta.commitMessage || '';
-                    commitMessage.title = meta.commitMessage || '';
+                    commitCell.appendChild(commitHash);
+                    commitCell.appendChild(document.createTextNode(' '));
+                    commitCell.appendChild(commitMessage);
+                    commitCell.title = [meta.commitHash, meta.commitMessage].filter(Boolean).join(' ');
                     const commitAuthor = document.createElement('span');
                     commitAuthor.className = 'label';
                     commitAuthor.textContent = meta.commitAuthor || '';
                     filesElem.appendChild(commitLabel);
-                    filesElem.appendChild(commitHash);
-                    filesElem.appendChild(commitMessage);
+                    filesElem.appendChild(commitCell);
                     filesElem.appendChild(commitAuthor);
                 }
             }
