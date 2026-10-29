@@ -73,12 +73,6 @@
     <polyline points="177 152 216 128 128 80 40 128 79 152" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
     <polyline points="177 104 216 80 128 32 40 80 79 104" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
   </symbol>
-  <!-- Warning -->
-  <symbol id="ph-warning" viewBox="0 0 256 256">
-    <path d="M236.66895,188l-95.99121-160a16,16,0,0,0-27.356,0L17.32263,188A15.89017,15.89017,0,0,0,32.00013,212h192a15.89017,15.89017,0,0,0,14.67737-24Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
-    <line x1="128" y1="112" x2="128" y2="144" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
-    <circle cx="128" cy="180" r="12"/>
-  </symbol>
   <!-- Triangle -->
   <symbol id="ph-triangle" viewBox="0 0 256 256">
     <path d="M236.66895,188l-96.00047-160a16,16,0,0,0-27.356,0l-95.99121,160A15.89017,15.89017,0,0,0,32.00013,212h192a15.89017,15.89017,0,0,0,14.67737-24Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>

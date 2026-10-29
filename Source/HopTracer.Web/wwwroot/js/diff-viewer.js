@@ -903,6 +903,13 @@
             if (changeListCount) {
                 changeListCount.textContent = total.toLocaleString();
             }
+            
+            // Save focused row before clearing
+            const focusedRow = document.activeElement;
+            const focusedNodeId = focusedRow?.classList.contains('qrow') 
+                ? focusedRow.dataset.nodeId 
+                : null;
+            
             changeList.innerHTML = '';
 
             if (total === 0) {
@@ -917,7 +924,7 @@
 
             filtered.forEach(node => {
                 const item = document.createElement('button');
-                item.className = 'qrow change-item';
+                item.className = 'qrow';
                 if (state.selected === node.id) item.classList.add('selected', 'sel');
                 item.dataset.nodeId = String(node.id);
                 item.tabIndex = 0;
@@ -1049,18 +1056,9 @@
 
             changeList.appendChild(fragment);
             
-            // Update unchanged toggle text
-            const unchangedToggle = document.getElementById('toggle-unchanged');
-            const unchangedToggleText = document.getElementById('unchanged-toggle-text');
-            if (unchangedToggle && unchangedToggleText) {
-                const hideUnchanged = unchangedToggle.checked;
-                const unchangedCount = state.nodes.filter(n => n.status === 'same').length;
-                
-                if (hideUnchanged && unchangedCount > 0) {
-                    unchangedToggleText.textContent = `${unchangedCount} unchanged hidden`;
-                } else {
-                    unchangedToggleText.textContent = 'hide unchanged';
-                }
+            // Restore focus to the same node if it had focus before
+            if (focusedNodeId) {
+                restoreFocusToRow(focusedNodeId);
             }
         }
 
@@ -1155,6 +1153,42 @@
             const currentIndex = filtered.findIndex(n => n.id === state.selected);
             const prevIndex = currentIndex <= 0 ? filtered.length - 1 : currentIndex - 1;
             zoomToNode(filtered[prevIndex].id);
+        }
+
+        function moveFocusToNextRow() {
+            const rows = Array.from(document.querySelectorAll('.qrow'));
+            if (rows.length === 0) return;
+            
+            const focused = document.activeElement;
+            const currentIndex = rows.indexOf(focused);
+            
+            if (currentIndex === -1) {
+                rows[0].focus();
+            } else if (currentIndex < rows.length - 1) {
+                rows[currentIndex + 1].focus();
+            }
+        }
+
+        function moveFocusToPreviousRow() {
+            const rows = Array.from(document.querySelectorAll('.qrow'));
+            if (rows.length === 0) return;
+            
+            const focused = document.activeElement;
+            const currentIndex = rows.indexOf(focused);
+            
+            if (currentIndex === -1) {
+                rows[rows.length - 1].focus();
+            } else if (currentIndex > 0) {
+                rows[currentIndex - 1].focus();
+            }
+        }
+
+        function restoreFocusToRow(nodeId) {
+            if (!nodeId) return;
+            const row = document.querySelector(`.qrow[data-node-id="${nodeId}"]`);
+            if (row) {
+                row.focus();
+            }
         }
 
         function syncStatusFilterButtons() {
@@ -3286,9 +3320,19 @@
                 switch (key) {
                     case 'f': fitView(); break;
                     case 'j':
-                    case 'arrowdown': navigateToNext(); break;
+                        navigateToNext();
+                        break;
                     case 'k':
-                    case 'arrowup': navigateToPrevious(); break;
+                        navigateToPrevious();
+                        break;
+                    case 'arrowdown':
+                        e.preventDefault();
+                        moveFocusToNextRow();
+                        break;
+                    case 'arrowup':
+                        e.preventDefault();
+                        moveFocusToPreviousRow();
+                        break;
                     case 'escape':
                         state.selected = null;
                         updateDetailsPanel(null);
@@ -3382,44 +3426,8 @@
             });
             syncStatusFilterButtons();
             renderComponentResultsList();
-            
-            // Wire unchanged toggle
-            const unchangedToggle = document.getElementById('toggle-unchanged');
-            const unchangedToggleText = document.getElementById('unchanged-toggle-text');
-            
-            function updateUnchangedToggle() {
-                if (!unchangedToggle || !unchangedToggleText) return;
-                
-                const hideUnchanged = unchangedToggle.checked;
-                const unchangedCount = state.nodes.filter(n => n.status === 'same').length;
-                
-                if (hideUnchanged && unchangedCount > 0) {
-                    unchangedToggleText.textContent = `${unchangedCount} unchanged hidden`;
-                } else {
-                    unchangedToggleText.textContent = 'hide unchanged';
-                }
-            }
-            
-            if (unchangedToggle) {
-                unchangedToggle.addEventListener('change', () => {
-                    if (unchangedToggle.checked) {
-                        state.filterStatuses.delete('same');
-                    } else {
-                        state.filterStatuses.add('same');
-                    }
-                    updateUnchangedToggle();
-                    syncStatusFilterButtons();
-                    applySearchQuery(state.search, { refreshView: false, syncInput: false });
-                    renderComponentResultsList();
-                    scheduleDraw();
-                });
-                
-                // Initialize: hide unchanged by default
-                state.filterStatuses.delete('same');
-                updateUnchangedToggle();
-            }
 
-            // Navigation controls
+            // Arrow key navigation: move focus only, Enter/Space to select
             const btnNextChange = document.getElementById('btn-next-change');
             const btnPrevChange = document.getElementById('btn-prev-change');
             

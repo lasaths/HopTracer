@@ -37,23 +37,6 @@
     <main id="main-container" aria-label="Comparison workspace">
         <!-- Left Panel: Risk-Ordered Change List -->
         <div id="sidebar">
-            <div class="sidebar-header">
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <span class="stat-label">Added</span>
-                        <span id="stat-added" class="stat-number">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Removed</span>
-                        <span id="stat-removed" class="stat-number">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Modified</span>
-                        <span id="stat-modified" class="stat-number">0</span>
-                    </div>
-                </div>
-            </div>
-
             <div class="controls">
                 <!-- Risk-Ordered Change Queue -->
                 <div class="change-list-section">
@@ -65,34 +48,15 @@
                         <div class="component-results-empty">No changes to review.</div>
                     </div>
                     <div class="queue-foot">
-                        <div class="queue-foot-left">
-                            <label class="unchanged-toggle">
-                                <input type="checkbox" id="toggle-unchanged" checked />
-                                <span id="unchanged-toggle-text">hide unchanged</span>
-                            </label>
-                        </div>
+                        <div class="queue-foot-left"></div>
                         <div class="queue-foot-right">
                             <kbd class="keycap">J</kbd>
                             <kbd class="keycap">K</kbd>
+                            <span class="keycap-label">STEP</span>
                             <kbd class="keycap">F</kbd>
+                            <span class="keycap-label">FIT</span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Navigation Controls -->
-                <div class="navigation-controls">
-                    <button type="button" id="btn-prev-change" class="nav-btn" title="Previous change (K)">
-                        <svg viewBox="0 0 16 16" fill="currentColor">
-                            <use href="/vendor/phosphor/icons.svg#ph-caret-left"></use>
-                        </svg>
-                        Prev
-                    </button>
-                    <button type="button" id="btn-next-change" class="nav-btn" title="Next change (J)">
-                        Next
-                        <svg viewBox="0 0 16 16" fill="currentColor">
-                            <use href="/vendor/phosphor/icons.svg#ph-caret-right"></use>
-                        </svg>
-                    </button>
                 </div>
 
                 <!-- Filters -->

@@ -226,33 +226,6 @@ html, body {
     border-right: 1px solid var(--c-line);
 }
 
-/* Queue head */
-.sidebar-header {
-    height: 48px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: none;
-    border-bottom: 1px solid var(--c-line);
-}
-
-.sidebar-header .label:first-child {
-    color: var(--c-muted);
-}
-
-.sidebar-header .label.text {
-    color: var(--c-text);
-}
-
-/* Hide old stat items */
-.stats-row, .stat-item, .stat-label, .stat-number {
-    display: none !important;
-}
-
-#stat-added, #stat-removed, #stat-modified {
-    display: none !important;
-}
-
 /* Change list */
 .change-list-section {
     flex: 1;
@@ -292,14 +265,14 @@ html, body {
 }
 
 /* Queue rows */
-.qrow, .change-item {
+.qrow {
     display: flex;
     align-items: flex-start;
     gap: 8px;
     text-align: left;
-    min-height: var(--row2);
+    min-height: 48px;
     padding: 6px 8px 6px 6px;
-    border-left: var(--accent) solid transparent;
+    border-left: 2px solid transparent;
     width: 100%;
     background: none;
     border-top: none;
@@ -310,22 +283,22 @@ html, body {
     font: inherit;
 }
 
-.qrow + .qrow, .change-item + .change-item {
+.qrow + .qrow {
     box-shadow: 0 -1px 0 var(--c-surface-hover);
 }
 
-.qrow:hover, .change-item:hover {
+.qrow:hover {
     background: var(--c-surface-hover);
 }
 
-.qrow.sel, .change-item.selected {
+.qrow.sel {
     border-left-color: var(--c-ultra);
     background: var(--c-surface);
 }
 
-.qrow:focus, .change-item:focus, .qrow:focus-visible, .change-item:focus-visible {
-    outline: var(--ring) solid var(--c-text);
-    outline-offset: -2px;
+.qrow:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--c-text);
 }
 
 .qrow .qg {
@@ -359,6 +332,12 @@ html, body {
     text-overflow: ellipsis;
 }
 
+.qrow .small.muted {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--c-muted);
+}
+
 .qrow .qr {
     display: flex;
     align-items: center;
@@ -369,8 +348,8 @@ html, body {
 
 /* Compact rows below 1440px */
 @media (max-width: 1439px) {
-    .qrow, .change-item {
-        min-height: var(--row);
+    .qrow {
+        min-height: 32px;
         flex-direction: row;
         align-items: center;
         gap: 8px;
@@ -442,24 +421,6 @@ html, body {
     align-items: center;
 }
 
-.unchanged-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--f-mono);
-    font-size: 11px;
-    color: var(--c-muted);
-    cursor: pointer;
-    user-select: none;
-}
-
-.unchanged-toggle input[type="checkbox"] {
-    margin: 0;
-    width: 14px;
-    height: 14px;
-    cursor: pointer;
-}
-
 .queue-foot-right {
     display: flex;
     align-items: center;
@@ -479,6 +440,12 @@ html, body {
     background: transparent;
     border: 1px solid var(--c-muted);
     border-radius: 2px;
+}
+
+.keycap-label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--c-muted);
 }
 
 .change-list {
@@ -517,30 +484,6 @@ html, body {
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--text-muted);
-}
-
-/* Change Item - ANDURA L5 Style */
-.change-item {
-    padding: var(--space-sm) var(--space-md);
-    border-left: 2px solid transparent;
-    cursor: pointer;
-    transition: all var(--transition-base);
-}
-
-.change-item:hover {
-    background: var(--interactive-hover);
-}
-
-.change-item.selected {
-    background: rgba(58, 60, 255, 0.12);
-    border-left-color: var(--accent-primary);
-}
-
-/* Bug fix #8: Change-list focus ring Ultramarine */
-/* Bug fix #4: Focus ring with enough specificity to beat global :focus-visible */
-.change-list .change-item:focus-visible {
-    outline: 2px solid var(--accent-primary) !important;
-    outline-offset: -2px !important;
 }
 
 .change-item-header {
@@ -632,31 +575,6 @@ html, body {
     height: 100%;
     background: var(--status-modified);
     transition: width var(--transition-base);
-}
-
-/* Queue footer */
-.navigation-controls {
-    margin-top: auto;
-    padding: 16px 0 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    flex: none;
-    border-bottom: none;
-}
-
-@media (max-width: 1280px) {
-    .navigation-controls {
-        padding: 16px 0 24px;
-    }
-}
-
-.nav-btn {
-    display: none !important;
-}
-
-#btn-prev-change, #btn-next-change {
-    display: none !important;
 }
 
 /* Controls Section - Overflow */
