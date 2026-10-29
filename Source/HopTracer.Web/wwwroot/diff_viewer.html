@@ -3,377 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HopTracer</title>
-    <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>HopTracer · Diff Viewer</title>
+    <link rel="stylesheet" href="/css/tokens.css">
     <link rel="stylesheet" href="/css/diff-viewer.css">
+    <script>window.HOP_DATA = {json_data};</script>
 </head>
+<body>
+    <!-- Top bar -->
+    <header class="top" role="banner">
+        <a class="brand" href="/" aria-label="HopTracer home">
+            <img src="/vendor/logo-mono.png" alt="" width="28" height="28">
+            <b>HopTracer</b>
+        </a>
+        <div class="row" style="gap:8px;min-width:0">
+            <button class="row mono" id="meta-file-old" type="button" aria-label="Change old file" style="gap:8px">
+                <span class="trunc">...</span>
+            </button>
+            <span class="muted" aria-hidden="true">
+                <svg class="ico s12" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/>
+                </svg>
+            </span>
+            <button class="row mono text" id="meta-file-new" type="button" aria-label="Change new file" style="gap:8px">
+                <span class="trunc">...</span>
+            </button>
+            <span class="label" id="meta-time-diff" style="margin-left:8px">...</span>
+        </div>
+        <div class="facts">
+            <button class="row" id="search-launcher" type="button" aria-label="Search components and code" 
+                    style="width:232px;height:32px;padding:0 8px;border-bottom:1px solid var(--c-line);color:var(--c-muted)">
+                <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/>
+                </svg>
+                <span class="grow trunc" style="text-align:left">Search components, code</span>
+                <span class="keycap">Ctrl</span>
+                <span class="keycap">K</span>
+            </button>
+            <a class="btn" href="/">
+                <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/>
+                </svg>
+                New comparison
+            </a>
+        </div>
+    </header>
 
-<body class="dark no-glow">
+    <!-- Alarm band (shown only when high-risk change exists) -->
+    <section class="band" id="alarm-band" role="status" aria-label="Highest-risk change" style="display:none">
+        <span class="edge"></span>
+        <span id="alarm-status" class="st"></span>
+        <span class="trunc" style="min-width:0" id="alarm-message"></span>
+        <span id="alarm-risk" class="label" style="flex:none"></span>
+        <div class="acts">
+            <button class="btn band" id="btn-band-diff" type="button" style="display:none">View script diff</button>
+            <button class="btn band pri" id="btn-band-inspect" type="button">Inspect</button>
+        </div>
+    </section>
 
-    <div id="tooltip" class="tooltip"></div>
-
-    <!-- Quiet Top Line - ANDURA Style -->
-    <div id="file-metadata-header">
-        <div class="metadata-row">
-            <div class="metadata-logo">
-                <img src="/images/HopTrace_Logo.png" alt="HopTracer">
-                <span class="metadata-logo-text">HopTracer</span>
-            </div>
-            <div class="metadata-item">
-                <span class="metadata-label">Files</span>
-                <button type="button" class="metadata-value source-link" id="meta-file-old" data-side="old" title="Click to change old file">...</button>
-                <span class="metadata-arrow">→</span>
-                <button type="button" class="metadata-value source-link" id="meta-file-new" data-side="new" title="Click to change new file">...</button>
-            </div>
-            <div class="metadata-stats">
-                <div class="metadata-stat">
-                    <svg class="metadata-stat-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <use href="/vendor/phosphor/icons.svg#ph-clock"></use>
+    <!-- Main layout -->
+    <main id="main-view">
+        <!-- Queue -->
+        <nav id="sidebar" class="queue" aria-label="Change queue">
+            <div class="qhead">
+                <span class="label">Changes</span>
+                <span class="label text" id="change-list-count">0</span>
+                <button class="label row" id="component-sort" type="button" style="margin-left:auto;gap:4px">
+                    Risk
+                    <svg class="ico s12" viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>
                     </svg>
-                    <span id="meta-time-diff" class="metadata-stat-value">-</span>
+                </button>
+            </div>
+            <div id="change-list" role="listbox"></div>
+            <div class="qfoot">
+                <button class="label row" id="btn-toggle-unchanged" type="button" style="gap:8px;color:var(--c-muted)">
+                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M96.26,37.05A8,8,0,0,1,102,27.29a104.11,104.11,0,0,1,52,0,8,8,0,0,1-2,15.75,8.15,8.15,0,0,1-2-.26,88.09,88.09,0,0,0-44,0A8,8,0,0,1,96.26,37.05ZM53.79,55.14a104.05,104.05,0,0,0-26,45,8,8,0,0,0,15.42,4.27,88,88,0,0,1,22-38.09A8,8,0,0,0,53.79,55.14ZM43.21,151.55a8,8,0,1,0-15.42,4.28,104.12,104.12,0,0,0,26,45,8,8,0,0,0,11.41-11.22A88.14,88.14,0,0,1,43.21,151.55ZM150,213.22a88,88,0,0,1-44,0,8,8,0,1,0-4,15.49,104.11,104.11,0,0,0,52,0,8,8,0,0,0-4-15.49ZM222.65,146a8,8,0,0,0-9.85,5.58,87.91,87.91,0,0,1-22,38.08,8,8,0,1,0,11.42,11.21,104,104,0,0,0,26-45A8,8,0,0,0,222.65,146Zm-9.86-41.54a8,8,0,0,0,15.42-4.28,104,104,0,0,0-26-45,8,8,0,1,0-11.41,11.22A88,88,0,0,1,212.79,104.45Z"/>
+                    </svg>
+                    <span id="unchanged-count">0</span> unchanged hidden
+                </button>
+                <div class="row label" style="gap:6px;margin-top:16px">
+                    <span class="keycap">J</span>
+                    <span class="keycap">K</span>
+                    <span style="margin-right:12px">Step</span>
+                    <span class="keycap">F</span>
+                    <span>Fit</span>
                 </div>
             </div>
-        </div>
-    </div>
+        </nav>
 
-    <main id="main-container" aria-label="Comparison workspace">
-        <!-- Left Panel: Risk-Ordered Change List -->
-        <div id="sidebar">
-            <div class="sidebar-header">
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <span class="stat-label">Added</span>
-                        <span id="stat-added" class="stat-number">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Removed</span>
-                        <span id="stat-removed" class="stat-number">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Modified</span>
-                        <span id="stat-modified" class="stat-number">0</span>
-                    </div>
-                </div>
-                <div class="sidebar-header-actions">
-                    <a href="/" class="filter-btn sidebar-primary-action">New Comparison</a>
-                </div>
-            </div>
+        <!-- Canvas wrapper -->
+        <div class="canvas-wrap" style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <!-- Graph tabs (shown when multiple graphs exist) -->
+            <div class="gtabs" id="graph-tabs" style="display:none"></div>
 
-            <div class="controls">
-                <!-- Risk-Ordered Change List -->
-                <div class="change-list-section">
-                    <div class="section-header">
-                        <span class="section-title">Changes</span>
-                        <span id="change-list-count" class="section-count">0</span>
-                    </div>
-                    <div id="change-list" class="change-list">
-                        <div class="component-results-empty">No changes to review.</div>
-                    </div>
-                </div>
-
-                <!-- Navigation Controls -->
-                <div class="navigation-controls">
-                    <button type="button" id="btn-prev-change" class="nav-btn" title="Previous change (K)">
-                        <svg viewBox="0 0 16 16" fill="currentColor">
-                            <use href="/vendor/phosphor/icons.svg#ph-caret-left"></use>
-                        </svg>
-                        Prev
-                    </button>
-                    <button type="button" id="btn-next-change" class="nav-btn" title="Next change (J)">
-                        Next
-                        <svg viewBox="0 0 16 16" fill="currentColor">
-                            <use href="/vendor/phosphor/icons.svg#ph-caret-right"></use>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Filters -->
-                <div class="sidebar-card">
-                    <div class="section-label">Status Filters</div>
-                    <div class="filter-group">
-                        <button class="filter-btn" data-filter="all">All</button>
-                        <button class="filter-btn active" data-filter="added">Added</button>
-                        <button class="filter-btn active" data-filter="removed">Removed</button>
-                        <button class="filter-btn active" data-filter="modified">Modified</button>
-                        <button class="filter-btn" data-filter="same">Unchanged</button>
-                    </div>
-                </div>
-
-                <!-- Export & Review -->
-                <div class="sidebar-card">
-                    <div class="section-label">Review & Export</div>
-                    <div class="review-action-stack">
-                        <button type="button" id="btn-export-forensic" class="filter-btn review-action-btn" title="Download forensic JSON and HTML report">
-                            <svg style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px;" viewBox="0 0 16 16" fill="currentColor">
-                                <use href="/vendor/phosphor/icons.svg#ph-download-simple"></use>
-                            </svg>
-                            Export Report
-                        </button>
-                        <button type="button" id="btn-save-baseline" class="filter-btn review-action-btn" title="Save current file as a known-good baseline">Save Baseline</button>
-                        <button type="button" id="btn-check-baseline" class="filter-btn review-action-btn" title="Compare current file against a saved baseline">Check Baseline</button>
-                    </div>
-                </div>
-
-                <!-- Sort & Components -->
-                <div class="sidebar-card">
-                    <div class="section-label">Component Sort</div>
-                    <div class="component-sort-row">
-                        <label for="component-sort">Sort by</label>
-                        <select id="component-sort" class="component-sort-select">
-                            <option value="risk">Risk</option>
-                            <option value="az">A-Z</option>
-                            <option value="za">Z-A</option>
-                            <option value="dist">Dist</option>
-                            <option value="data">Data Size</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- View Options -->
-                <details class="sidebar-collapsible">
-                    <summary>View Options</summary>
-                    <div class="sidebar-collapsible-body">
-                        <label for="toggle-ports" class="option-toggle">
-                            <input type="checkbox" id="toggle-ports" />
-                            <span>Show inputs/output details</span>
-                        </label>
-                        <label for="toggle-groups" class="option-toggle">
-                            <input type="checkbox" id="toggle-groups" checked />
-                            <span>Show groups</span>
-                        </label>
-                        <label for="toggle-high-level-mods" class="option-toggle">
-                            <input type="checkbox" id="toggle-high-level-mods" />
-                            <span>Include high-level modifications</span>
-                        </label>
-                        <label for="toggle-changed-edges" class="option-toggle">
-                            <input type="checkbox" id="toggle-changed-edges" />
-                            <span>Show changed wires only</span>
-                        </label>
-                    </div>
-                </details>
-
-                <!-- File Analytics -->
-                <details class="sidebar-collapsible">
-                    <summary>File Analytics</summary>
-                    <div class="sidebar-collapsible-body">
-                        <div class="analytics-source">
-                            <div class="source-side-label">Old File</div>
-                            <div id="meta-old-name" class="source-name">-</div>
-                            <div id="meta-old-date" class="source-date">-</div>
-                            <div class="source-version-row">
-                                <span class="source-inline-label">Version</span>
-                                <span id="meta-old-version" class="source-version">-</span>
-                            </div>
-                        </div>
-
-                        <div id="time-diff-container" class="time-diff-chip" style="display: none;">
-                            <div class="time-diff-label">Time Difference</div>
-                            <div id="time-diff-value" class="time-diff-value">-</div>
-                        </div>
-
-                        <div id="version-diff-container" class="time-diff-chip" style="display: none;">
-                            <div class="time-diff-label">Version Changed</div>
-                            <div id="version-diff-value" class="time-diff-value">-</div>
-                        </div>
-
-                        <div class="analytics-source">
-                            <div class="source-side-label">New File</div>
-                            <div id="meta-new-name" class="source-name">-</div>
-                            <div id="meta-new-date" class="source-date">-</div>
-                            <div class="source-version-row">
-                                <span class="source-inline-label">Version</span>
-                                <span id="meta-new-version" class="source-version">-</span>
-                            </div>
-                        </div>
-                    </div>
-                </details>
-            </div>
-        </div>
-
-        <div id="resizer"></div>
-
-        <!-- Centre: Graph Canvas -->
-        <div id="main-view">
-            <div id="graph-tabs" class="graph-tabs"></div>
-            
-            <div class="top-right-tools">
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background: var(--status-added)"></div> Added
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background: var(--status-removed)"></div> Removed
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background: var(--status-modified)"></div> Modified
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background: var(--status-same)"></div> Unchanged
-                    </div>
-                </div>
+            <!-- Canvas -->
+            <div class="canvas" id="graph-canvas" role="application" aria-label="Graph canvas" tabindex="0">
+                <svg id="canvas-svg" xmlns="http://www.w3.org/2000/svg" style="position:absolute;left:0;top:0;pointer-events:none"></svg>
+                <canvas id="main-canvas" style="position:absolute;left:0;top:0"></canvas>
                 
-                <button type="button" id="search-launcher" class="search-launcher" title="Search components + code (Ctrl+K)">
-                    <svg class="search-launcher-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <use href="/vendor/phosphor/icons.svg#ph-magnifying-glass"></use>
-                    </svg>
-                </button>
-            </div>
-
-            <button type="button" id="btn-sidebar-expand" class="panel-expand-btn left" title="Show left panel">▶</button>
-            <button type="button" id="btn-details-expand" class="panel-expand-btn right" title="Show right panel">◀</button>
-
-            <div id="perf-indicator">Initializing…</div>
-
-            <canvas id="graph-canvas"></canvas>
-
-            <div id="minimap-container">
-                <canvas id="minimap-canvas"></canvas>
-            </div>
-
-            <div class="bottom-controls">
-                <div class="slider-group">
-                    <div class="slider-header">
-                        <span>Wire Visibility</span>
-                        <span id="wire-label" class="slider-value">Show All</span>
+                <!-- View sliders -->
+                <div class="strip">
+                    <div class="sld" id="wire-control">
+                        <div class="s-hd">
+                            <span class="label">Wires</span>
+                            <span class="label s-v text" id="wire-label">All</span>
+                        </div>
+                        <div class="s-tr" id="wire-slider" role="slider" tabindex="0" 
+                             aria-label="Wire visibility" aria-valuemin="0" aria-valuemax="100" 
+                             aria-valuenow="0" aria-valuetext="All">
+                            <span class="s-tk" style="left:0"></span>
+                            <span class="s-tk" style="left:25%"></span>
+                            <span class="s-tk" style="left:50%"></span>
+                            <span class="s-tk" style="left:75%"></span>
+                            <span class="s-tk" style="left:100%"></span>
+                            <span class="s-th" style="left:0"></span>
+                        </div>
+                        <div class="s-tl">
+                            <span class="label on" style="left:0">All</span>
+                            <span class="label" style="left:100%;transform:translateX(-100%)">None</span>
+                        </div>
                     </div>
-                    <input type="range" id="wire-slider" min="0" max="100" value="0">
+                    <div class="sld" id="version-control">
+                        <div class="s-hd">
+                            <span class="label">Show</span>
+                            <span class="label s-v text" id="version-label">Both</span>
+                        </div>
+                        <div class="s-tr" id="version-slider" role="slider" tabindex="0"
+                             aria-label="Version visibility" aria-valuemin="0" aria-valuemax="100"
+                             aria-valuenow="50" aria-valuetext="Both">
+                            <span class="s-tk" style="left:0"></span>
+                            <span class="s-tk" style="left:50%"></span>
+                            <span class="s-tk" style="left:100%"></span>
+                            <span class="s-th" style="left:50%"></span>
+                        </div>
+                        <div class="s-tl">
+                            <span class="label" style="left:0">Old</span>
+                            <span class="label on" style="left:50%;transform:translateX(-50%)">Both</span>
+                            <span class="label" style="left:100%;transform:translateX(-100%)">New</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="slider-group">
-                    <div class="slider-header">
-                        <span>Version Compare</span>
-                        <span id="version-label" class="slider-value">Mixed</span>
-                    </div>
-                    <input type="range" id="version-slider" min="0" max="100" value="50">
-                    <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-secondary); margin-top: 2px;">
-                        <span>Old</span>
-                        <span>New</span>
-                    </div>
+
+                <!-- Zoom cluster -->
+                <div class="zoomc">
+                    <button class="btn icon" id="btn-minimap" type="button" aria-label="Toggle minimap">
+                        <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M200,48V96a8,8,0,0,1-16,0V67.31l-42.34,42.35a8,8,0,0,1-11.32-11.32L172.69,56H144a8,8,0,0,1,0-16h48A8,8,0,0,1,200,48ZM109.66,141.66,67.31,184H96a8,8,0,0,0,0,16H48a8,8,0,0,0-8-8V144a8,8,0,0,0,16,0v28.69l42.34-42.35a8,8,0,0,0,11.32,11.32Zm32-32L184,67.31V96a8,8,0,0,0,16,0V48a8,8,0,0,0-8-8H144a8,8,0,0,0,0,16h28.69L130.34,98.34a8,8,0,0,0,11.32,11.32ZM109.66,130.34,67.31,72H96a8,8,0,0,0,0-16H48a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V83.31l42.34,42.35a8,8,0,0,0,11.32-11.32Z"/>
+                        </svg>
+                    </button>
+                    <span class="vr"></span>
+                    <button class="btn icon" id="btn-zoom-out" type="button" aria-label="Zoom out">
+                        <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M176,128a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,128Zm53.66,90.34a8,8,0,0,1-11.32,0l-43.13-43.13a88.11,88.11,0,1,1,11.32-11.32l43.13,43.13A8,8,0,0,1,229.66,218.34ZM112,184a72,72,0,1,0-72-72A72.08,72.08,0,0,0,112,184Z"/>
+                        </svg>
+                    </button>
+                    <span class="mono label" id="zoom-display" style="min-width:40px;text-align:center">100%</span>
+                    <button class="btn icon" id="btn-zoom-in" type="button" aria-label="Zoom in">
+                        <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M229.66,218.34l-43.13-43.13a88.11,88.11,0,1,0-11.32,11.32l43.13,43.13a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Zm104,0a8,8,0,0,1-8,8H120v16a8,8,0,0,1-16,0V120H88a8,8,0,0,1,0-16h16V88a8,8,0,0,1,16,0v16h16A8,8,0,0,1,144,112Z"/>
+                        </svg>
+                    </button>
+                    <button class="btn icon" id="btn-fit" type="button" aria-label="Fit to view">
+                        <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M208,48V96a8,8,0,0,1-16,0V67.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L180.69,56H152a8,8,0,0,1,0-16h48A8,8,0,0,1,208,48ZM104,156a8,8,0,0,0-8,8v19.31L69.66,157a8,8,0,0,0-11.32,11.32L84.69,194H56a8,8,0,0,0,0,16h48a8,8,0,0,0,8-8V152A8,8,0,0,0,104,156Zm61.66,1a8,8,0,0,0-11.32,0L128,183.31,101.66,157A8,8,0,0,0,90.34,168.32l32,32a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,165.66,157ZM90.34,99.66,128,62.34l26.34,26.32a8,8,0,0,0,11.32-11.32l-32-32a8,8,0,0,0-11.32,0l-32,32a8,8,0,0,0,11.32,11.32Z"/>
+                        </svg>
+                    </button>
                 </div>
+
+                <!-- Minimap (hidden by default) -->
+                <div id="minimap-container" style="display:none;position:absolute;right:16px;bottom:60px;width:200px;height:128px;
+                                                     background:var(--c-surface);border:1px solid var(--c-line)">
+                    <canvas id="minimap-canvas" width="200" height="128"></canvas>
+                </div>
+
+                <!-- Tooltip -->
+                <div id="tooltip" role="tooltip" style="display:none;position:absolute;background:var(--c-surface-lift);
+                                                         border:1px solid var(--c-line);padding:8px 12px;pointer-events:none;z-index:100"></div>
             </div>
 
-            <div class="overlay-controls">
-                <button class="icon-btn" id="btn-fit" title="Fit to View">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <use href="/vendor/phosphor/icons.svg#ph-arrows-out"></use>
-                    </svg>
-                </button>
-                <button class="icon-btn" id="btn-zoom-in" title="Zoom In (+)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                </button>
-                <button class="icon-btn" id="btn-zoom-out" title="Zoom Out (-)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                </button>
+            <!-- Script diff sheet (replaces canvas when shown) -->
+            <div id="script-diff" style="display:none;flex:1;background:var(--c-surface);overflow:hidden;display:flex;flex-direction:column">
+                <div class="sd-head">
+                    <button class="back" id="btn-close-script" type="button">
+                        <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"/>
+                        </svg>
+                        Canvas
+                        <span class="keycap">Esc</span>
+                    </button>
+                    <span class="sel-glyph"></span>
+                    <span class="title" id="sd-title"></span>
+                    <span id="sd-stats" class="label"></span>
+                    <div class="seg" style="margin-left:auto">
+                        <button type="button" data-mode="split" aria-pressed="true">Split</button>
+                        <button type="button" data-mode="unified" aria-pressed="false">Unified</button>
+                    </div>
+                    <button class="btn" id="btn-prev-hunk" type="button">
+                        <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M168,128a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,128Zm64,0A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/>
+                        </svg>
+                    </button>
+                    <button class="btn" id="btn-next-hunk" type="button">
+                        Next
+                        <span class="keycap">N</span>
+                    </button>
+                    <button class="btn icon" id="btn-copy-diff" type="button" aria-label="Copy diff">
+                        <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                            <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="sd-body" style="flex:1;overflow:auto;font-family:var(--f-mono);font-size:12px;line-height:18px"></div>
             </div>
         </div>
 
-        <div id="details-resizer"></div>
-
-        <!-- Right Panel: Inspector (ANDURA Detail Pane) -->
-        <div id="details-panel">
-            <div class="details-tabs">
-                <button type="button" id="btn-details-collapse" class="panel-icon-btn" title="Hide right panel">▶</button>
-                <button id="details-tab-inspector" class="details-tab active" data-tab="inspector">Inspector</button>
-                <button id="details-tab-script" class="details-tab" data-tab="script" style="display:none;">Script</button>
-            </div>
-            <div id="details-pane-inspector" class="details-pane active">
-                <div class="empty-state">
-                    Select a node in the graph<br>to view details
+        <!-- Right column -->
+        <aside id="details-panel" class="col">
+            <!-- Summary (shown when nothing selected) -->
+            <div id="summary-view">
+                <span class="label">Review</span>
+                <div class="display" id="review-count" style="margin-top:8px">0</div>
+                <div class="muted" style="margin-top:4px">changes to review</div>
+                
+                <div class="rbar" id="risk-bar" style="margin-top:16px"></div>
+                
+                <div class="row label" style="margin-top:12px;gap:16px">
+                    <span id="risk-high-count">HIGH 0</span>
+                    <span id="risk-med-count">MEDIUM 0</span>
+                    <span id="risk-low-count">LOW 0</span>
                 </div>
+
+                <section style="margin-top:32px">
+                    <span class="label">Top risks</span>
+                    <div class="risklist" id="top-risks" style="margin-top:8px"></div>
+                </section>
+
+                <section style="margin-top:32px">
+                    <span class="label">Files · Times CET</span>
+                    <div class="files" style="margin-top:8px">
+                        <span class="label">Old</span>
+                        <span class="trunc mono small" id="file-old-name">...</span>
+                        <span class="label" id="file-old-time">...</span>
+                        <span class="label">New</span>
+                        <span class="trunc mono small" id="file-new-name">...</span>
+                        <span class="label" id="file-new-time">...</span>
+                        <span class="label">Commit</span>
+                        <span class="mono small" id="commit-id">...</span>
+                        <span class="label" id="commit-branch">...</span>
+                    </div>
+                </section>
+
+                <div class="label" id="perf-display" style="margin-top:32px">...</div>
             </div>
-            <div id="details-pane-script" class="details-pane"></div>
-        </div>
+
+            <!-- Inspector (shown when node selected) -->
+            <div id="inspector-view" style="display:none">
+                <div class="dtabs">
+                    <button type="button" data-tab="inspector" aria-selected="true">
+                        Inspector
+                    </button>
+                    <button type="button" data-tab="script" aria-selected="false" style="display:none">
+                        Script diff
+                    </button>
+                </div>
+
+                <button class="back" id="btn-back-summary" type="button">
+                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"/>
+                    </svg>
+                    Summary
+                    <span class="keycap">Esc</span>
+                </button>
+
+                <div id="inspector-content"></div>
+            </div>
+        </aside>
     </main>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay">
-        <div id="loadingTitle">Converting & Comparing...</div>
-        <div style="width: 40px; height: 40px; border: 4px solid var(--border-hairline); border-top: 4px solid var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <div id="loadingPercent">0%</div>
-        <div style="width:min(360px, calc(100vw - 48px)); height:10px; background:rgba(255,255,255,0.08); border:1px solid var(--border-hairline); border-radius:999px; margin-top:10px; overflow:hidden;">
-            <div id="loadingProgressBar"></div>
+    <!-- Footer -->
+    <footer>
+        <button class="tab" data-filter="all" aria-current="page" type="button">
+            <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>
+            </svg>
+            <span class="w">All <span id="stat-all">0</span></span>
+        </button>
+        <button class="tab" data-filter="added" type="button">
+            <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32A8,8,0,0,1,176,128Z"/>
+            </svg>
+            <span class="w">Added <span id="stat-added">0</span></span>
+        </button>
+        <button class="tab" data-filter="removed" type="button">
+            <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                <path d="M176,128a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,128Zm56,0A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/>
+            </svg>
+            <span class="w">Removed <span id="stat-removed">0</span></span>
+        </button>
+        <button class="tab" data-filter="modified" type="button">
+            <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                <path d="M227.32,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H216a8,8,0,0,0,0-16H115.32l112-112A16,16,0,0,0,227.32,73.37ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.69,147.32,64l24-24L216,84.69Z"/>
+            </svg>
+            <span class="w">Modified <span id="stat-modified">0</span></span>
+        </button>
+        <button class="tab" data-filter="same" type="button">
+            <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                <path d="M96.26,37.05A8,8,0,0,1,102,27.29a104.11,104.11,0,0,1,52,0,8,8,0,0,1-2,15.75,8.15,8.15,0,0,1-2-.26,88.09,88.09,0,0,0-44,0A8,8,0,0,1,96.26,37.05ZM53.79,55.14a104.05,104.05,0,0,0-26,45,8,8,0,0,0,15.42,4.27,88,88,0,0,1,22-38.09A8,8,0,0,0,53.79,55.14ZM43.21,151.55a8,8,0,1,0-15.42,4.28,104.12,104.12,0,0,0,26,45,8,8,0,0,0,11.41-11.22A88.14,88.14,0,0,1,43.21,151.55ZM150,213.22a88,88,0,0,1-44,0,8,8,0,1,0-4,15.49,104.11,104.11,0,0,0,52,0,8,8,0,0,0-4-15.49ZM222.65,146a8,8,0,0,0-9.85,5.58,87.91,87.91,0,0,1-22,38.08,8,8,0,1,0,11.42,11.21,104,104,0,0,0,26-45A8,8,0,0,0,222.65,146Zm-9.86-41.54a8,8,0,0,0,15.42-4.28,104,104,0,0,0-26-45,8,8,0,1,0-11.41,11.22A88,88,0,0,1,212.79,104.45Z"/>
+            </svg>
+            <span class="w">Unchanged <span id="stat-same">0</span></span>
+        </button>
+        <div class="right">
+            <button class="btn ghost" id="btn-check-baseline" type="button">
+                <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/>
+                </svg>
+                Check baseline
+            </button>
+            <button class="btn ghost" id="btn-save-baseline" type="button">
+                <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M219.31,72,184,36.69A15.86,15.86,0,0,0,172.69,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V83.31A15.86,15.86,0,0,0,219.31,72ZM168,208H88V152h80Zm40,0H184V152a16,16,0,0,0-16-16H88a16,16,0,0,0-16,16v56H48V48H172.69L208,83.31ZM160,72a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h56A8,8,0,0,1,160,72Z"/>
+                </svg>
+                Save baseline
+            </button>
+            <button class="btn ghost" id="btn-export-forensic" type="button">
+                <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM152,88V44l44,44Z"/>
+                </svg>
+                Export report
+            </button>
         </div>
-        <div id="loadingSubtitle">This may take a few moments for large files.</div>
+    </footer>
+
+    <!-- Spotlight (hidden by default) -->
+    <div id="spotlight-backdrop" class="spot-backdrop" aria-hidden="true" style="display:none">
+        <div class="spot-panel" role="dialog" aria-modal="true" aria-label="Search components and script code">
+            <div class="spot-query">
+                <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/>
+                </svg>
+                <input type="text" id="spotlight-input" placeholder="Search..." autocomplete="off" spellcheck="false">
+            </div>
+            <div id="spotlight-results" style="flex:1;overflow-y:auto"></div>
+            <div class="spot-hint">
+                <svg class="ico s12" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>
+                </svg>
+                <svg class="ico s12" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M213.66,154.34l-80-80a8,8,0,0,0-11.32,0l-80,80a8,8,0,0,0,11.32,11.32L128,91.31l74.34,74.35a8,8,0,0,0,11.32-11.32Z"/>
+                </svg>
+                <span class="keycap">Enter</span>
+                <span>Open</span>
+                <span class="keycap">Esc</span>
+                <span>Close</span>
+                <span style="margin-left:auto">Names, values, code</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Source Modal -->
-    <div id="source-modal" class="source-modal-backdrop">
-        <div class="source-modal">
-            <div class="source-modal-header">
-                <div class="source-modal-title" id="source-modal-title">Change Source</div>
-                <button type="button" id="btn-source-modal-close" class="panel-icon-btn" title="Close" aria-label="Close dialog">✕</button>
-            </div>
-            <div class="source-modal-body">
-                <div class="source-mode-row">
-                    <button type="button" id="source-mode-file" class="source-mode-btn active">File</button>
-                    <button type="button" id="source-mode-commit" class="source-mode-btn">Git Commit</button>
-                </div>
+    <!-- Toast container -->
+    <div id="toast-container" style="position:fixed;left:32px;bottom:72px;width:360px;z-index:200"></div>
 
-                <div id="source-pane-file" class="source-pane">
-                    <div class="source-field-label">Selected File</div>
-                    <div id="source-file-path" class="source-path">No file selected</div>
-                    <div id="source-file-meta" class="source-path-meta"></div>
-                    <div class="source-actions">
-                        <button type="button" id="btn-source-pick-file" class="filter-btn">Choose File</button>
-                    </div>
-                </div>
-
-                <div id="source-pane-commit" class="source-pane" style="display:none;">
-                    <div class="source-field-label">Repository File</div>
-                    <div id="source-commit-path" class="source-path">No file selected</div>
-                    <div id="source-commit-meta" class="source-path-meta"></div>
-                    <div class="source-actions">
-                        <button type="button" id="btn-source-pick-commit-file" class="filter-btn">Choose File</button>
-                        <button type="button" id="btn-source-load-commits" class="filter-btn">Load Commits</button>
-                    </div>
-                    <div id="source-commit-list" class="source-commit-list"></div>
-                </div>
-
-                <div id="source-modal-status" class="source-modal-status" role="status" aria-live="polite" aria-atomic="true"></div>
-            </div>
-            <div class="source-modal-footer">
-                <button type="button" id="btn-source-cancel" class="filter-btn">Cancel</button>
-                <button type="button" id="btn-source-apply" class="filter-btn active">Apply</button>
-            </div>
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:var(--c-void);z-index:300;
+                                     display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div class="title" id="loadingTitle">Comparing</div>
+        <div class="vl" id="loadingPercent" style="margin-top:16px">0<span class="unit">%</span></div>
+        <div class="prog" style="width:400px;margin-top:24px">
+            <i id="loadingProgressBar" style="width:0%"></i>
+        </div>
+        <div id="loadingStages" style="margin-top:32px;width:400px"></div>
+        <div class="row label" style="margin-top:32px;gap:8px;color:var(--c-muted)">
+            Cancel
+            <span class="keycap">Esc</span>
         </div>
     </div>
 
-    <!-- Script Modal -->
-    <div id="script-modal" class="source-modal-backdrop">
-        <div class="source-modal script-diff-modal" role="dialog" aria-modal="true" aria-labelledby="script-modal-title">
-            <div class="source-modal-header">
-                <div class="script-modal-header-copy">
-                    <div class="source-modal-title" id="script-modal-title">Script</div>
-                    <div id="script-modal-subtitle" class="script-modal-subtitle"></div>
-                </div>
-                <button type="button" id="btn-script-modal-close" class="panel-icon-btn" title="Close" aria-label="Close script diff">✕</button>
-            </div>
-            <div id="script-modal-body" class="source-modal-body script-modal-body"></div>
-        </div>
-    </div>
-
-    <!-- Spotlight Search -->
-    <div id="spotlight-backdrop" class="spotlight-backdrop" aria-hidden="true">
-        <div class="spotlight-panel" role="dialog" aria-modal="true" aria-label="Search components and script code">
-            <div class="spotlight-input-row">
-                <input id="spotlight-input" class="spotlight-input" type="text" placeholder="Search components and C#/Python code..." autocomplete="off" spellcheck="false" />
-                <span class="spotlight-hint">ESC</span>
-            </div>
-            <div id="spotlight-results" class="spotlight-results">
-                <div class="spotlight-empty">Type to search C#/Python scripts and component names.</div>
-            </div>
-        </div>
-    </div>
-
-    <script src="/vendor/fuse.min.js"></script>
-    <script>window.HOP_DATA = {json_data};</script>
     <script src="/js/diff-viewer.js"></script>
 </body>
 </html>
