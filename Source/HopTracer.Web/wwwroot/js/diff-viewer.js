@@ -95,6 +95,7 @@
         const detailsTabInspector = document.getElementById('details-tab-inspector');
         const detailsTabScript = document.getElementById('details-tab-script');
         const graphTabsBar = document.getElementById('graph-tabs');
+        const canvasTagsLayer = document.getElementById('canvas-tags');
         const tooltip = document.getElementById('tooltip');
         const sidebar = document.getElementById('sidebar');
         const resizer = document.getElementById('resizer');
@@ -4212,6 +4213,222 @@
             scheduleDraw();
         }
 
+        // --- Canvas status tags ---
+
+        const CANVAS_TAG_GLYPH = {
+            added: { href: '/vendor/phosphor/icons.svg#ph-plus-circle', cls: 'ad' },
+            removed: { href: '/vendor/phosphor/icons.svg#ph-minus-circle', cls: 'em' },
+            modified: { href: '/vendor/phosphor/icons.svg#ph-pencil-simple-line', cls: 'ca' }
+        };
+        const canvasTagElements = new Map();
+
+        function canvasTagLabelText(node) {
+            const name = String(node.nickname || node.name || 'Unnamed');
+            const status = String(node.status || '');
+            const statusWord = status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
+            return `${name} · ${statusWord}`;
+        }
+
+        function canvasTagStatusColor(status) {
+            if (status === 'added') return CONFIG.colors.added;
+            if (status === 'removed') return CONFIG.colors.removed;
+            if (status === 'modified') return CONFIG.colors.modified;
+            return CONFIG.colors.same;
+        }
+
+        function measureCanvasTagSize(text) {
+            const dpr = window.devicePixelRatio || 1;
+            ctx.save();
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace';
+            try { ctx.letterSpacing = '0.08em'; } catch (e) { /* older canvas */ }
+            const tw = ctx.measureText(String(text || '')).width;
+            ctx.restore();
+            return { w: Math.ceil(tw + 38), h: 24 };
+        }
+
+        function rectsOverlap(a, b) {
+            return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+        }
+
+        function getGroupLabelScreenRects(renderNodes, mix) {
+            const rects = [];
+            if (!state.showGroups || !Array.isArray(state.groups) || state.groups.length === 0) return rects;
+            const scale = state.view.scale || 1;
+            if (scale < 0.5) return rects;
+            const lookup = buildNodeLookupMap(Array.from(renderNodes.values()));
+            for (let i = 0; i < state.groups.length; i++) {
+                const group = state.groups[i];
+                const rect = computeGroupRenderRect(group, lookup, mix);
+                if (!rect) continue;
+                const groupLabel = String(group.name || '').trim();
+                if (!groupLabel || groupLabel.toLowerCase() === 'group') continue;
+                const screenPx = Math.max(11, Math.min(12 * scale, 14));
+                const dpr = window.devicePixelRatio || 1;
+                ctx.save();
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.font = `500 ${screenPx}px "IBM Plex Mono", ui-monospace, monospace`;
+                const tw = ctx.measureText(groupLabel).width;
+                ctx.restore();
+                rects.push({
+                    x: rect.x * scale + state.view.x + 8,
+                    y: rect.y * scale + state.view.y - 4 - screenPx,
+                    w: tw,
+                    h: screenPx
+                });
+            }
+            return rects;
+        }
+
+        function ensureCanvasTagElement(node) {
+            const id = String(node.id);
+            let el = canvasTagElements.get(id);
+            if (el) return el;
+            el = document.createElement('span');
+            el.className = 'tag';
+            el.dataset.nodeId = id;
+            el.setAttribute('aria-hidden', 'true');
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'ico');
+            svg.setAttribute('viewBox', '0 0 256 256');
+            svg.setAttribute('fill', 'currentColor');
+            const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+            svg.appendChild(use);
+            const label = document.createElement('span');
+            el.appendChild(svg);
+            el.appendChild(label);
+            canvasTagsLayer.appendChild(el);
+            canvasTagElements.set(id, el);
+            return el;
+        }
+
+        function syncCanvasTagElement(el, node, selected, dimmed) {
+            const status = node.status;
+            const glyph = CANVAS_TAG_GLYPH[status];
+            el.classList.toggle('ad', status === 'added');
+            el.classList.toggle('em', status === 'removed');
+            el.classList.toggle('ca', status === 'modified');
+            el.classList.toggle('sel', !!selected);
+            el.classList.toggle('is-dim', !!dimmed);
+            const svg = el.querySelector('svg');
+            const use = svg && svg.querySelector('use');
+            if (svg && glyph) {
+                svg.setAttribute('class', `ico ${glyph.cls}`);
+            }
+            if (use && glyph) {
+                use.setAttribute('href', glyph.href);
+                use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', glyph.href);
+            }
+            const label = el.querySelector('span');
+            if (label) label.textContent = canvasTagLabelText(node);
+        }
+
+        function layoutCanvasStatusTags(renderNodes, canvasW, canvasH, mix) {
+            const leaders = [];
+            if (!canvasTagsLayer) return leaders;
+
+            const scale = state.view.scale || 1;
+            const keep = new Set();
+            const occupied = getGroupLabelScreenRects(renderNodes, mix);
+            const nodes = Array.from(renderNodes.values()).filter(n =>
+                (n.status === 'added' || n.status === 'removed' || n.status === 'modified') &&
+                (n.alpha == null || n.alpha > 0.05)
+            );
+            nodes.sort((a, b) => compareNodesForComponentSort(a, b));
+
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                const sx = n.x * scale + state.view.x;
+                const sy = n.y * scale + state.view.y;
+                const sw = n.w * scale;
+                const sh = n.h * scale;
+                if (sx + sw < 0 || sy + sh < 0 || sx > canvasW || sy > canvasH) continue;
+
+                const text = canvasTagLabelText(n);
+                const size = measureCanvasTagSize(text);
+                const tw = size.w;
+                const th = size.h;
+                const cx = sx + sw / 2 - tw / 2;
+                const candidates = [
+                    { x: cx, y: sy - 34 },
+                    { x: cx, y: sy + sh + 12 },
+                    { x: cx, y: sy - 82 }
+                ];
+
+                let chosen = null;
+                for (let c = 0; c < candidates.length; c++) {
+                    const box = { x: candidates[c].x, y: candidates[c].y, w: tw, h: th };
+                    const onCanvas = box.x >= 0 && box.y >= 0 && box.x + box.w <= canvasW && box.y + box.h <= canvasH;
+                    if (!onCanvas) continue;
+                    let hit = false;
+                    for (let o = 0; o < occupied.length; o++) {
+                        if (rectsOverlap(box, occupied[o])) { hit = true; break; }
+                    }
+                    if (!hit) {
+                        chosen = box;
+                        break;
+                    }
+                }
+                if (!chosen) {
+                    chosen = { x: candidates[0].x, y: candidates[0].y, w: tw, h: th };
+                }
+                chosen.x = Math.min(Math.max(0, chosen.x), Math.max(0, canvasW - tw));
+                chosen.y = Math.min(Math.max(0, chosen.y), Math.max(0, canvasH - th));
+
+                occupied.push(chosen);
+                keep.add(String(n.id));
+
+                const el = ensureCanvasTagElement(n);
+                const dimmed = !doesNodeMatchStatusFilter(n.status);
+                syncCanvasTagElement(el, n, state.selected != null && String(state.selected) === String(n.id), dimmed);
+                el.style.left = `${chosen.x}px`;
+                el.style.top = `${chosen.y}px`;
+
+                const tagAbove = (chosen.y + th) <= sy + 1;
+                const from = tagAbove
+                    ? { x: chosen.x + tw / 2, y: chosen.y + th }
+                    : { x: chosen.x + tw / 2, y: chosen.y };
+                const to = tagAbove
+                    ? { x: sx + sw / 2, y: sy }
+                    : { x: sx + sw / 2, y: sy + sh };
+                leaders.push({
+                    x1: (from.x - state.view.x) / scale,
+                    y1: (from.y - state.view.y) / scale,
+                    x2: (to.x - state.view.x) / scale,
+                    y2: (to.y - state.view.y) / scale,
+                    color: canvasTagStatusColor(n.status),
+                    alpha: dimmed ? 0.38 : 1
+                });
+            }
+
+            canvasTagElements.forEach((el, id) => {
+                if (!keep.has(id)) {
+                    el.remove();
+                    canvasTagElements.delete(id);
+                }
+            });
+            return leaders;
+        }
+
+        function drawCanvasTagLeaders(leaders) {
+            if (!leaders || leaders.length === 0) return;
+            const scale = state.view.scale || 1;
+            for (let i = 0; i < leaders.length; i++) {
+                const l = leaders[i];
+                ctx.save();
+                ctx.globalAlpha = l.alpha;
+                ctx.strokeStyle = l.color;
+                ctx.lineWidth = 1 / scale;
+                ctx.lineCap = 'butt';
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(l.x1, l.y1);
+                ctx.lineTo(l.x2, l.y2);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
         // --- Drawing ---
 
         function loop() {
@@ -4296,6 +4513,9 @@
                     if (e.target === state.selected) connectedIds.add(e.source);
                 });
             }
+
+            const tagLeaders = layoutCanvasStatusTags(renderNodes, canvasWidth, canvasHeight, mix);
+            drawCanvasTagLeaders(tagLeaders);
 
             drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds, matchingNodeSet);
 

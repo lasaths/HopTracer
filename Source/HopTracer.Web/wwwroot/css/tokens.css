@@ -97,10 +97,13 @@ footer .tab span.w{border-bottom:var(--accent) solid transparent;padding:2px 0}
 footer .tab[aria-current] {color:var(--c-text)} footer .tab[aria-current] span.w{border-bottom-color:var(--c-text)}
 footer .right{margin-left:auto;display:flex;align-items:center;gap:var(--s8)}
 footer .btn.ghost:hover{color:var(--c-text)}
+.canvas-tags{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
 .tag{position:absolute;display:inline-flex;align-items:center;gap:var(--s4);border:1px solid var(--c-line);background:var(--c-void);padding:3px var(--s8);white-space:nowrap;
-  font-family:var(--f-mono);font-weight:500;font-size:var(--t-label);line-height:var(--t-label-lh);letter-spacing:var(--t-track);text-transform:uppercase;color:var(--c-text)}
+  font-family:var(--f-mono);font-weight:500;font-size:var(--t-label);line-height:var(--t-label-lh);letter-spacing:var(--t-track);text-transform:uppercase;color:var(--c-text);
+  pointer-events:none}
 .tag.em{border-color:var(--c-emergency)} .tag.ca{border-color:var(--c-caution)} .tag.ad{border-color:var(--c-added)}
 .tag.sel{border-color:var(--c-ultra)}
+.tag.is-dim{opacity:.38}
 .sel-glyph{width:var(--glyph);height:var(--glyph);border:var(--accent) solid var(--c-ultra);flex:none;display:inline-block}
 .hair{height:1px;background:var(--c-line)}
 a{color:inherit;text-decoration:none}
