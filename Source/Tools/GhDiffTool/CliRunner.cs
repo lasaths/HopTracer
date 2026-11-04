@@ -195,7 +195,15 @@ public static class CliRunner
         var code = WriteOutput(result.Diff, flags.FileOldLabel, flags.FileNewLabel, flags, stdout, stderr);
         if (flags.FailOnRisk.HasValue)
         {
-            var maxRisk = result.Diff.Nodes.Where(n => n.Status != "same").Max(n => (int?)n.RiskScore) ?? 0;
+            var changedNodes = result.Diff.Nodes.Where(n => n.Status != "same").ToList();
+            
+            // If no changes and threshold is 0, exit 0
+            if (changedNodes.Count == 0)
+            {
+                return 0;
+            }
+            
+            var maxRisk = changedNodes.Max(n => (int?)n.RiskScore) ?? 0;
             if (maxRisk >= flags.FailOnRisk.Value)
             {
                 return 1;
