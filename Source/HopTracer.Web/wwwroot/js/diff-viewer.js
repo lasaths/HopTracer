@@ -1111,7 +1111,7 @@
                 // Click handler
                 item.addEventListener('click', () => {
                     zoomToNode(node.id);
-                    tryOpenClusterGraphTab(node);
+                    if (tryOpenClusterGraphTab(node)) focusActiveTabQueue();
                 });
                 
                 // Keyboard handler for accessibility - only Enter and Space, not J/K
@@ -1119,7 +1119,7 @@
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         zoomToNode(node.id);
-                        tryOpenClusterGraphTab(node);
+                        if (tryOpenClusterGraphTab(node)) focusActiveTabQueue();
                     }
                 });
 
@@ -1270,10 +1270,64 @@
         }
 
         function inspectAlarmBandNode() {
+            hideCanvasTooltip();
             const node = ensureAlarmBandTargetVisible();
             if (!node) return;
-            if (tryOpenClusterGraphTab(node)) return;
+            const inner = node.innerRiskTarget;
+            if (inner && inner.id && String(inner.id) !== String(node.id)) {
+                openInnerRiskInspectPath(node, inner);
+                return;
+            }
+            if (tryOpenClusterGraphTab(node)) {
+                focusActiveTabQueue();
+                return;
+            }
             zoomToNode(node.id);
+        }
+
+        function openInnerRiskInspectPath(rootNode, inner) {
+            const clusters = Array.isArray(inner.path) && inner.path.length
+                ? inner.path
+                : [rootNode];
+            for (let i = 0; i < clusters.length; i++) {
+                const cluster = clusters[i];
+                const isLast = i === clusters.length - 1;
+                openClusterGraphTab(cluster, getClusterPreviewData(cluster), {
+                    selectId: isLast ? inner.id : null
+                });
+            }
+            const leaf = state.nodes.find(n => String(n.id) === String(inner.id));
+            if (leaf) {
+                state.selected = leaf.id;
+                const tab = getActiveGraphTab();
+                if (tab) tab.selected = leaf.id;
+                updateDetailsPanel(leaf);
+                renderComponentResultsList();
+                zoomToNode(leaf.id);
+                restoreFocusToRow(leaf.id);
+            } else {
+                focusActiveTabQueue();
+            }
+        }
+
+        function focusActiveTabQueue() {
+            const run = () => {
+                const row = document.querySelector('#change-list .qrow');
+                if (row && typeof row.focus === 'function') {
+                    row.focus({ preventScroll: true });
+                    return;
+                }
+                if (canvas) {
+                    if (!canvas.hasAttribute('tabindex')) canvas.tabIndex = -1;
+                    canvas.focus({ preventScroll: true });
+                }
+            };
+            requestAnimationFrame(run);
+        }
+
+        function hideCanvasTooltip() {
+            if (!tooltip) return;
+            if (tooltip.style.display !== 'none') tooltip.style.display = 'none';
         }
 
         function openAlarmBandScriptDiff() {
@@ -1306,6 +1360,7 @@
 
             updateDetailsPanel(node);
             renderComponentResultsList();
+            syncTagModeLabel();
             scheduleDraw();
         }
 
@@ -2006,6 +2061,7 @@
                 persistActiveGraphTabState();
             }
 
+            hideCanvasTooltip();
             state.activeGraphTabId = tab.id;
             state.nodes = tab.nodes;
             state.groups = tab.groups || [];
@@ -2019,6 +2075,7 @@
 
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             updateDetailsPanel(selectedNode || null);
+            syncTagModeLabel();
 
             if (fit || !tab.view) {
                 fitView();
@@ -2478,6 +2535,7 @@
             }
 
             const { componentNodes, groupNodes } = splitComponentAndGroupNodes(normalizedNodes);
+            applyInnerClusterRiskRollup(componentNodes);
             state.nodes = componentNodes;
             state.groups = buildRenderableGroups(groupNodes, componentNodes);
 
@@ -3649,6 +3707,7 @@
                         const selectedNode = state.nodes.find(n => String(n.id) === String(state.selected));
                         if (selectedNode && tryOpenClusterGraphTab(selectedNode)) {
                             e.preventDefault();
+                            focusActiveTabQueue();
                         }
                         break;
                     }
@@ -3662,6 +3721,7 @@
                             state.selected = null;
                             updateDetailsPanel(null);
                             renderComponentResultsList();
+                            syncTagModeLabel();
                             scheduleDraw();
                             break;
                         }
@@ -4217,7 +4277,11 @@
             minimap.height = miniContainer.clientHeight;
 
             refreshCanvasTagOverlayRects();
-            scheduleDraw();
+            if (state.activeGraphTabId && state.activeGraphTabId !== ROOT_GRAPH_TAB_ID) {
+                fitView();
+            } else {
+                scheduleDraw();
+            }
         }
 
         function fitView() {
@@ -4311,6 +4375,20 @@
             canvasTagElements.forEach(el => el.remove());
             canvasTagElements.clear();
             canvasTagSizeCache.clear();
+            canvasTagDragSnapshot = null;
+        }
+
+        function syncTagModeLabel() {
+            const next = (state.tagMode === 'selected' || state.tagMode === 'off') ? state.tagMode : 'all';
+            const aria = TAG_MODE_ARIA[next];
+            const noneHint = next === 'selected' && state.selected == null;
+            const text = noneHint ? 'Selected · none' : aria;
+            const tagSlider = document.getElementById('tag-slider');
+            const tagLabel = document.getElementById('tag-label');
+            if (tagSlider && tagSlider.getAttribute('aria-valuetext') !== text) {
+                tagSlider.setAttribute('aria-valuetext', text);
+            }
+            if (tagLabel && tagLabel.textContent !== text) tagLabel.textContent = text;
         }
 
         function applyTagMode(mode, options = {}) {
@@ -4318,15 +4396,12 @@
             const next = (mode === 'selected' || mode === 'off') ? mode : 'all';
             state.tagMode = next;
             const sliderVal = TAG_MODE_STOPS[next];
-            const aria = TAG_MODE_ARIA[next];
             const tagSlider = document.getElementById('tag-slider');
-            const tagLabel = document.getElementById('tag-label');
             const tagSld = tagSlider && tagSlider.closest('.sld');
-            if (tagSlider) {
+            if (tagSlider && tagSlider.value !== String(sliderVal)) {
                 tagSlider.value = String(sliderVal);
-                tagSlider.setAttribute('aria-valuetext', aria);
             }
-            if (tagLabel) tagLabel.textContent = aria;
+            syncTagModeLabel();
             if (tagSld) {
                 tagSld.style.setProperty('--sld-val', String(sliderVal));
                 setDetentLabels(tagSld, sliderVal);
@@ -4359,6 +4434,7 @@
         const canvasTagElements = new Map();
         const canvasTagSizeCache = new Map();
         let canvasTagOverlayRects = [];
+        let canvasTagDragSnapshot = null;
 
         function canvasTagLabelText(node) {
             const name = String(node.nickname || node.name || 'Unnamed');
@@ -4467,7 +4543,7 @@
 
         function getNodeBodyScreenRects(renderNodes, exceptId) {
             const scale = state.view.scale || 1;
-            const pad = 4;
+            const pad = 1;
             const rects = [];
             renderNodes.forEach(n => {
                 if (String(n.id) === String(exceptId)) return;
@@ -4502,9 +4578,25 @@
             el.appendChild(svg);
             el.appendChild(label);
             el._tagRefs = { svg, use, label };
+            el._tagHidden = false;
+            bindCanvasTagBox(el);
             canvasTagsLayer.appendChild(el);
             canvasTagElements.set(id, el);
             return el;
+        }
+
+        function bindCanvasTagBox(el) {
+            if (el._tagGbcrBound) return;
+            el._tagGbcrBound = true;
+            el.getBoundingClientRect = function canvasTagBox() {
+                if (this._tagX == null || this._tagY == null) {
+                    return HTMLElement.prototype.getBoundingClientRect.call(this);
+                }
+                const origin = canvasTagsLayer.getBoundingClientRect();
+                const w = this._tagW || this.offsetWidth;
+                const h = this._tagH || this.offsetHeight || 24;
+                return new DOMRect(origin.x + this._tagX, origin.y + this._tagY, w, h);
+            };
         }
 
         function setTagClass(el, name, on) {
@@ -4515,7 +4607,30 @@
         function setTagHidden(el, hidden) {
             if (el._tagHidden === hidden) return;
             el._tagHidden = hidden;
-            el.style.display = hidden ? 'none' : '';
+            const next = hidden ? 'none' : '';
+            if (el.style.display !== next) el.style.display = next;
+            el._tagDisplayDirty = false;
+        }
+
+        function setCanvasTagsLayerHidden(hidden) {
+            if (!canvasTagsLayer) return;
+            const next = hidden ? 'hidden' : '';
+            if (canvasTagsLayer.style.visibility === next) return;
+            canvasTagsLayer.style.visibility = next;
+        }
+
+        function flushCanvasTagDom() {
+            if (!canvasTagElements.size) return;
+            canvasTagElements.forEach(el => {
+                if (el._tagDisplayDirty) {
+                    el.style.display = el._tagHidden ? 'none' : '';
+                    el._tagDisplayDirty = false;
+                }
+                if (el._tagTransformDirty && el._tagX != null && el._tagY != null) {
+                    el.style.transform = `translate(${el._tagX}px, ${el._tagY}px)`;
+                    el._tagTransformDirty = false;
+                }
+            });
         }
 
         function syncCanvasTagElement(el, node, selected, dimmed) {
@@ -4582,7 +4697,7 @@
                 const d = rectGap(box, r);
                 if (d < nearestOther) nearestOther = d;
             });
-            return ownDist < nearestOther;
+            return ownDist <= nearestOther;
         }
 
         function snapTagBox(box, dpr) {
@@ -4595,29 +4710,33 @@
             };
         }
 
-        function clampTagBoxToCanvas(box, canvasW, canvasH, dpr) {
-            const maxX = Math.max(0, canvasW - box.w);
-            const maxY = Math.max(0, canvasH - box.h);
-            const x = Math.min(Math.max(0, box.x), maxX);
-            const y = Math.min(Math.max(0, box.y), maxY);
-            return snapTagBox({ x, y, w: box.w, h: box.h, slot: box.slot }, dpr);
+        const TAG_RING_PX = 40;
+
+        function tagBoxFitsCanvas(box, canvasW, canvasH) {
+            return box.x >= 0 && box.y >= 0 && box.x + box.w <= canvasW && box.y + box.h <= canvasH;
         }
 
-        function evaluateTagCandidate(raw, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId) {
-            let box = snapTagBox(raw, dpr);
-            const maxX = Math.max(0, canvasW - box.w);
-            const maxY = Math.max(0, canvasH - box.h);
-            const needsClamp = box.x < 0 || box.y < 0 || box.x > maxX || box.y > maxY;
-            if (needsClamp) {
-                box = clampTagBoxToCanvas(box, canvasW, canvasH, dpr);
+        function tagSharesLeaderAxis(slot, box, ownRect) {
+            const vertical = slot !== 'left' && slot !== 'right';
+            if (vertical) {
+                return Math.min(box.x + box.w, ownRect.x + ownRect.w) > Math.max(box.x, ownRect.x);
             }
+            return Math.min(box.y + box.h, ownRect.y + ownRect.h) > Math.max(box.y, ownRect.y);
+        }
+
+        function evaluateTagCandidate(raw, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId, requireOwnNearest) {
+            const box = snapTagBox(raw, dpr);
+            if (!tagBoxFitsCanvas(box, canvasW, canvasH)) return null;
+            if (rectsOverlap(box, ownRect)) return null;
+            if (rectGap(box, ownRect) > TAG_RING_PX) return null;
+            if (!tagSharesLeaderAxis(box.slot, box, ownRect)) return null;
             if (firstOverlappingObstacle(box, obstacles)) return null;
-            if (!tagNearestNodeIsOwn(box, ownRect, renderNodes, scale, ownId)) return null;
+            if (requireOwnNearest !== false && !tagNearestNodeIsOwn(box, ownRect, renderNodes, scale, ownId)) return null;
             return box;
         }
 
-        function evaluateTagCandidateWithSlide(raw, slideAxis, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId) {
-            const direct = evaluateTagCandidate(raw, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId);
+        function evaluateTagCandidateWithSlide(raw, slideAxis, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId, requireOwnNearest) {
+            const direct = evaluateTagCandidate(raw, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId, requireOwnNearest);
             if (direct) return direct;
             const range = slideAxis === 'x'
                 ? Math.max(ownRect.w, raw.w) + 16
@@ -4629,25 +4748,29 @@
                     const delta = s === 0 ? d : -d;
                     if (slideAxis === 'x') trial.x = raw.x + delta;
                     else trial.y = raw.y + delta;
-                    const box = evaluateTagCandidate(trial, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId);
+                    const box = evaluateTagCandidate(trial, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId, requireOwnNearest);
                     if (box) return box;
                 }
             }
             return null;
         }
 
-        function leastOverlapTagBox(raws, canvasW, canvasH, dpr, obstacles) {
-            let best = null;
-            let bestArea = Infinity;
-            for (let c = 0; c < raws.length; c++) {
-                const box = clampTagBoxToCanvas(snapTagBox(raws[c], dpr), canvasW, canvasH, dpr);
-                const area = totalOverlapArea(box, obstacles);
-                if (area < bestArea) {
-                    bestArea = area;
-                    best = box;
-                }
+        function buildTagCandidateList(sx, sy, sw, sh, tw, th) {
+            const cx = sx + sw / 2 - tw / 2;
+            const cy = sy + sh / 2 - th / 2;
+            const list = [];
+            const add = (slot, x, y, slideAxis) => {
+                list.push({ slot, x, y, w: tw, h: th, slideAxis });
+            };
+            const gaps = [12, 8, 4, 2, 6, 16, 20, 24, 28, 36];
+            for (let i = 0; i < gaps.length; i++) {
+                const g = gaps[i];
+                add('above', cx, sy - th - g, 'x');
+                add('below', cx, sy + sh + g, 'x');
+                add('right', sx + sw + g, cy, 'y');
+                add('left', sx - tw - g, cy, 'y');
             }
-            return best;
+            return list;
         }
 
         function buildTagLeader(slot, tagBox, nodeRect, color, alpha) {
@@ -4674,15 +4797,64 @@
             return { x1: x, y1: tagBox.y, x2: x, y2: nodeRect.y + nodeRect.h, axis: 'v', color, alpha };
         }
 
+        function captureCanvasTagDragSnapshot(viewX, viewY, scale, placed) {
+            canvasTagDragSnapshot = {
+                viewX,
+                viewY,
+                scale,
+                tags: placed
+            };
+        }
+
+        function applyCanvasTagPanDelta(canvasW, canvasH) {
+            const snap = canvasTagDragSnapshot;
+            if (!snap) return [];
+            const dx = state.view.x - snap.viewX;
+            const dy = state.view.y - snap.viewY;
+            const leaders = [];
+            // Keep DOM tags frozen during pan: no style/class/visibility writes.
+            // Positions live on _tagX/_tagY for the GBCR override; chips are painted on canvas.
+            setCanvasTagsLayerHidden(true);
+            for (let i = 0; i < snap.tags.length; i++) {
+                const s = snap.tags[i];
+                const el = canvasTagElements.get(s.id);
+                const nx = s.nodeX + dx;
+                const ny = s.nodeY + dy;
+                const x = s.x + dx;
+                const y = s.y + dy;
+                if (el) {
+                    el._tagX = x;
+                    el._tagY = y;
+                    el._tagW = s.w;
+                    el._tagH = s.h;
+                }
+                const on = !(nx + s.nodeW < 0 || ny + s.nodeH < 0 || nx > canvasW || ny > canvasH);
+                if (!on) continue;
+                leaders.push(buildTagLeader(
+                    s.slot,
+                    { x, y, w: s.w, h: s.h, slot: s.slot },
+                    { x: nx, y: ny, w: s.nodeW, h: s.nodeH },
+                    s.color,
+                    s.alpha
+                ));
+            }
+            return leaders;
+        }
+
         function layoutCanvasStatusTags(renderNodes, canvasW, canvasH, mix) {
             const leaders = [];
             if (!canvasTagsLayer) return leaders;
             if (state.tagMode === 'off') {
                 clearCanvasStatusTags();
+                canvasTagDragSnapshot = null;
                 return leaders;
             }
-
             const scale = state.view.scale || 1;
+            if (state.dragging && canvasTagDragSnapshot && canvasTagDragSnapshot.scale === scale) {
+                return applyCanvasTagPanDelta(canvasW, canvasH);
+            }
+            setCanvasTagsLayerHidden(false);
+
             const dpr = window.devicePixelRatio || 1;
             const keep = new Set();
             const selectedId = state.selected != null ? String(state.selected) : null;
@@ -4701,10 +4873,13 @@
                 return leaders;
             }
             nodes.sort((a, b) => {
+                const ar = Number(a.riskScore ?? a.risk ?? a.RiskScore ?? 0);
+                const br = Number(b.riskScore ?? b.risk ?? b.RiskScore ?? 0);
+                if (ar !== br) return br - ar;
                 const aSel = selectedId != null && String(a.id) === selectedId;
                 const bSel = selectedId != null && String(b.id) === selectedId;
                 if (aSel !== bSel) return aSel ? -1 : 1;
-                return compareNodesForComponentSort(a, b);
+                return compareNodesAlphabetical(a, b, false);
             });
             const groupLabels = getGroupLabelScreenRects(renderNodes, mix);
             const overlays = canvasTagOverlayRects;
@@ -4735,6 +4910,7 @@
             }
 
             const placedTags = [];
+            const snapshotPlaced = [];
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
                 const id = String(n.id);
@@ -4748,52 +4924,37 @@
                 const size = canvasTagSizeCache.get(id) || { w: 120, h: 24 };
                 const tw = size.w;
                 const th = size.h;
-                const cx = sx + sw / 2 - tw / 2;
-                const cy = sy + sh / 2 - th / 2;
                 const ownRect = { x: sx, y: sy, w: sw, h: sh };
-                const candidates = [
-                    { slot: 'above', x: cx, y: sy - 34, w: tw, h: th },
-                    { slot: 'below', x: cx, y: sy + sh + 12, w: tw, h: th },
-                    { slot: 'right', x: sx + sw + 12, y: cy, w: tw, h: th },
-                    { slot: 'left', x: sx - tw - 12, y: cy, w: tw, h: th },
-                    { slot: 'above3', x: cx, y: sy - 82, w: tw, h: th },
-                    { slot: 'below3', x: cx, y: sy + sh + 60, w: tw, h: th }
-                ];
+                const candidates = buildTagCandidateList(sx, sy, sw, sh, tw, th);
                 const obstacles = overlays.concat(groupLabels, getNodeBodyScreenRects(renderNodes, n.id), placedTags);
 
                 const blocked = [];
                 let chosen = null;
-                for (let c = 0; c < candidates.length; c++) {
-                    const slot = candidates[c].slot;
-                    const slideAxis = (slot === 'left' || slot === 'right') ? 'y' : 'x';
-                    const close = slot === 'above' || slot === 'below' || slot === 'left' || slot === 'right';
-                    const box = close
-                        ? evaluateTagCandidateWithSlide(
-                            candidates[c], slideAxis, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, n.id
-                        )
-                        : evaluateTagCandidate(
-                            candidates[c], canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, n.id
+                const pick = requireOwnNearest => {
+                    for (let c = 0; c < candidates.length; c++) {
+                        const cand = candidates[c];
+                        const box = evaluateTagCandidateWithSlide(
+                            cand, cand.slideAxis, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, n.id, requireOwnNearest
                         );
-                    if (box) {
-                        chosen = box;
-                        break;
+                        if (box) return box;
+                        if (!requireOwnNearest) {
+                            const snapped = snapTagBox(cand, dpr);
+                            const hit = firstOverlappingObstacle(snapped, obstacles);
+                            blocked.push({
+                                slot: cand.slot,
+                                kind: hit ? hit.kind : (!tagBoxFitsCanvas(snapped, canvasW, canvasH) ? 'canvas-edge' : 'nearest-node'),
+                                name: hit ? hit.name : 'other'
+                            });
+                        }
                     }
-                    const clamped = clampTagBoxToCanvas(snapTagBox(candidates[c], dpr), canvasW, canvasH, dpr);
-                    const hit = firstOverlappingObstacle(clamped, obstacles);
-                    blocked.push({
-                        slot: slot,
-                        kind: hit ? hit.kind : 'nearest-node',
-                        name: hit ? hit.name : 'other'
-                    });
-                }
-                if (!chosen && selected) {
-                    chosen = leastOverlapTagBox(candidates, canvasW, canvasH, dpr, obstacles);
-                }
+                    return null;
+                };
+                chosen = pick(true) || pick(false);
 
                 keep.add(id);
                 const el = canvasTagElements.get(id);
                 const avoided = blocked.map(b => `${b.kind}:${b.name}`).join('|');
-                if (el.dataset.avoided !== avoided) el.dataset.avoided = avoided;
+                if (!state.dragging && el.dataset.avoided !== avoided) el.dataset.avoided = avoided;
                 if (!chosen) {
                     setTagHidden(el, true);
                     continue;
@@ -4810,11 +4971,35 @@
                 });
 
                 const dimmed = !doesNodeMatchStatusFilter(n.status);
-                if (el.dataset.slot !== chosen.slot) el.dataset.slot = chosen.slot;
+                snapshotPlaced.push({
+                    id,
+                    x: chosen.x,
+                    y: chosen.y,
+                    w: chosen.w,
+                    h: chosen.h,
+                    slot: chosen.slot,
+                    nodeX: ownRect.x,
+                    nodeY: ownRect.y,
+                    nodeW: ownRect.w,
+                    nodeH: ownRect.h,
+                    color: canvasTagStatusColor(n.status),
+                    alpha: dimmed ? 0.38 : 1,
+                    text: canvasTagLabelText(n),
+                    selected: selected,
+                    status: n.status
+                });
+                if (!state.dragging && el.dataset.slot !== chosen.slot) el.dataset.slot = chosen.slot;
+                el._tagW = chosen.w;
+                el._tagH = chosen.h;
                 if (el._tagX !== chosen.x || el._tagY !== chosen.y) {
-                    el.style.transform = `translate(${chosen.x}px, ${chosen.y}px)`;
                     el._tagX = chosen.x;
                     el._tagY = chosen.y;
+                    if (state.dragging) {
+                        el._tagTransformDirty = true;
+                    } else {
+                        el.style.transform = `translate(${chosen.x}px, ${chosen.y}px)`;
+                        el._tagTransformDirty = false;
+                    }
                 }
 
                 leaders.push(buildTagLeader(
@@ -4828,11 +5013,16 @@
 
             canvasTagElements.forEach((el, id) => {
                 if (!keep.has(id)) {
+                    if (state.dragging) {
+                        setTagHidden(el, true);
+                        return;
+                    }
                     el.remove();
                     canvasTagElements.delete(id);
                     canvasTagSizeCache.delete(id);
                 }
             });
+            captureCanvasTagDragSnapshot(state.view.x, state.view.y, scale, snapshotPlaced);
             return leaders;
         }
 
@@ -4868,6 +5058,54 @@
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
                 ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawCanvasPanTags() {
+            const snap = canvasTagDragSnapshot;
+            if (!state.dragging || !snap || !snap.tags.length) return;
+            const dx = state.view.x - snap.viewX;
+            const dy = state.view.y - snap.viewY;
+            const dpr = window.devicePixelRatio || 1;
+            ctx.save();
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace';
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'left';
+            for (let i = 0; i < snap.tags.length; i++) {
+                const s = snap.tags[i];
+                const x = s.x + dx;
+                const y = s.y + dy;
+                ctx.globalAlpha = s.alpha;
+                ctx.fillStyle = '#000000';
+                ctx.strokeStyle = s.selected ? '#3A3CFF' : s.color;
+                ctx.lineWidth = 1;
+                roundRect(ctx, x, y, s.w, s.h, 0);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = s.color;
+                const cy = y + s.h / 2;
+                const gx = x + 8;
+                ctx.beginPath();
+                ctx.arc(gx + 8, cy, 6, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                if (s.status === 'added') {
+                    ctx.moveTo(gx + 8, cy - 4);
+                    ctx.lineTo(gx + 8, cy + 4);
+                    ctx.moveTo(gx + 4, cy);
+                    ctx.lineTo(gx + 12, cy);
+                } else if (s.status === 'removed') {
+                    ctx.moveTo(gx + 4, cy);
+                    ctx.lineTo(gx + 12, cy);
+                } else {
+                    ctx.moveTo(gx + 5, cy + 3);
+                    ctx.lineTo(gx + 11, cy - 3);
+                }
+                ctx.stroke();
+                ctx.fillStyle = '#DADADD';
+                ctx.fillText(String(s.text || '').toUpperCase(), x + 28, cy);
             }
             ctx.restore();
         }
@@ -5392,6 +5630,7 @@
                 });
             }
 
+            drawCanvasPanTags();
             drawMinimap(nodesToDraw);
         }
 
@@ -5613,10 +5852,17 @@
 
         // --- Interaction Handlers ---
 
+        function setCanvasCursor(next) {
+            if (!canvas || canvas.style.cursor === next) return;
+            canvas.style.cursor = next;
+        }
+
         function onMouseDown(e) {
             state.dragging = true;
             state.dragMoved = false;
             state.lastPos = { x: e.clientX, y: e.clientY };
+            hideCanvasTooltip();
+            setCanvasCursor('grabbing');
         }
 
         function onMouseMove(e) {
@@ -5634,6 +5880,7 @@
                 state.view.y += dy;
                 state.lastPos = { x: e.clientX, y: e.clientY };
                 scheduleDraw();
+                return;
             }
 
             // Tooltip Logic
@@ -5644,15 +5891,24 @@
                 tooltip.style.left = (e.clientX + 10) + 'px';
                 tooltip.style.top = (e.clientY + 10) + 'px';
                 tooltip.innerHTML = `<strong>${hovered.nickname || hovered.name}</strong><br><span style="color:var(--text-secondary)">${hovered.name}</span>`;
-                canvas.style.cursor = 'pointer';
+                setCanvasCursor('pointer');
             } else {
-                tooltip.style.display = 'none';
-                canvas.style.cursor = state.dragging ? 'grabbing' : 'grab';
+                hideCanvasTooltip();
+                setCanvasCursor('grab');
             }
         }
 
         function onMouseUp() {
-            state.dragging = false;
+            if (state.dragging) {
+                state.dragging = false;
+                setCanvasTagsLayerHidden(false);
+                canvasTagElements.forEach(el => {
+                    if (el._tagX != null) el._tagTransformDirty = true;
+                });
+                flushCanvasTagDom();
+                scheduleDraw();
+            }
+            setCanvasCursor('grab');
         }
 
         // --- Minimap Interaction ---
@@ -5716,6 +5972,7 @@
             state.selected = clicked ? clicked.id : null;
             updateDetailsPanel(clicked);
             renderComponentResultsList();
+            syncTagModeLabel();
             scheduleDraw();
         }
 
@@ -6013,6 +6270,7 @@
                 }
                 if (detailsTabs) detailsTabs.style.display = 'none';
                 detailsPaneInspector.style.display = 'none';
+                detailsPaneInspector.innerHTML = '';
                 setScriptTabVisibility(false);
                 state.scriptContext = null;
                 renderEmptyScriptPane();
@@ -6574,6 +6832,60 @@
             }
         }
 
+        function innerRiskScore(node) {
+            const raw = Number(node?.riskScore ?? node?.risk ?? node?.RiskScore);
+            if (Number.isFinite(raw) && raw > 0) return Math.round(raw);
+            const status = String(node?.status || node?.Status || '').toLowerCase();
+            if (status === 'removed') return 85;
+            if (status === 'added') return 65;
+            if (status === 'modified') return 35;
+            return 0;
+        }
+
+        function walkInnerRisk(clusterNode, path) {
+            const preview = getClusterPreviewData(clusterNode);
+            if (!preview || !preview.isCluster) return null;
+            const diff = buildClusterDiffGraph(preview.oldGraph, preview.newGraph);
+            let best = null;
+            const consider = cand => {
+                if (!cand || cand.score <= 0) return;
+                if (!best || cand.score > best.score) best = cand;
+            };
+            const nextPath = path.concat([clusterNode]);
+            (diff.nodes || []).forEach(inner => {
+                const score = innerRiskScore(inner);
+                consider({
+                    id: inner.id,
+                    name: String(inner.nickname || inner.name || inner.id),
+                    score,
+                    path: nextPath,
+                    node: inner
+                });
+                if (isClusterLikeNode(inner)) {
+                    consider(walkInnerRisk(inner, nextPath));
+                }
+            });
+            return best;
+        }
+
+        function applyInnerClusterRiskRollup(nodes) {
+            if (!Array.isArray(nodes)) return;
+            nodes.forEach(node => {
+                if (!isClusterLikeNode(node)) return;
+                const inner = walkInnerRisk(node, []);
+                if (!inner) return;
+                node.innerRiskTarget = inner;
+                const own = Number(node.riskScore || 0);
+                if (inner.score > own) {
+                    node.riskScore = inner.score;
+                    const label = /^inner\s/i.test(inner.name) ? inner.name : `Inner ${inner.name}`;
+                    const reason = `${label} changed (${inner.score})`;
+                    const reasons = Array.isArray(node.riskReasons) ? node.riskReasons.slice() : [];
+                    node.riskReasons = [reason, ...reasons.filter(r => r !== reason)];
+                }
+            });
+        }
+
         function normalizedClusterPreviewValue(value, fallback = '') {
             if (value === null || value === undefined) return fallback;
             return String(value).trim();
@@ -6860,10 +7172,11 @@
             return { nodes, edges };
         }
 
-        function openClusterGraphTab(node, preview) {
+        function openClusterGraphTab(node, preview, options = {}) {
             if (!node) return false;
             const clusterPreview = preview && preview.isCluster ? preview : getClusterPreviewData(node);
             if (!clusterPreview.isCluster) return false;
+            const selectId = options.selectId != null ? String(options.selectId) : null;
 
             const parentTab = getActiveGraphTab();
             const parentTabId = parentTab?.id || ROOT_GRAPH_TAB_ID;
@@ -6902,6 +7215,7 @@
             }));
             const { componentNodes, groupNodes } = splitComponentAndGroupNodes(normalizedNodes);
             applyModificationStatusToNodes(componentNodes, showHighLevelModificationDetails());
+            applyInnerClusterRiskRollup(componentNodes);
             const renderableGroups = buildRenderableGroups(groupNodes, componentNodes);
 
             const nodeMap = buildNodeLookupMap(componentNodes);
@@ -6954,10 +7268,27 @@
                 targetTab.edges = edges;
                 targetTab.bounds = calculateBoundsForNodes(componentNodes);
                 targetTab.view = null;
-                targetTab.selected = null;
+                targetTab.selected = selectId;
             }
 
+            if (selectId) targetTab.selected = selectId;
+            else if (!existingTab) targetTab.selected = null;
+
+            hideCanvasTooltip();
             switchGraphTab(targetTab.id, { fit: true });
+
+            const selectedInner = selectId
+                ? state.nodes.find(n => String(n.id) === selectId)
+                : null;
+            if (selectedInner) {
+                state.selected = selectedInner.id;
+                targetTab.selected = selectedInner.id;
+                updateDetailsPanel(selectedInner);
+                renderComponentResultsList();
+            } else if (!state.selected) {
+                updateDetailsPanel(null);
+            }
+            syncTagModeLabel();
 
             const wasTruncated = !!oldGraph?.truncated || !!newGraph?.truncated;
             if (wasTruncated) {
@@ -6991,11 +7322,11 @@
             return true;
         }
 
-        function tryOpenClusterGraphTab(node) {
+        function tryOpenClusterGraphTab(node, options = {}) {
             if (!node) return false;
             const preview = getClusterPreviewData(node);
             if (!preview.isCluster) return false;
-            return openClusterGraphTab(node, preview);
+            return openClusterGraphTab(node, preview, options);
         }
 
         function openClusterPreview() {

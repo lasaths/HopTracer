@@ -614,4 +614,131 @@ public class DifferTests
         Assert.Equal(string.Empty, node.PropertiesOld!["ScriptSource"]);
         Assert.Equal("x = 1\nprint(x)", node.Properties["ScriptSource"]);
     }
+
+    [Fact]
+    public void Diff_RollsUpHighestInnerClusterRisk()
+    {
+        const string oldPreview = """
+            {"nodes":[
+              {"id":"inner-csharp","name":"C# Script","nickname":"Inner C#","x":0,"y":0,"w":120,"h":44,
+               "properties":{"ScriptSource":"using System; public class Script { int a; }"},
+               "inputs":[],"outputs":[]},
+              {"id":"inner-gone","name":"Panel","nickname":"Gone","x":80,"y":0,"w":90,"h":40,
+               "properties":{"UserText":"old"},"inputs":[],"outputs":[]}
+            ],"edges":[]}
+            """;
+        const string newPreview = """
+            {"nodes":[
+              {"id":"inner-csharp","name":"C# Script","nickname":"Inner C#","x":0,"y":0,"w":120,"h":44,
+               "properties":{"ScriptSource":"using System; public class Script { }"},
+               "inputs":[],"outputs":[]}
+            ],"edges":[]}
+            """;
+
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["C"] = new Node
+                {
+                    Id = "C",
+                    Name = "Cluster",
+                    Nickname = "Cluster",
+                    Properties = new Dictionary<string, string>
+                    {
+                        ["IsCluster"] = "true",
+                        ["ClusterHash"] = "OLDHASH",
+                        ["ClusterPreviewGraph"] = oldPreview
+                    }
+                }
+            }
+        };
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["C"] = new Node
+                {
+                    Id = "C",
+                    Name = "Cluster",
+                    Nickname = "Cluster",
+                    Properties = new Dictionary<string, string>
+                    {
+                        ["IsCluster"] = "true",
+                        ["ClusterHash"] = "NEWHASH",
+                        ["ClusterPreviewGraph"] = newPreview
+                    }
+                }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var cluster = detailed.Nodes.Single(n => n.Id == "C");
+
+        Assert.Equal("modified", cluster.Status);
+        Assert.Equal(85, cluster.RiskScore);
+        Assert.StartsWith("Inner Gone changed (85)", cluster.RiskReasons[0]);
+    }
+
+    [Fact]
+    public void Diff_InnerScriptRiskBeatsOwnClusterScoreWhenHigher()
+    {
+        const string oldPreview = """
+            {"nodes":[
+              {"id":"inner-csharp","name":"C# Script","nickname":"Inner C#","x":0,"y":0,"w":120,"h":44,
+               "properties":{"ScriptSource":"old code"},
+               "inputs":[],"outputs":[]}
+            ],"edges":[]}
+            """;
+        const string newPreview = """
+            {"nodes":[
+              {"id":"inner-csharp","name":"C# Script","nickname":"Inner C#","x":0,"y":0,"w":120,"h":44,
+               "properties":{"ScriptSource":"new code"},
+               "inputs":[],"outputs":[]}
+            ],"edges":[]}
+            """;
+
+        var oldGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["C"] = new Node
+                {
+                    Id = "C",
+                    Name = "Cluster",
+                    Nickname = "Cluster",
+                    Properties = new Dictionary<string, string>
+                    {
+                        ["IsCluster"] = "true",
+                        ["ClusterHash"] = "SAMEHASH",
+                        ["ClusterPreviewGraph"] = oldPreview
+                    }
+                }
+            }
+        };
+        var newGraph = new Graph
+        {
+            Nodes = new Dictionary<string, Node>
+            {
+                ["C"] = new Node
+                {
+                    Id = "C",
+                    Name = "Cluster",
+                    Nickname = "Cluster",
+                    Properties = new Dictionary<string, string>
+                    {
+                        ["IsCluster"] = "true",
+                        ["ClusterHash"] = "SAMEHASH",
+                        ["ClusterPreviewGraph"] = newPreview
+                    }
+                }
+            }
+        };
+
+        var detailed = _differ.DiffDetailed(oldGraph, newGraph);
+        var cluster = detailed.Nodes.Single(n => n.Id == "C");
+
+        Assert.Equal(75, cluster.RiskScore);
+        Assert.Equal("Inner C# changed (75)", cluster.RiskReasons[0]);
+    }
 }

@@ -20,6 +20,7 @@
   --tint-removed:rgba(244,85,54,.16); --tint-added:rgba(91,163,127,.16);
   --tint-removed-strong:rgba(244,85,54,.32); --tint-added-strong:rgba(91,163,127,.32);
   --scrim:rgba(0,0,0,.72);
+  --wash:rgba(255,255,255,.08);
   /* type */
   --f-sans:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
   --t-label:11px; --t-label-lh:16px; --t-track:.08em;

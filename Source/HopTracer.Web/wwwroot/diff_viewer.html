@@ -7,8 +7,8 @@
     <meta name="andura-host-tokens" content="andura-host.json">
     <title>HopTracer</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
-    <link rel="stylesheet" href="/css/tokens.css">
-    <link rel="stylesheet" href="/css/diff-viewer.css">
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/diff-viewer.css">
 </head>
 
 <body class="dark no-glow">
@@ -362,7 +362,7 @@
         <div id="loadingTitle">Converting & Comparing...</div>
         <div style="width: 40px; height: 40px; border: 4px solid var(--border-hairline); border-top: 4px solid var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
         <div id="loadingPercent">0%</div>
-        <div style="width:min(360px, calc(100vw - 48px)); height:10px; background:rgba(255,255,255,0.08); border:1px solid var(--border-hairline); border-radius:999px; margin-top:10px; overflow:hidden;">
+        <div style="width:min(360px, calc(100vw - 48px)); height:10px; background:var(--wash); border:1px solid var(--border-hairline); border-radius:999px; margin-top:10px; overflow:hidden;">
             <div id="loadingProgressBar"></div>
         </div>
         <div id="loadingSubtitle">This may take a few moments for large files.</div>
@@ -449,8 +449,8 @@
         </button>
     </div>
 
-    <script src="/vendor/fuse.min.js"></script>
+    <script src="vendor/fuse.min.js"></script>
     <script>window.HOP_DATA = {json_data};</script>
-    <script src="/js/diff-viewer.js"></script>
+    <script src="js/diff-viewer.js"></script>
 </body>
 </html>
