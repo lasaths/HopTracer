@@ -234,15 +234,16 @@ public static class DiffAgentFormatterV2
                 continue;
             }
 
-            var (added, removed) = UnifiedDiff.CountChanges(oldScript, newScript);
-            var unifiedDiff = UnifiedDiff.Generate(oldScript, newScript, ScriptDiffContextLines);
+            var (added, removed, diff, truncated, lineEndingChange) = UnifiedDiffV2.Generate(oldScript, newScript);
 
             return new ScriptChange
             {
                 Language = InferLanguage(key, node.Name),
                 LinesAdded = added,
                 LinesRemoved = removed,
-                UnifiedDiff = unifiedDiff
+                UnifiedDiff = diff,
+                Truncated = truncated ? true : null,
+                LineEndingChange = lineEndingChange
             };
         }
 
@@ -517,6 +518,8 @@ internal sealed class ScriptChange
     public int LinesAdded { get; set; }
     public int LinesRemoved { get; set; }
     public string UnifiedDiff { get; set; } = string.Empty;
+    public bool? Truncated { get; set; }
+    public string? LineEndingChange { get; set; }
 }
 
 internal sealed class ImpactInfo
