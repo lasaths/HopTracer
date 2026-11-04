@@ -7,6 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
   <!-- Exclude Web-dependent tests on non-Windows platforms -->
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
     <Compile Remove="FileValidationServiceTests.cs" />
