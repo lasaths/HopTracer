@@ -21,7 +21,7 @@ public static class DiffAgentFormatter
 
         var result = new AgentDiffReport
         {
-            GeneratedAt = options.IncludeTimestamp ? DateTimeOffset.UtcNow : (DateTimeOffset?)null,
+            GeneratedAt = DateTimeOffset.UtcNow,
             FileOld = options.FileOld,
             FileNew = options.FileNew,
             Summary = BuildSummary(stats, wireChanges, propertyChanges, opaqueChanges),
