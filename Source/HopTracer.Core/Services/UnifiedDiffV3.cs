@@ -37,7 +37,25 @@ public static class UnifiedDiffV3
         var diffLines = new List<string>();
         bool truncated = false;
 
-        // Build unified diff hunks
+        // First pass: count all changes before truncation
+        foreach (var line in diff.Lines)
+        {
+            switch (line.Type)
+            {
+                case ChangeType.Inserted:
+                    added++;
+                    break;
+                case ChangeType.Deleted:
+                    removed++;
+                    break;
+                case ChangeType.Modified:
+                    removed++;
+                    added++;
+                    break;
+            }
+        }
+
+        // Build unified diff hunks with truncation
         var hunks = BuildHunks(diff.Lines);
         
         foreach (var hunk in hunks)
@@ -48,8 +66,15 @@ public static class UnifiedDiffV3
                 break;
             }
 
-            // Hunk header
-            diffLines.Add($"@@ -{hunk.OldStart + 1},{hunk.OldCount} +{hunk.NewStart + 1},{hunk.NewCount} @@");
+            // Hunk header: -0,0 for empty old text
+            var oldStart = hunk.OldStart;
+            var oldCount = hunk.OldCount;
+            if (string.IsNullOrEmpty(oldText))
+            {
+                oldStart = 0;
+                oldCount = 0;
+            }
+            diffLines.Add($"@@ -{oldStart + 1},{oldCount} +{hunk.NewStart + 1},{hunk.NewCount} @@");
             
             // Hunk content
             foreach (var line in hunk.Lines)
@@ -64,20 +89,16 @@ public static class UnifiedDiffV3
                 {
                     case ChangeType.Inserted:
                         diffLines.Add("+" + line.Text);
-                        added++;
                         break;
                     case ChangeType.Deleted:
                         diffLines.Add("-" + line.Text);
-                        removed++;
                         break;
                     case ChangeType.Unchanged:
                     case ChangeType.Imaginary:
                         diffLines.Add(" " + line.Text);
                         break;
                     case ChangeType.Modified:
-                        // DiffPlex shows these as delete + insert
                         diffLines.Add("-" + line.Text);
-                        removed++;
                         break;
                 }
             }
