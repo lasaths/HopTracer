@@ -35,7 +35,7 @@ public sealed class CliFlags
             CompactFormat = Compact,
             IncludeNodeDetails = Verbose && !isAgent,
             IncludeChangedEdges = ShowEdges || isAgent,
-            MaxNodesToShow = MaxNodes ?? (isAgent ? 100 : 20),
+            MaxNodesToShow = MaxNodes ?? (isAgent ? 0 : 20), // 0 = let formatter decide adaptively
             MaxEdgesToShow = MaxEdges ?? (isAgent ? 50 : 10),
             IncludeStatistics = !NoStats && !isAgent,
             IncludeDiagnostics = !NoDiagnostics,

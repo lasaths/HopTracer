@@ -29,20 +29,27 @@ public static class DiffAgentFormatterV2
             .ThenBy(n => n.Id)
             .ToList();
         
-        var maxNodesToShow = options.MaxNodesToShow > 0 ? options.MaxNodesToShow : 100;
+        // Adaptive limit: fewer changes shown for large graphs
+        int defaultMax = significantChanges.Count > 50 ? 10 : 100;
+        var maxNodesToShow = options.MaxNodesToShow > 0 ? options.MaxNodesToShow : defaultMax;
         var displayedChanges = significantChanges.Take(maxNodesToShow).ToList();
         var omittedCount = Math.Max(0, significantChanges.Count - maxNodesToShow);
         
         // Check for 8-char ID collisions
         var idMap = BuildSafeIdMap(displayedChanges);
         
-        var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff, idMap)).ToList();
+        bool isLargeGraph = significantChanges.Count > 50;
+        var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff, idMap, isLargeGraph)).ToList();
         
-        // Add recursive cluster changes
-        var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes, idMap);
-        changes.AddRange(clusterChanges);
+        // Add recursive cluster changes (skip for large graphs to save size)
+        if (!isLargeGraph)
+        {
+            var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes, idMap);
+            changes.AddRange(clusterChanges);
+        }
         
-        var wires = BuildWireChanges(diff, resolver);
+        // Skip wires for large graphs
+        var wires = isLargeGraph ? new List<WireChange>() : BuildWireChanges(diff, resolver);
         
         var result = new AgentDiffReportV2
         {
@@ -97,7 +104,7 @@ public static class DiffAgentFormatterV2
         return map;
     }
 
-    private static ChangeItem BuildChange(Node node, DiffGraphResolver resolver, DiffComputation diff, Dictionary<string, string> idMap)
+    private static ChangeItem BuildChange(Node node, DiffGraphResolver resolver, DiffComputation diff, Dictionary<string, string> idMap, bool skipImpact = false)
     {
         var nodeLabel = string.IsNullOrWhiteSpace(node.Nickname) ? node.Name : node.Nickname;
         var change = new ChangeItem
@@ -113,31 +120,35 @@ public static class DiffAgentFormatterV2
                 Level = GetRiskLevel(node.RiskScore),
                 Reasons = node.RiskReasons.Any() ? node.RiskReasons : new List<string> { "Node modified" }
             },
-            Impact = BuildImpact(node, diff)
+            Impact = skipImpact ? new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 } : BuildImpact(node, diff)
         };
 
-        // Check for name/nickname changes
-        var rename = TryGetRename(node);
-        if (rename != null)
+        // For large graphs, skip detailed params/scripts to save size
+        if (!skipImpact)
         {
-            change.Rename = rename;
-        }
-
-        var propertyChanges = GetActualPropertyChanges(node);
-        if (propertyChanges.Count > 0)
-        {
-            change.Params = propertyChanges.Select(kvp => new ParamChange
+            // Check for name/nickname changes
+            var rename = TryGetRename(node);
+            if (rename != null)
             {
-                Key = kvp.Key,
-                Old = kvp.Value.Old,
-                New = kvp.Value.New
-            }).ToList();
-        }
+                change.Rename = rename;
+            }
 
-        var scriptChange = TryGetScriptChange(node);
-        if (scriptChange != null)
-        {
-            change.Script = scriptChange;
+            var propertyChanges = GetActualPropertyChanges(node);
+            if (propertyChanges.Count > 0)
+            {
+                change.Params = propertyChanges.Select(kvp => new ParamChange
+                {
+                    Key = kvp.Key,
+                    Old = kvp.Value.Old,
+                    New = kvp.Value.New
+                }).ToList();
+            }
+
+            var scriptChange = TryGetScriptChange(node);
+            if (scriptChange != null)
+            {
+                change.Script = scriptChange;
+            }
         }
 
         return change;
@@ -174,11 +185,13 @@ public static class DiffAgentFormatterV2
 
     private static List<WireChange> BuildWireChanges(DiffComputation diff, DiffGraphResolver resolver)
     {
-        return diff.Edges
-            .Where(e => e.Status != "same")
+        var changedEdges = diff.Edges.Where(e => e.Status != "same").ToList();
+        var wireLimit = changedEdges.Count > 50 ? 10 : 50;
+        
+        return changedEdges
             .OrderBy(e => e.Status)
             .ThenBy(e => e.Source)
-            .Take(50)
+            .Take(wireLimit)
             .Select(e =>
             {
                 var resolved = resolver.Resolve(e);
@@ -410,7 +423,7 @@ public static class DiffAgentFormatterV2
                 continue;
             }
 
-            var (added, removed, diff, truncated, lineEndingChange) = UnifiedDiffV2.Generate(oldScript, newScript);
+            var (added, removed, diff, truncated, lineEndingChange) = UnifiedDiffV3.Generate(oldScript, newScript);
 
             // Apply per-script line budget
             if (diff.Split('\n').Length > MaxScriptDiffLines)
