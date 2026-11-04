@@ -34,6 +34,11 @@ public static class DiffAgentFormatterV2
         var omittedCount = Math.Max(0, significantChanges.Count - maxNodesToShow);
         
         var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff)).ToList();
+        
+        // Add recursive cluster changes
+        var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes);
+        changes.AddRange(clusterChanges);
+        
         var wires = BuildWireChanges(diff, resolver);
         
         var result = new AgentDiffReportV2
@@ -157,6 +162,135 @@ public static class DiffAgentFormatterV2
                 };
             })
             .ToList();
+    }
+
+    private static List<ChangeItem> BuildRecursiveClusterChanges(List<Node> parentNodes, List<Node> allNodes)
+    {
+        var clusterChanges = new List<ChangeItem>();
+
+        foreach (var node in parentNodes)
+        {
+            if (!node.Name.Contains("Cluster", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var clusterName = string.IsNullOrWhiteSpace(node.Nickname) ? node.Name : node.Nickname;
+            var oldPreview = node.PropertiesOld?.GetValueOrDefault("ClusterPreviewGraph");
+            var newPreview = node.Properties.GetValueOrDefault("ClusterPreviewGraph");
+
+            if (string.IsNullOrEmpty(oldPreview) && string.IsNullOrEmpty(newPreview))
+            {
+                continue;
+            }
+
+            // Parse inner cluster graph
+            var oldInnerNodes = ParseClusterPreview(oldPreview);
+            var newInnerNodes = ParseClusterPreview(newPreview);
+
+            // Simple matching: match by ID, then by Name+Type
+            var innerChanges = DiffInnerNodes(oldInnerNodes, newInnerNodes);
+
+            foreach (var (innerNode, status) in innerChanges)
+            {
+                var shortId = innerNode.Id.Length > 8 ? innerNode.Id.Substring(0, 8) : innerNode.Id;
+                var label = string.IsNullOrWhiteSpace(innerNode.Nickname) ? innerNode.Name : innerNode.Nickname;
+
+                clusterChanges.Add(new ChangeItem
+                {
+                    Id = shortId,
+                    Name = label,
+                    Type = innerNode.Name,
+                    Path = new[] { "root", clusterName },
+                    Status = status,
+                    Risk = new RiskInfo
+                    {
+                        Score = 0,
+                        Level = "none",
+                        Reasons = new List<string> { $"Inside cluster '{clusterName}'" }
+                    },
+                    Impact = new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 }
+                });
+            }
+        }
+
+        return clusterChanges;
+    }
+
+    private static List<ClusterInnerNode> ParseClusterPreview(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+        {
+            return new List<ClusterInnerNode>();
+        }
+
+        try
+        {
+            var doc = JsonDocument.Parse(json);
+            var nodes = new List<ClusterInnerNode>();
+
+            if (doc.RootElement.TryGetProperty("Objects", out var objects))
+            {
+                foreach (var obj in objects.EnumerateArray())
+                {
+                    var id = obj.TryGetProperty("GUID", out var guid) ? guid.GetString() ?? string.Empty : string.Empty;
+                    var name = obj.TryGetProperty("Name", out var n) ? n.GetString() ?? string.Empty : string.Empty;
+                    var nickname = obj.TryGetProperty("NickName", out var nn) ? nn.GetString() ?? string.Empty : string.Empty;
+
+                    nodes.Add(new ClusterInnerNode { Id = id, Name = name, Nickname = nickname });
+                }
+            }
+
+            return nodes;
+        }
+        catch
+        {
+            return new List<ClusterInnerNode>();
+        }
+    }
+
+    private static List<(ClusterInnerNode Node, string Status)> DiffInnerNodes(
+        List<ClusterInnerNode> oldNodes, List<ClusterInnerNode> newNodes)
+    {
+        var changes = new List<(ClusterInnerNode, string)>();
+        var oldById = oldNodes.ToDictionary(n => n.Id, n => n);
+        var newById = newNodes.ToDictionary(n => n.Id, n => n);
+        var matchedNew = new HashSet<string>();
+
+        // Match by ID
+        foreach (var oldNode in oldNodes)
+        {
+            if (newById.TryGetValue(oldNode.Id, out var newNode))
+            {
+                matchedNew.Add(newNode.Id);
+                if (oldNode.Name != newNode.Name || oldNode.Nickname != newNode.Nickname)
+                {
+                    changes.Add((newNode, "modified"));
+                }
+            }
+            else
+            {
+                changes.Add((oldNode, "removed"));
+            }
+        }
+
+        // Added nodes
+        foreach (var newNode in newNodes)
+        {
+            if (!matchedNew.Contains(newNode.Id))
+            {
+                changes.Add((newNode, "added"));
+            }
+        }
+
+        return changes;
+    }
+
+    private record ClusterInnerNode
+    {
+        public string Id { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
+        public string Nickname { get; init; } = string.Empty;
     }
 
     private static Dictionary<string, (string Old, string New)> GetActualPropertyChanges(Node node)
