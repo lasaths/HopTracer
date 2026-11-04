@@ -41,8 +41,8 @@ public static class DiffAgentFormatterV2
         // Full detail for displayed nodes
         var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff, idMap, skipDetail: false)).ToList();
         
-        // Add recursive cluster changes
-        var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes, idMap);
+        // Add recursive cluster changes (search all significant changes, not just displayed)
+        var clusterChanges = BuildRecursiveClusterChanges(significantChanges, diff.Nodes, idMap);
         changes.AddRange(clusterChanges);
         
         var wires = BuildWireChanges(diff, resolver);
@@ -206,6 +206,7 @@ public static class DiffAgentFormatterV2
     private static List<ChangeItem> BuildRecursiveClusterChanges(List<Node> parentNodes, List<Node> allNodes, Dictionary<string, string> parentIdMap)
     {
         var clusterChanges = new List<ChangeItem>();
+        var basePath = new[] { "root" };
 
         foreach (var node in parentNodes)
         {
@@ -223,37 +224,63 @@ public static class DiffAgentFormatterV2
                 continue;
             }
 
-            // Parse inner cluster graph
-            var oldInnerNodes = ParseClusterPreview(oldPreview);
-            var newInnerNodes = ParseClusterPreview(newPreview);
+            // Parse and recursively process inner nodes
+            var innerChanges = BuildClusterInnerChanges(oldPreview, newPreview, clusterName, basePath);
+            clusterChanges.AddRange(innerChanges);
+        }
 
-            // Simple matching: match by ID, then by Name+Type
-            var innerChanges = DiffInnerNodes(oldInnerNodes, newInnerNodes);
+        return clusterChanges.Take(20).ToList();
+    }
 
-            foreach (var (innerNode, status) in innerChanges)
+    private static List<ChangeItem> BuildClusterInnerChanges(string? oldPreview, string? newPreview, string clusterName, string[] parentPath)
+    {
+        var changes = new List<ChangeItem>();
+        
+        // Parse inner cluster graph
+        var oldInnerNodes = ParseClusterPreview(oldPreview);
+        var newInnerNodes = ParseClusterPreview(newPreview);
+
+        // Simple matching: match by ID
+        var innerChanges = DiffInnerNodes(oldInnerNodes, newInnerNodes);
+        var currentPath = parentPath.Append(clusterName).ToArray();
+
+        foreach (var (innerNode, status) in innerChanges)
+        {
+            var shortId = GetSafeShortId(innerNode.Id, innerChanges.Select(c => c.Node.Id));
+            var label = string.IsNullOrWhiteSpace(innerNode.Nickname) ? innerNode.Name : innerNode.Nickname;
+
+            // Check if this inner node is also a cluster
+            var isCluster = innerNode.Name.Contains("Cluster", StringComparison.OrdinalIgnoreCase);
+            
+            changes.Add(new ChangeItem
             {
-                var shortId = GetSafeShortId(innerNode.Id, innerChanges.Select(c => c.Node.Id));
-                var label = string.IsNullOrWhiteSpace(innerNode.Nickname) ? innerNode.Name : innerNode.Nickname;
-
-                clusterChanges.Add(new ChangeItem
+                Id = shortId,
+                Name = label,
+                Type = innerNode.Name,
+                Path = currentPath,
+                Status = status,
+                Risk = new RiskInfo
                 {
-                    Id = shortId,
-                    Name = label,
-                    Type = innerNode.Name,
-                    Path = new[] { "root", clusterName },
-                    Status = status,
-                    Risk = new RiskInfo
-                    {
-                        Score = 0,
-                        Level = "none",
-                        Reasons = new List<string> { $"Inside cluster '{clusterName}'" }
-                    },
-                    Impact = new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 }
-                });
+                    Score = 0,
+                    Level = "none",
+                    Reasons = new List<string> { $"Inside cluster '{clusterName}'" }
+                },
+                Impact = new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 }
+            });
+
+            // Recursively process nested clusters
+            if (isCluster && !string.IsNullOrEmpty(innerNode.ClusterPreviewGraph))
+            {
+                var oldMatched = oldInnerNodes.FirstOrDefault(n => n.Id == innerNode.Id);
+                var oldNested = oldMatched?.ClusterPreviewGraph;
+                var newNested = status == "removed" ? null : innerNode.ClusterPreviewGraph;
+                
+                var nestedChanges = BuildClusterInnerChanges(oldNested, newNested, label, currentPath);
+                changes.AddRange(nestedChanges);
             }
         }
 
-        return clusterChanges;
+        return changes;
     }
 
     private static List<ClusterInnerNode> ParseClusterPreview(string? json)
@@ -268,15 +295,32 @@ public static class DiffAgentFormatterV2
             var doc = JsonDocument.Parse(json);
             var nodes = new List<ClusterInnerNode>();
 
-            if (doc.RootElement.TryGetProperty("Objects", out var objects))
+            // New format: {"Nodes": [...], "Edges": [...]}
+            if (doc.RootElement.TryGetProperty("Nodes", out var nodesArray))
             {
-                foreach (var obj in objects.EnumerateArray())
+                foreach (var obj in nodesArray.EnumerateArray())
                 {
-                    var id = obj.TryGetProperty("GUID", out var guid) ? guid.GetString() ?? string.Empty : string.Empty;
+                    var id = obj.TryGetProperty("Id", out var guid) ? guid.GetString() ?? string.Empty : string.Empty;
                     var name = obj.TryGetProperty("Name", out var n) ? n.GetString() ?? string.Empty : string.Empty;
-                    var nickname = obj.TryGetProperty("NickName", out var nn) ? nn.GetString() ?? string.Empty : string.Empty;
+                    var nickname = obj.TryGetProperty("Nickname", out var nn) ? nn.GetString() ?? string.Empty : string.Empty;
+                    
+                    // Check if inner node has nested cluster
+                    string? clusterPreview = null;
+                    if (obj.TryGetProperty("Properties", out var propsObj) && propsObj.ValueKind == JsonValueKind.Object)
+                    {
+                        if (propsObj.TryGetProperty("ClusterPreviewGraph", out var cp))
+                        {
+                            clusterPreview = cp.GetString();
+                        }
+                    }
 
-                    nodes.Add(new ClusterInnerNode { Id = id, Name = name, Nickname = nickname });
+                    nodes.Add(new ClusterInnerNode 
+                    { 
+                        Id = id, 
+                        Name = name, 
+                        Nickname = nickname,
+                        ClusterPreviewGraph = clusterPreview
+                    });
                 }
             }
 
@@ -337,6 +381,7 @@ public static class DiffAgentFormatterV2
         public string Id { get; init; } = string.Empty;
         public string Name { get; init; } = string.Empty;
         public string Nickname { get; init; } = string.Empty;
+        public string? ClusterPreviewGraph { get; init; }
     }
 
     private static OmittedSummary BuildOmittedSummary(List<Node> omittedNodes)
