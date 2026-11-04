@@ -4508,6 +4508,51 @@
             const mini = document.getElementById('minimap-container');
             add(mini, 'minimap');
             canvasTagOverlayRects = rects;
+            applyTagLayerClip();
+        }
+
+        function getTagClipTop() {
+            let top = 0;
+            for (let i = 0; i < canvasTagOverlayRects.length; i++) {
+                const r = canvasTagOverlayRects[i];
+                if (r.kind === 'strip' || r.kind === 'graph-tabs') {
+                    const bottom = r.y + r.h;
+                    if (bottom > top) top = bottom;
+                }
+            }
+            return top;
+        }
+
+        function applyTagLayerClip() {
+            if (!canvasTagsLayer) return;
+            const next = `${Math.max(0, getTagClipTop())}px`;
+            if (canvasTagsLayer.style.getPropertyValue('--tag-clip-top') === next) return;
+            canvasTagsLayer.style.setProperty('--tag-clip-top', next);
+        }
+
+        function clipCanvasTagsToOverlays(canvasW, canvasH) {
+            const top = Math.max(0, getTagClipTop());
+            ctx.beginPath();
+            ctx.rect(0, top, canvasW, Math.max(0, canvasH - top));
+            ctx.clip();
+            ctx.beginPath();
+            ctx.rect(0, 0, canvasW, canvasH);
+            for (let i = 0; i < canvasTagOverlayRects.length; i++) {
+                const r = canvasTagOverlayRects[i];
+                if (r.kind === 'strip' || r.kind === 'graph-tabs') continue;
+                if (r.w > 0 && r.h > 0) ctx.rect(r.x, r.y, r.w, r.h);
+            }
+            ctx.clip('evenodd');
+        }
+
+        function tagAnchorUnderOverlay(nodeRect) {
+            const ax = nodeRect.x + nodeRect.w / 2;
+            const ay = nodeRect.y + nodeRect.h / 2;
+            for (let i = 0; i < canvasTagOverlayRects.length; i++) {
+                const r = canvasTagOverlayRects[i];
+                if (ax >= r.x && ax <= r.x + r.w && ay >= r.y && ay <= r.y + r.h) return true;
+            }
+            return false;
         }
 
         function getGroupLabelScreenRects(renderNodes, mix) {
@@ -4682,8 +4727,9 @@
             return Math.hypot(dx, dy);
         }
 
-        function tagNearestNodeIsOwn(box, ownRect, renderNodes, scale, ownId) {
-            const ownDist = rectGap(box, ownRect);
+        const TAG_OTHER_MIN_GAP = 6;
+
+        function tagNearestOtherGap(box, renderNodes, scale, ownId) {
             let nearestOther = Infinity;
             renderNodes.forEach(n => {
                 if (String(n.id) === String(ownId)) return;
@@ -4697,7 +4743,11 @@
                 const d = rectGap(box, r);
                 if (d < nearestOther) nearestOther = d;
             });
-            return ownDist <= nearestOther;
+            return nearestOther;
+        }
+
+        function tagSlotScore(ownDist, nearestOther) {
+            return ownDist - nearestOther;
         }
 
         function snapTagBox(box, dpr) {
@@ -4731,7 +4781,10 @@
             if (rectGap(box, ownRect) > TAG_RING_PX) return null;
             if (!tagSharesLeaderAxis(box.slot, box, ownRect)) return null;
             if (firstOverlappingObstacle(box, obstacles)) return null;
-            if (requireOwnNearest !== false && !tagNearestNodeIsOwn(box, ownRect, renderNodes, scale, ownId)) return null;
+            const ownDist = rectGap(box, ownRect);
+            const nearestOther = tagNearestOtherGap(box, renderNodes, scale, ownId);
+            if (requireOwnNearest !== false && nearestOther < TAG_OTHER_MIN_GAP) return null;
+            if (tagSlotScore(ownDist, nearestOther) >= 0) return null;
             return box;
         }
 
@@ -4739,8 +4792,8 @@
             const direct = evaluateTagCandidate(raw, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId, requireOwnNearest);
             if (direct) return direct;
             const range = slideAxis === 'x'
-                ? Math.max(ownRect.w, raw.w) + 16
-                : Math.max(ownRect.h, raw.h) + 16;
+                ? Math.max(ownRect.w, raw.w) + 48
+                : Math.max(ownRect.h, raw.h) + 48;
             const step = 4;
             for (let d = step; d <= range; d += step) {
                 for (let s = 0; s < 2; s++) {
@@ -4828,8 +4881,9 @@
                     el._tagW = s.w;
                     el._tagH = s.h;
                 }
+                const nodeRect = { x: nx, y: ny, w: s.nodeW, h: s.nodeH };
                 const on = !(nx + s.nodeW < 0 || ny + s.nodeH < 0 || nx > canvasW || ny > canvasH);
-                if (!on) continue;
+                if (!on || tagAnchorUnderOverlay(nodeRect)) continue;
                 leaders.push(buildTagLeader(
                     s.slot,
                     { x, y, w: s.w, h: s.h, slot: s.slot },
@@ -4925,6 +4979,12 @@
                 const tw = size.w;
                 const th = size.h;
                 const ownRect = { x: sx, y: sy, w: sw, h: sh };
+                const el = canvasTagElements.get(id);
+                if (tagAnchorUnderOverlay(ownRect)) {
+                    keep.add(id);
+                    setTagHidden(el, true);
+                    continue;
+                }
                 const candidates = buildTagCandidateList(sx, sy, sw, sh, tw, th);
                 const obstacles = overlays.concat(groupLabels, getNodeBodyScreenRects(renderNodes, n.id), placedTags);
 
@@ -4952,7 +5012,6 @@
                 chosen = pick(true) || pick(false);
 
                 keep.add(id);
-                const el = canvasTagElements.get(id);
                 const avoided = blocked.map(b => `${b.kind}:${b.name}`).join('|');
                 if (!state.dragging && el.dataset.avoided !== avoided) el.dataset.avoided = avoided;
                 if (!chosen) {
@@ -5033,6 +5092,7 @@
             const offset = ((lineWidthCss * dpr) % 2 ? 0.5 : 0) / dpr;
             ctx.save();
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            clipCanvasTagsToOverlays(canvas.clientWidth, canvas.clientHeight);
             ctx.lineWidth = lineWidthCss;
             ctx.lineCap = 'butt';
             ctx.setLineDash([]);
@@ -5070,6 +5130,7 @@
             const dpr = window.devicePixelRatio || 1;
             ctx.save();
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            clipCanvasTagsToOverlays(canvas.clientWidth, canvas.clientHeight);
             ctx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace';
             ctx.textBaseline = 'middle';
             ctx.textAlign = 'left';
@@ -5077,6 +5138,8 @@
                 const s = snap.tags[i];
                 const x = s.x + dx;
                 const y = s.y + dy;
+                const nodeRect = { x: s.nodeX + dx, y: s.nodeY + dy, w: s.nodeW, h: s.nodeH };
+                if (tagAnchorUnderOverlay(nodeRect)) continue;
                 ctx.globalAlpha = s.alpha;
                 ctx.fillStyle = '#000000';
                 ctx.strokeStyle = s.selected ? '#3A3CFF' : s.color;

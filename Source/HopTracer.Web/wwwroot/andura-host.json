@@ -20,5 +20,13 @@
     "footer": "--foot",
     "target": "--btn",
     "text-min": "--t-label"
+  },
+  "aliases": {
+    "--accent-primary": "--c-ultra",
+    "--border-hairline": "--c-line",
+    "--status-added": "--c-added",
+    "--status-modified": "--c-caution",
+    "--status-removed": "--c-removed",
+    "--status-same": "--c-muted"
   }
 }

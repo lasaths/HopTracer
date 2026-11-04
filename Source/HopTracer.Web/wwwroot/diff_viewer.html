@@ -21,7 +21,7 @@
             <div class="brand-logo"></div>
             <b>HopTracer</b>
         </div>
-        <div class="breadcrumb mono small" style="display: flex; align-items: center; gap: 8px; color: var(--c-text);">
+        <div class="breadcrumb mono small">
             <span id="meta-file-old">...</span>
             <svg class="ico" width="12" height="12"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
             <span id="meta-file-new">...</span>
@@ -296,23 +296,23 @@
             <aside class="col" id="details-summary" aria-label="Summary" style="display:none">
                 <section>
                     <div class="label">Review</div>
-                    <div class="row" style="align-items:baseline;gap:12px;margin-top:8px">
+                    <div class="row summary-hero">
                         <span class="display" id="summary-changes-count">0</span>
                         <span class="title muted" style="font-weight:400">changes to review</span>
                     </div>
                     <div class="rbar" role="img" aria-label="Risk split" id="summary-risk-bar"></div>
-                    <div class="row" style="gap:24px;margin-top:12px" id="summary-risk-counts"></div>
+                    <div class="row summary-risk-counts" id="summary-risk-counts"></div>
                 </section>
                 <section>
                     <div class="row">
                         <span class="label">Top risks</span>
                         <span class="label" style="margin-left:auto">Risk</span>
                     </div>
-                    <div class="risklist" style="margin-top:8px" id="summary-top-risks"></div>
+                    <div class="risklist mt-s8" id="summary-top-risks"></div>
                 </section>
                 <section>
                     <div class="label">Files · times CET</div>
-                    <div class="files" style="margin-top:8px" id="summary-files"></div>
+                    <div class="files mt-s8" id="summary-files"></div>
                 </section>
                 <div class="label" style="margin-top:auto" id="summary-perf">Parse — ms · match — · diff —</div>
             </aside>
@@ -360,9 +360,9 @@
     <!-- Loading Overlay -->
     <div id="loadingOverlay">
         <div id="loadingTitle">Converting & Comparing...</div>
-        <div style="width: 40px; height: 40px; border: 4px solid var(--border-hairline); border-top: 4px solid var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <div id="loadingSpinner"></div>
         <div id="loadingPercent">0%</div>
-        <div style="width:min(360px, calc(100vw - 48px)); height:10px; background:var(--wash); border:1px solid var(--border-hairline); border-radius:999px; margin-top:10px; overflow:hidden;">
+        <div id="loadingTrack">
             <div id="loadingProgressBar"></div>
         </div>
         <div id="loadingSubtitle">This may take a few moments for large files.</div>
