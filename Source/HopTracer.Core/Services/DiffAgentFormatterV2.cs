@@ -33,10 +33,13 @@ public static class DiffAgentFormatterV2
         var displayedChanges = significantChanges.Take(maxNodesToShow).ToList();
         var omittedCount = Math.Max(0, significantChanges.Count - maxNodesToShow);
         
-        var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff)).ToList();
+        // Check for 8-char ID collisions
+        var idMap = BuildSafeIdMap(displayedChanges);
+        
+        var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff, idMap)).ToList();
         
         // Add recursive cluster changes
-        var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes);
+        var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes, idMap);
         changes.AddRange(clusterChanges);
         
         var wires = BuildWireChanges(diff, resolver);
@@ -68,12 +71,38 @@ public static class DiffAgentFormatterV2
         return JsonSerializer.Serialize(result, AgentJsonOptions);
     }
 
-    private static ChangeItem BuildChange(Node node, DiffGraphResolver resolver, DiffComputation diff)
+    private static Dictionary<string, string> BuildSafeIdMap(List<Node> nodes)
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        var shortIds = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        // Group by 8-char prefix
+        foreach (var node in nodes)
+        {
+            var shortId = node.Id.Length > 8 ? node.Id.Substring(0, 8) : node.Id;
+            if (!shortIds.ContainsKey(shortId))
+            {
+                shortIds[shortId] = new List<string>();
+            }
+            shortIds[shortId].Add(node.Id);
+        }
+
+        // Use full ID if collision detected
+        foreach (var node in nodes)
+        {
+            var shortId = node.Id.Length > 8 ? node.Id.Substring(0, 8) : node.Id;
+            map[node.Id] = shortIds[shortId].Count > 1 ? node.Id : shortId;
+        }
+
+        return map;
+    }
+
+    private static ChangeItem BuildChange(Node node, DiffGraphResolver resolver, DiffComputation diff, Dictionary<string, string> idMap)
     {
         var nodeLabel = string.IsNullOrWhiteSpace(node.Nickname) ? node.Name : node.Nickname;
         var change = new ChangeItem
         {
-            Id = node.Id.Length > 8 ? node.Id.Substring(0, 8) : node.Id,
+            Id = idMap[node.Id],
             Name = nodeLabel,
             Type = node.Name,
             Path = new[] { "root" },
@@ -164,7 +193,7 @@ public static class DiffAgentFormatterV2
             .ToList();
     }
 
-    private static List<ChangeItem> BuildRecursiveClusterChanges(List<Node> parentNodes, List<Node> allNodes)
+    private static List<ChangeItem> BuildRecursiveClusterChanges(List<Node> parentNodes, List<Node> allNodes, Dictionary<string, string> parentIdMap)
     {
         var clusterChanges = new List<ChangeItem>();
 
@@ -193,7 +222,7 @@ public static class DiffAgentFormatterV2
 
             foreach (var (innerNode, status) in innerChanges)
             {
-                var shortId = innerNode.Id.Length > 8 ? innerNode.Id.Substring(0, 8) : innerNode.Id;
+                var shortId = GetSafeShortId(innerNode.Id, innerChanges.Select(c => c.Node.Id));
                 var label = string.IsNullOrWhiteSpace(innerNode.Nickname) ? innerNode.Name : innerNode.Nickname;
 
                 clusterChanges.Add(new ChangeItem
@@ -284,6 +313,13 @@ public static class DiffAgentFormatterV2
         }
 
         return changes;
+    }
+
+    private static string GetSafeShortId(string id, IEnumerable<string> allIds)
+    {
+        var shortId = id.Length > 8 ? id.Substring(0, 8) : id;
+        var collisions = allIds.Where(x => x != id && x.Length >= 8 && x.Substring(0, 8) == shortId).Any();
+        return collisions ? id : shortId;
     }
 
     private record ClusterInnerNode

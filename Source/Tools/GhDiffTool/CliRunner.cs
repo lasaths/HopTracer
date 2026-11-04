@@ -182,7 +182,7 @@ public static class CliRunner
         flags.FileOldLabel = $"{result.Baseline.Name} (baseline)";
         flags.FileNewLabel = Path.GetFileName(filePath);
         var code = WriteOutput(result.Diff, flags.FileOldLabel, flags.FileNewLabel, flags, stdout, stderr);
-        if (flags.FailOnRisk && !result.Passed)
+        if (flags.FailOnRisk.HasValue && !result.Passed)
         {
             return 1;
         }
@@ -360,9 +360,13 @@ public static class CliRunner
             stdout.Write(text);
         }
 
-        if (flags.FailOnRisk && diff.RiskSummary.CriticalCount + diff.RiskSummary.HighCount > 0)
+        if (flags.FailOnRisk.HasValue)
         {
-            return 1;
+            var maxRisk = diff.Nodes.Where(n => n.Status != "same").Max(n => (int?)n.RiskScore) ?? 0;
+            if (maxRisk >= flags.FailOnRisk.Value)
+            {
+                return 1;
+            }
         }
 
         return 0;
@@ -491,7 +495,7 @@ public static class CliRunner
                     flags.MaxEdges = int.Parse(NextArg(args, ref i, arg));
                     break;
                 case "--fail-on-risk":
-                    flags.FailOnRisk = true;
+                    flags.FailOnRisk = 60; // Default: high/critical
                     break;
                 case "--no-stats":
                     flags.NoStats = true;

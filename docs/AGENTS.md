@@ -82,13 +82,65 @@ hoptracer compare old.ghx new.ghx --format agent
 # Deterministic output for CI diffs
 hoptracer compare old.ghx new.ghx --format agent --no-timestamp > diff.json
 
-# Fail CI on high-risk changes
+# Fail CI on high-risk changes (default threshold: 60 = high/critical)
 hoptracer compare old.ghx new.ghx --format agent --fail-on-risk
 # Exit 0: OK, 1: risk threshold hit, 2+: error
+
+# Custom risk threshold (fail on medium+ changes)
+hoptracer compare old.ghx new.ghx --format agent --fail-on-risk=30
+# Exit 0: OK, 1: risk >= 30, 2+: error
 
 # Compare against git history
 hoptracer git path/to/definition.ghx --commit HEAD~5 --format agent
 ```
+
+### Before/After Example
+
+**Before (v1):**
+```json
+{
+  "totalChangedNodes": 3,
+  "summary": "3 node(s) modified; script changes detected.",
+  "wireChanges": [...large array...],
+  "nodeChanges": [...large array...],
+  "propertyChanges": [...includes unchanged properties...],
+  "opaqueChanges": {...base64 blobs...}
+}
+```
+
+**After (v2):**
+```json
+{
+  "schema": "hoptracer.agent/2",
+  "inputs": { "old": "old.ghx", "new": "new.ghx", "oldSha256": "abc...", "newSha256": "def..." },
+  "summary": {
+    "added": 0, "removed": 0, "modified": 3,
+    "maxRisk": "medium",
+    "headline": "3 node(s) modified; C# Script script changed (15 added, 8 removed)."
+  },
+  "changes": [
+    {
+      "id": "12345678",
+      "name": "C# Script",
+      "status": "modified",
+      "risk": { "score": 75, "level": "high", "reasons": ["Node modified", "Script/code change"] },
+      "script": {
+        "language": "C#",
+        "linesAdded": 15,
+        "linesRemoved": 8,
+        "unifiedDiff": "@@ -10,3 +10,10 @@\n ...",
+        "truncated": null
+      },
+      "impact": { "upstream": [...], "downstream": [...], "downstreamCount": 5 }
+    }
+  ],
+  "wires": [{ "status": "added", "from": "NodeA.Output", "to": "NodeB.Input", "wire": "NodeA.Output → NodeB.Input" }],
+  "cosmetic": { "moved": 2 },
+  "truncation": { "listed": 3, "total": 3, "omittedLowRisk": 0 }
+}
+```
+
+**Size reduction:** v2 is ~70% smaller on cluster/synthetic graphs by dropping unchanged properties, raw `ClusterPreviewGraph` blobs, and using unified diffs instead of full script bodies.
 
 ### Output Structure
 

@@ -16,7 +16,7 @@ public sealed class CliFlags
     public bool ShowEdges { get; set; }
     public int? MaxNodes { get; set; }
     public int? MaxEdges { get; set; }
-    public bool FailOnRisk { get; set; }
+    public int? FailOnRisk { get; set; }
     public bool NoStats { get; set; }
     public bool NoDiagnostics { get; set; }
     public bool NoRisk { get; set; }
