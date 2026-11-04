@@ -350,6 +350,20 @@ public class Differ : IDiffer
         var propertiesOld = new Dictionary<string, string>(StringComparer.Ordinal);
         var propertiesChanged = false;
         var includeScriptComparisonBaseline = false;
+        
+        // Store old Name/Nickname for rename detection
+        if (nOld.Name != nNew.Name)
+        {
+            propertiesOld["Name"] = nOld.Name;
+            properties["Name"] = nNew.Name;
+            propertiesChanged = true;
+        }
+        if (nOld.Nickname != nNew.Nickname)
+        {
+            propertiesOld["NickName"] = nOld.Nickname;
+            properties["NickName"] = nNew.Nickname;
+            propertiesChanged = true;
+        }
 
         foreach (var kv in nOld.Properties)
         {

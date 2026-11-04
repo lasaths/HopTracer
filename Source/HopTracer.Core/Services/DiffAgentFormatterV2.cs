@@ -130,6 +130,17 @@ public static class DiffAgentFormatterV2
             if (rename != null)
             {
                 change.Rename = rename;
+                // Add rename reason
+                var renameReason = rename.OldNickname != null && rename.NewNickname != null
+                    ? $"Renamed from '{rename.OldNickname}' to '{rename.NewNickname}'"
+                    : rename.OldName != null && rename.NewName != null
+                    ? $"Type changed from '{rename.OldName}' to '{rename.NewName}'"
+                    : "Name changed";
+                    
+                if (!change.Risk.Reasons.Contains(renameReason))
+                {
+                    change.Risk.Reasons = change.Risk.Reasons.Prepend(renameReason).ToList();
+                }
             }
 
             var propertyChanges = GetActualPropertyChanges(node);
