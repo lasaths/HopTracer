@@ -4284,6 +4284,51 @@
             }
         }
 
+        function getFitOverlayInsets(canvasW, canvasH) {
+            refreshCanvasTagOverlayRects();
+            const tagRoom = 48;
+            const edge = 16;
+            let top = 50;
+            let right = 50;
+            let bottom = 50;
+            let left = 50;
+            for (let i = 0; i < canvasTagOverlayRects.length; i++) {
+                const r = canvasTagOverlayRects[i];
+                if (!r || r.w <= 0 || r.h <= 0) continue;
+                // Lift / drop the whole graph so nodes and their tags sit in the
+                // clear band between the top chrome and the minimap / zoom stack.
+                // Do not also consume the minimap width as a left inset — that
+                // shrinks fit scale and hides tags.
+                if (r.kind === 'strip' || r.kind === 'graph-tabs' || r.kind === 'legend') {
+                    top = Math.max(top, r.y + r.h + tagRoom);
+                }
+                if (r.kind === 'zoom') {
+                    right = Math.max(right, canvasW - r.x + edge);
+                }
+                if (r.kind === 'zoom' || r.kind === 'minimap') {
+                    bottom = Math.max(bottom, canvasH - r.y + tagRoom);
+                }
+            }
+            if (top + bottom >= canvasH) {
+                top = Math.min(top, Math.floor(canvasH * 0.35));
+                bottom = Math.min(bottom, Math.floor(canvasH * 0.35));
+            }
+            if (left + right >= canvasW) {
+                left = Math.min(left, Math.floor(canvasW * 0.35));
+                right = Math.min(right, Math.floor(canvasW * 0.35));
+            }
+            return { top, right, bottom, left };
+        }
+
+        function isViewZoomedIn() {
+            const fit = state.fitScale;
+            return Number.isFinite(fit) && fit > 0 && state.view.scale > fit + 0.02;
+        }
+
+        function shouldHideTagsUnderOverlays() {
+            return !!state.dragging || isViewZoomedIn();
+        }
+
         function fitView() {
             updateBounds();
             if (state.nodes.length === 0) return;
@@ -4292,19 +4337,22 @@
             const canvasWidth = canvas.width / dpr;
             const canvasHeight = canvas.height / dpr;
             
-            const padding = 50;
+            const inset = getFitOverlayInsets(canvasWidth, canvasHeight);
             const w = state.bounds.maxX - state.bounds.minX;
             const h = state.bounds.maxY - state.bounds.minY;
 
             // Prevent division by zero
             if (w === 0 || h === 0) return;
 
-            const scaleX = (canvasWidth - padding * 2) / w;
-            const scaleY = (canvasHeight - padding * 2) / h;
+            const availW = Math.max(1, canvasWidth - inset.left - inset.right);
+            const availH = Math.max(1, canvasHeight - inset.top - inset.bottom);
+            const scaleX = availW / w;
+            const scaleY = availH / h;
 
             state.view.scale = Math.min(scaleX, scaleY, 1); // Cap scale at 1
-            state.view.x = (canvasWidth - w * state.view.scale) / 2 - state.bounds.minX * state.view.scale;
-            state.view.y = (canvasHeight - h * state.view.scale) / 2 - state.bounds.minY * state.view.scale;
+            state.view.x = inset.left + (availW - w * state.view.scale) / 2 - state.bounds.minX * state.view.scale;
+            state.view.y = inset.top + (availH - h * state.view.scale) / 2 - state.bounds.minY * state.view.scale;
+            state.fitScale = state.view.scale;
 
             scheduleDraw();
         }
@@ -4883,7 +4931,7 @@
                 }
                 const nodeRect = { x: nx, y: ny, w: s.nodeW, h: s.nodeH };
                 const on = !(nx + s.nodeW < 0 || ny + s.nodeH < 0 || nx > canvasW || ny > canvasH);
-                if (!on || tagAnchorUnderOverlay(nodeRect)) continue;
+                if (!on || (shouldHideTagsUnderOverlays() && tagAnchorUnderOverlay(nodeRect))) continue;
                 leaders.push(buildTagLeader(
                     s.slot,
                     { x, y, w: s.w, h: s.h, slot: s.slot },
@@ -4980,7 +5028,7 @@
                 const th = size.h;
                 const ownRect = { x: sx, y: sy, w: sw, h: sh };
                 const el = canvasTagElements.get(id);
-                if (tagAnchorUnderOverlay(ownRect)) {
+                if (shouldHideTagsUnderOverlays() && tagAnchorUnderOverlay(ownRect)) {
                     keep.add(id);
                     setTagHidden(el, true);
                     continue;
@@ -5139,7 +5187,7 @@
                 const x = s.x + dx;
                 const y = s.y + dy;
                 const nodeRect = { x: s.nodeX + dx, y: s.nodeY + dy, w: s.nodeW, h: s.nodeH };
-                if (tagAnchorUnderOverlay(nodeRect)) continue;
+                if (shouldHideTagsUnderOverlays() && tagAnchorUnderOverlay(nodeRect)) continue;
                 ctx.globalAlpha = s.alpha;
                 ctx.fillStyle = '#000000';
                 ctx.strokeStyle = s.selected ? '#3A3CFF' : s.color;
@@ -6328,6 +6376,7 @@
             if (!node) {
                 // Show summary panel
                 if (detailsSummary) {
+                    detailsSummary.hidden = false;
                     detailsSummary.style.display = 'flex';
                     populateSummaryPanel();
                 }
@@ -6341,7 +6390,10 @@
             }
 
             // Show inspector panel
-            if (detailsSummary) detailsSummary.style.display = 'none';
+            if (detailsSummary) {
+                detailsSummary.hidden = true;
+                detailsSummary.style.display = 'none';
+            }
             if (detailsTabs) detailsTabs.style.display = '';
             detailsPaneInspector.style.display = '';
 
