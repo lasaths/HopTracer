@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Archive name="Root">
+  <items>
+    <item name="plugin_version">1.0</item>
+  </items>
+  <chunks>
+    <chunk name="Definition">
+      <items>
+        <item name="ObjectCount" type_name="gh_int32" type_code="3">1</item>
+      </items>
+      <chunks>
+        <chunk name="Object" index="0">
+          <items>
+            <item name="GUID" type_name="gh_guid" type_code="9">57da07bd-ecab-415d-9d86-af36d7073abc</item>
+            <item name="Name" type_name="gh_string" type_code="10">Panel</item>
+          </items>
+          <chunks>
+            <chunk name="Container">
+              <items>
+                <item name="InstanceGuid" type_name="gh_guid" type_code="9">panel-guid-001</item>
+                <item name="Name" type_name="gh_string" type_code="10">Panel</item>
+                <item name="NickName" type_name="gh_string" type_code="10">MyPanel</item>
+                <item name="UserText" type_name="gh_string" type_code="10">Old text content</item>
+              </items>
+            </chunk>
+          </chunks>
+        </chunk>
+      </chunks>
+    </chunk>
+  </chunks>
+</Archive>

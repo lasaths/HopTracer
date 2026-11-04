@@ -148,6 +148,16 @@ public static class DiffAgentFormatterV2
             {
                 change.Script = scriptChange;
             }
+
+            // Panel text for Panel components (added or modified)
+            if (node.Name.Contains("Panel", StringComparison.OrdinalIgnoreCase) && node.Status != "removed")
+            {
+                var text = node.Properties.GetValueOrDefault("UserText");
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    change.PanelText = text.Length > 200 ? text.Substring(0, 200) + "..." : text;
+                }
+            }
         }
 
         return change;
@@ -750,6 +760,7 @@ internal sealed class ChangeItem
     public NameChange? Rename { get; set; }
     public List<ParamChange>? Params { get; set; }
     public ScriptChange? Script { get; set; }
+    public string? PanelText { get; set; }
     public ImpactInfo Impact { get; set; } = new();
 }
 
