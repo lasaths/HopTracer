@@ -519,11 +519,26 @@ public static class CliRunner
                     flags.RelativePaths = false;
                     break;
                 default:
-                    if (arg.StartsWith('-'))
+                    if (arg.StartsWith("--fail-on-risk=", StringComparison.Ordinal))
+                    {
+                        var value = arg.Substring("--fail-on-risk=".Length);
+                        if (int.TryParse(value, out var threshold) && threshold >= 0 && threshold <= 100)
+                        {
+                            flags.FailOnRisk = threshold;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"Invalid --fail-on-risk threshold: {value} (must be 0-100)");
+                        }
+                    }
+                    else if (arg.StartsWith('-'))
                     {
                         throw new InvalidOperationException($"Unknown option: {arg}");
                     }
-                    positional.Add(arg);
+                    else
+                    {
+                        positional.Add(arg);
+                    }
                     break;
             }
         }
