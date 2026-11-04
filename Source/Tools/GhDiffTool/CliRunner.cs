@@ -378,7 +378,15 @@ public static class CliRunner
 
         if (flags.FailOnRisk.HasValue)
         {
-            var maxRisk = diff.Nodes.Where(n => n.Status != "same").Max(n => (int?)n.RiskScore) ?? 0;
+            var changedNodes = diff.Nodes.Where(n => n.Status != "same").ToList();
+            
+            // If no changes and threshold is 0, exit 0 (no risk to fail on)
+            if (changedNodes.Count == 0)
+            {
+                return 0;
+            }
+            
+            var maxRisk = changedNodes.Max(n => (int?)n.RiskScore) ?? 0;
             if (maxRisk >= flags.FailOnRisk.Value)
             {
                 return 1;
