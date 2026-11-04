@@ -34,6 +34,7 @@ public static class DiffAgentFormatterV2
         var omittedCount = Math.Max(0, significantChanges.Count - MaxChangesToShow);
         
         var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff)).ToList();
+        var wires = BuildWireChanges(diff, resolver);
         
         var result = new AgentDiffReportV2
         {
@@ -48,6 +49,7 @@ public static class DiffAgentFormatterV2
             },
             Summary = BuildSummaryV2(diff, changes, cosmeticMoves),
             Changes = changes,
+            Wires = wires,
             Cosmetic = new CosmeticChanges { Moved = cosmeticMoves },
             Diagnostics = BuildDiagnosticsV2(diff.Diagnostics),
             Truncation = new TruncationInfo
@@ -75,10 +77,17 @@ public static class DiffAgentFormatterV2
             {
                 Score = node.RiskScore,
                 Level = GetRiskLevel(node.RiskScore),
-                Reasons = node.RiskReasons
+                Reasons = node.RiskReasons.Any() ? node.RiskReasons : new List<string> { "Node modified" }
             },
             Impact = BuildImpact(node, diff)
         };
+
+        // Check for name/nickname changes
+        var rename = TryGetRename(node);
+        if (rename != null)
+        {
+            change.Rename = rename;
+        }
 
         var propertyChanges = GetActualPropertyChanges(node);
         if (propertyChanges.Count > 0)
@@ -100,6 +109,56 @@ public static class DiffAgentFormatterV2
         return change;
     }
 
+    private static NameChange? TryGetRename(Node node)
+    {
+        if (node.PropertiesOld == null)
+        {
+            return null;
+        }
+
+        node.PropertiesOld.TryGetValue("Name", out var oldName);
+        node.Properties.TryGetValue("Name", out var newName);
+        node.PropertiesOld.TryGetValue("NickName", out var oldNickname);
+        node.Properties.TryGetValue("NickName", out var newNickname);
+
+        var hasNameChange = !string.IsNullOrEmpty(oldName) && !string.IsNullOrEmpty(newName) && oldName != newName;
+        var hasNicknameChange = !string.IsNullOrEmpty(oldNickname) && !string.IsNullOrEmpty(newNickname) && oldNickname != newNickname;
+
+        if (hasNameChange || hasNicknameChange)
+        {
+            return new NameChange
+            {
+                OldName = hasNameChange ? oldName : null,
+                NewName = hasNameChange ? newName : null,
+                OldNickname = hasNicknameChange ? oldNickname : null,
+                NewNickname = hasNicknameChange ? newNickname : null
+            };
+        }
+
+        return null;
+    }
+
+    private static List<WireChange> BuildWireChanges(DiffComputation diff, DiffGraphResolver resolver)
+    {
+        return diff.Edges
+            .Where(e => e.Status != "same")
+            .OrderBy(e => e.Status)
+            .ThenBy(e => e.Source)
+            .Take(50)
+            .Select(e =>
+            {
+                var resolved = resolver.Resolve(e);
+                return new WireChange
+                {
+                    Status = e.Status,
+                    From = resolved.From,
+                    To = resolved.To,
+                    Wire = resolved.Wire
+                };
+            })
+            .ToList();
+    }
+
     private static Dictionary<string, (string Old, string New)> GetActualPropertyChanges(Node node)
     {
         var changes = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
@@ -109,9 +168,23 @@ public static class DiffAgentFormatterV2
             return changes;
         }
 
+        // Check if Text is a base64-encoded script duplicate
+        node.Properties.TryGetValue("ScriptSource", out var scriptSource);
+        node.Properties.TryGetValue("Text", out var textProp);
+        var textIsScriptDuplicate = !string.IsNullOrEmpty(scriptSource) && 
+                                    !string.IsNullOrEmpty(textProp) && 
+                                    textProp.Length > 100 &&
+                                    textProp.All(c => char.IsLetterOrDigit(c) || c is '+' or '/' or '=');
+
         foreach (var key in node.PropertiesOld.Keys)
         {
             if (ShouldSkipProperty(key))
+            {
+                continue;
+            }
+
+            // Skip Text only if it's a script duplicate
+            if (key.Equals("Text", StringComparison.OrdinalIgnoreCase) && textIsScriptDuplicate)
             {
                 continue;
             }
@@ -181,17 +254,22 @@ public static class DiffAgentFormatterV2
         var upstreamNodes = new List<ImpactNode>();
         var downstreamNodes = new List<ImpactNode>();
 
+        // Build a resolver to get port names
+        var resolver = new DiffGraphResolver(diff.Nodes);
+
         foreach (var edge in diff.Edges.Where(e => e.Target == node.Id))
         {
             var sourceNode = diff.Nodes.FirstOrDefault(n => n.Id == edge.Source);
             if (sourceNode != null)
             {
                 var label = string.IsNullOrWhiteSpace(sourceNode.Nickname) ? sourceNode.Name : sourceNode.Nickname;
+                var resolved = resolver.Resolve(edge);
                 upstreamNodes.Add(new ImpactNode
                 {
                     Id = sourceNode.Id.Length > 8 ? sourceNode.Id.Substring(0, 8) : sourceNode.Id,
                     Name = label,
-                    Port = edge.TargetPort
+                    Port = resolved.TargetPortName,
+                    Status = edge.Status != "same" ? edge.Status : null
                 });
             }
         }
@@ -202,11 +280,13 @@ public static class DiffAgentFormatterV2
             if (targetNode != null)
             {
                 var label = string.IsNullOrWhiteSpace(targetNode.Nickname) ? targetNode.Name : targetNode.Nickname;
+                var resolved = resolver.Resolve(edge);
                 downstreamNodes.Add(new ImpactNode
                 {
                     Id = targetNode.Id.Length > 8 ? targetNode.Id.Substring(0, 8) : targetNode.Id,
                     Name = label,
-                    Port = edge.SourcePort
+                    Port = resolved.SourcePortName,
+                    Status = edge.Status != "same" ? edge.Status : null
                 });
             }
         }
@@ -349,8 +429,9 @@ public static class DiffAgentFormatterV2
         key.Equals("GUID", StringComparison.OrdinalIgnoreCase) ||
         key.Equals("Hidden", StringComparison.OrdinalIgnoreCase) ||
         key.Equals("Optional", StringComparison.OrdinalIgnoreCase) ||
-        key.Equals("Text", StringComparison.OrdinalIgnoreCase) ||
         key.Equals("SourceCount", StringComparison.OrdinalIgnoreCase) ||
+        key.Equals("Name", StringComparison.OrdinalIgnoreCase) ||
+        key.Equals("NickName", StringComparison.OrdinalIgnoreCase) ||
         key.Equals("RefID", StringComparison.OrdinalIgnoreCase);
 
     private static readonly JsonSerializerOptions AgentJsonOptions = new()
@@ -369,6 +450,7 @@ internal sealed class AgentDiffReportV2
     public InputFiles Inputs { get; set; } = new();
     public SummaryInfo Summary { get; set; } = new();
     public List<ChangeItem> Changes { get; set; } = new();
+    public List<WireChange> Wires { get; set; } = new();
     public CosmeticChanges Cosmetic { get; set; } = new();
     public List<DiagnosticGroup> Diagnostics { get; set; } = new();
     public TruncationInfo Truncation { get; set; } = new();
@@ -401,9 +483,18 @@ internal sealed class ChangeItem
     public string[] Path { get; set; } = Array.Empty<string>();
     public string Status { get; set; } = string.Empty;
     public RiskInfo Risk { get; set; } = new();
+    public NameChange? Rename { get; set; }
     public List<ParamChange>? Params { get; set; }
     public ScriptChange? Script { get; set; }
     public ImpactInfo Impact { get; set; } = new();
+}
+
+internal sealed class NameChange
+{
+    public string? OldName { get; set; }
+    public string? NewName { get; set; }
+    public string? OldNickname { get; set; }
+    public string? NewNickname { get; set; }
 }
 
 internal sealed class RiskInfo
@@ -440,6 +531,7 @@ internal sealed class ImpactNode
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Port { get; set; } = string.Empty;
+    public string? Status { get; set; }
 }
 
 internal sealed class CosmeticChanges
@@ -459,4 +551,12 @@ internal sealed class TruncationInfo
     public int Listed { get; set; }
     public int Total { get; set; }
     public int OmittedLowRisk { get; set; }
+}
+
+internal sealed class WireChange
+{
+    public string Status { get; set; } = string.Empty;
+    public string From { get; set; } = string.Empty;
+    public string To { get; set; } = string.Empty;
+    public string Wire { get; set; } = string.Empty;
 }
