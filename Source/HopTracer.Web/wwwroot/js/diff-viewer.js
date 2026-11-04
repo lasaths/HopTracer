@@ -2319,12 +2319,12 @@
                     timeDiffContainer.style.display = 'none';
                 }
             } else {
-                if (GRAPH_DATA.newMeta) {
+                if (GRAPH_DATA.newMeta && leftNameElem && leftDateElem) {
                     leftNameElem.textContent = GRAPH_DATA.newMeta.name || 'Unknown';
                     leftDateElem.textContent = GRAPH_DATA.newMeta.date ? new Date(GRAPH_DATA.newMeta.date).toLocaleString() : 'Unknown Date';
                     leftDateElem.title = GRAPH_DATA.newMeta.description || '';
                 }
-                if (GRAPH_DATA.oldMeta) {
+                if (GRAPH_DATA.oldMeta && rightNameElem && rightDateElem) {
                     rightNameElem.textContent = GRAPH_DATA.oldMeta.name || 'Unknown';
                     rightDateElem.textContent = GRAPH_DATA.oldMeta.date ? new Date(GRAPH_DATA.oldMeta.date).toLocaleString() : 'Unknown Date';
                     rightDateElem.title = GRAPH_DATA.oldMeta.description || '';
@@ -2335,8 +2335,8 @@
                     const oldDate = new Date(GRAPH_DATA.oldMeta.date);
                     const diffMs = Math.abs(newDate - oldDate);
                     const timeDiff = formatTimeDifference(diffMs);
-
-                    document.getElementById('time-diff-value').textContent = timeDiff;
+                    const timeDiffValue = document.getElementById('time-diff-value');
+                    if (timeDiffValue) timeDiffValue.textContent = timeDiff;
                     if (timeDiffContainer) {
                         timeDiffContainer.style.display = 'block';
                     }
@@ -3868,8 +3868,53 @@
                 componentSortSelect.addEventListener('change', (e) => {
                     const nextSort = String(e.target.value || 'risk').toLowerCase();
                     state.componentSort = nextSort;
+                    syncQueueSortMenu();
                     renderComponentResultsList();
                 });
+            }
+
+            const queueSortBtn = document.getElementById('queue-sort-btn');
+            const queueSortMenu = document.getElementById('queue-sort-menu');
+            const queueSortLabel = document.getElementById('queue-sort-label');
+            const SORT_LABELS = { risk: 'RISK', az: 'A-Z', za: 'Z-A', dist: 'DIST', data: 'DATA' };
+            function syncQueueSortMenu() {
+                const cur = String(state.componentSort || 'risk').toLowerCase();
+                if (queueSortLabel) queueSortLabel.textContent = SORT_LABELS[cur] || 'RISK';
+                if (queueSortMenu) {
+                    queueSortMenu.querySelectorAll('[data-sort]').forEach(btn => {
+                        btn.setAttribute('aria-selected', btn.dataset.sort === cur ? 'true' : 'false');
+                    });
+                }
+            }
+            if (queueSortBtn && queueSortMenu) {
+                queueSortBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const open = queueSortMenu.hidden;
+                    queueSortMenu.hidden = !open;
+                    queueSortBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                });
+                queueSortMenu.querySelectorAll('[data-sort]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const nextSort = String(btn.dataset.sort || 'risk').toLowerCase();
+                        state.componentSort = nextSort;
+                        if (componentSortSelect) {
+                            componentSortSelect.value = nextSort;
+                            componentSortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        } else {
+                            syncQueueSortMenu();
+                            renderComponentResultsList();
+                        }
+                        queueSortMenu.hidden = true;
+                        queueSortBtn.setAttribute('aria-expanded', 'false');
+                    });
+                });
+                document.addEventListener('click', () => {
+                    if (!queueSortMenu.hidden) {
+                        queueSortMenu.hidden = true;
+                        queueSortBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                syncQueueSortMenu();
             }
 
             const togglePorts = document.getElementById('toggle-ports');
@@ -3932,6 +3977,17 @@
             document.getElementById('btn-fit').addEventListener('click', fitView);
             document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
             document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
+            const btnMinimap = document.getElementById('btn-minimap');
+            const miniContainer = document.getElementById('minimap-container');
+            if (btnMinimap && miniContainer) {
+                btnMinimap.addEventListener('click', () => {
+                    const show = miniContainer.hidden;
+                    miniContainer.hidden = !show;
+                    btnMinimap.setAttribute('aria-pressed', show ? 'true' : 'false');
+                    refreshCanvasTagOverlayRects();
+                    scheduleDraw();
+                });
+            }
 
             if (btnSidebarCollapse) btnSidebarCollapse.addEventListener('click', toggleSidebar);
             if (btnSidebarExpand) btnSidebarExpand.addEventListener('click', toggleSidebar);
@@ -4299,13 +4355,11 @@
                 // clear band between the top chrome and the minimap / zoom stack.
                 // Do not also consume the minimap width as a left inset — that
                 // shrinks fit scale and hides tags.
-                if (r.kind === 'strip' || r.kind === 'graph-tabs' || r.kind === 'legend') {
+                if (r.kind === 'strip' || r.kind === 'graph-tabs') {
                     top = Math.max(top, r.y + r.h + tagRoom);
                 }
-                if (r.kind === 'zoom') {
-                    right = Math.max(right, canvasW - r.x + edge);
-                }
                 if (r.kind === 'zoom' || r.kind === 'minimap') {
+                    right = Math.max(right, canvasW - r.x + edge);
                     bottom = Math.max(bottom, canvasH - r.y + tagRoom);
                 }
             }
@@ -4552,7 +4606,6 @@
             add(main && main.querySelector('.strip'), 'strip');
             add(graphTabsBar, 'graph-tabs', true);
             add(main && main.querySelector('.overlay-controls'), 'zoom');
-            add(main && main.querySelector('.top-right-tools'), 'legend');
             const mini = document.getElementById('minimap-container');
             add(mini, 'minimap');
             canvasTagOverlayRects = rects;
@@ -5230,7 +5283,8 @@
 
         function draw() {
             const dpr = window.devicePixelRatio || 1;
-            
+            window.__clusterGlyphs = [];
+
             // Clear
             ctx.fillStyle = CONFIG.colors.surface;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -5534,6 +5588,9 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
+                const isCluster = isClusterLikeNode(n);
+                const clusterLayout = isCluster ? clusterGlyphLayout(n, state.view.scale) : null;
+
                 // Text label - always show node nickname or name
                 // Hide labels below zoom 0.5 (11px would be too large in world space)
                 if (state.view.scale >= 0.5) {
@@ -5545,13 +5602,12 @@
                     ctx.font = `${fontSize}px "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    
-                    // Center text in node
-                    const maxWidth = n.w - 16;
-                    const tx = n.x + n.w / 2;
+
+                    // Cluster nodes reserve a right gutter for the stacked-squares glyph.
+                    const maxWidth = clusterLayout ? clusterLayout.labelW : (n.w - 16);
+                    const tx = clusterLayout ? clusterLayout.labelCx : (n.x + n.w / 2);
                     const ty = n.y + n.h / 2;
-                    
-                    // Truncate if needed
+
                     let displayLabel = label;
                     if (ctx.measureText(label).width > maxWidth) {
                         while (displayLabel.length > 3 && ctx.measureText(displayLabel + '…').width > maxWidth) {
@@ -5559,36 +5615,44 @@
                         }
                         displayLabel += '…';
                     }
-                    
+
                     ctx.fillText(displayLabel, tx, ty);
+                    if (clusterLayout) {
+                        clusterLayout.displayLabel = displayLabel;
+                        clusterLayout.labelTextW = ctx.measureText(displayLabel).width;
+                        clusterLayout.labelRight = tx + clusterLayout.labelTextW / 2;
+                    }
                 }
 
                 // Draw port sockets only (no labels yet)
                 drawNodePortSockets(n, false, null);
 
-                // Cluster indicator: draw a special double-border and icon
-                const props = n.properties || n.Properties || {};
-                const isCluster = isClusterLikeNode(n);
-                if (isCluster) {
-                    // Inner dashed border for cluster nodes
+                // Cluster indicator: dashed inner outline + stacked-squares glyph
+                if (clusterLayout) {
+                    const outlinePad = 2;
+                    const dashRight = clusterLayout.gx - clusterLayout.gap;
+                    const dashW = Math.max(0, dashRight - (n.x + outlinePad));
                     ctx.save();
                     ctx.strokeStyle = '#b388ff';
                     ctx.lineWidth = 1.5 / state.view.scale;
                     ctx.setLineDash([4 / state.view.scale, 3 / state.view.scale]);
-                    roundRect(ctx, n.x + 2, n.y + 2, n.w - 4, n.h - 4, CONFIG.node.radius - 1);
-                    ctx.stroke();
+                    if (dashW > 4) {
+                        roundRect(ctx, n.x + outlinePad, n.y + outlinePad, dashW, n.h - outlinePad * 2, Math.max(0, CONFIG.node.radius - 1));
+                        ctx.stroke();
+                    }
                     ctx.setLineDash([]);
                     ctx.restore();
 
-                    // Cluster icon (small box-in-box) in top-right corner
-                    if (state.view.scale > 0.35) {
-                        const ix = n.x + n.w - 16;
-                        const iy = n.y + 8;
-                        ctx.strokeStyle = '#b388ff';
-                        ctx.lineWidth = 1 / state.view.scale;
-                        ctx.strokeRect(ix, iy, 8, 6);
-                        ctx.strokeRect(ix + 2, iy + 2, 8, 6);
-                    }
+                    ctx.strokeStyle = '#b388ff';
+                    ctx.lineWidth = 1 / state.view.scale;
+                    ctx.strokeRect(clusterLayout.gx, clusterLayout.gy, clusterLayout.boxW, clusterLayout.boxH);
+                    ctx.strokeRect(
+                        clusterLayout.gx + clusterLayout.stack,
+                        clusterLayout.gy + clusterLayout.stack,
+                        clusterLayout.boxW,
+                        clusterLayout.boxH
+                    );
+                    recordClusterGlyphDebug(n, clusterLayout);
                 }
 
                 ctx.globalAlpha = 1.0;
@@ -6108,10 +6172,6 @@
             const togglePorts = document.getElementById('toggle-ports');
             const showPorts = togglePorts ? !!togglePorts.checked : !!state.showPortDetails;
             state.showPortDetails = showPorts;
-
-            detailsPaneInspector.querySelectorAll('.connections-card').forEach(card => {
-                card.style.display = showPorts ? '' : 'none';
-            });
         }
 
         function showHighLevelModificationDetails() {
@@ -6369,6 +6429,38 @@
             perfElem.textContent = `Parse ${t('parse')} ms · match ${t('match')} · diff ${t('diff')}`;
         }
 
+        function kvArrowIcon() {
+            return '<svg class="ico kv-arrow" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>';
+        }
+
+        function kvRow(label, valueHtml) {
+            return `<div class="kv"><span class="kv-k">${escapeHtml(label)}</span><span class="kv-v">${valueHtml}</span></div>`;
+        }
+
+        function kvPlain(label, value) {
+            return kvRow(label, escapeHtml(String(value ?? '')));
+        }
+
+        function kvDelta(label, oldVal, newVal) {
+            return kvRow(
+                label,
+                `<span class="kv-old">${escapeHtml(String(oldVal ?? ''))}</span>${kvArrowIcon()}<span class="kv-new">${escapeHtml(String(newVal ?? ''))}</span>`
+            );
+        }
+
+        function inspSection(title, body) {
+            if (!body) return '';
+            return `<section class="insp-sec"><div class="label">${escapeHtml(title)}</div>${body}</section>`;
+        }
+
+        function clearCanvasSelection() {
+            state.selected = null;
+            updateDetailsPanel(null);
+            renderComponentResultsList();
+            syncTagModeLabel();
+            scheduleDraw();
+        }
+
         function updateDetailsPanel(node) {
             const detailsSummary = document.getElementById('details-summary');
             const detailsTabs = document.querySelector('.details-tabs');
@@ -6407,58 +6499,43 @@
             const renderTopUserInputs = !isPanelLikeNode(node);
             const riskReasonText = showHighLevelDetails && riskReasons.length ? ` (${riskReasons.slice(0, 2).join(', ')})` : '';
 
-            const connectionsBlock = showHighLevelDetails ? `
-                <div class="detail-card connections-card" style="${showPorts ? '' : 'display:none;'}">
-                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Connections</div>
-                    <div class="prop-row">
-                        <span class="prop-label">Inputs</span>
-                        <span class="prop-value">${node.inAdded || 0} add / ${node.inRemoved || 0} rem</span>
-                    </div>
-                    <div class="prop-row">
-                        <span class="prop-label">Outputs</span>
-                        <span class="prop-value">${node.outAdded || 0} add / ${node.outRemoved || 0} rem</span>
-                    </div>
-                    ${renderPorts(node.inputs, 'Inputs')}
-                    ${renderPorts(node.outputs, 'Outputs')}
-                </div>
-            ` : '';
+            const whyBody = renderChangeSummary(node);
+            const typeBody = [
+                renderTopUserInputs ? renderUserInputSummary(node) : '',
+                renderProperties(node)
+            ].join('');
+            const inAdd = node.inAdded || 0;
+            const inRem = node.inRemoved || 0;
+            const outAdd = node.outAdded || 0;
+            const outRem = node.outRemoved || 0;
+            let connBody = kvPlain('Inputs', `${inAdd} add / ${inRem} rem`) +
+                kvPlain('Outputs', `${outAdd} add / ${outRem} rem`);
+            if (showPorts) {
+                connBody += renderPorts(node.inputs, 'Inputs') + renderPorts(node.outputs, 'Outputs');
+            }
+            let canvasBody = kvPlain('Id', `${String(node.id || '').substring(0, 8)}…`);
+            canvasBody += kvPlain('Position', `${Math.round(node.x)}, ${Math.round(node.y)}`);
+            if (node.dx !== undefined || node.dy !== undefined) {
+                canvasBody += kvPlain('Movement', `${Number(node.dx || 0).toFixed(1)}, ${Number(node.dy || 0).toFixed(1)}`);
+            }
+            if (riskScore !== undefined) {
+                canvasBody += kvPlain('Risk', `${riskScore}${riskReasonText}`);
+            }
 
             const html = `
-                <div class="detail-card">
-                    <div class="detail-header">
-                        <div>
-                            <div class="node-name">${node.nickname || node.name}</div>
-                            <div class="node-type">${node.name}</div>
-                        </div>
-                        <span class="status-badge" style="background: ${CONFIG.colors[effectiveStatus]}; color: white">
-                            ${effectiveStatus}
-                        </span>
+                <button type="button" class="insp-back" id="insp-summary">‹ SUMMARY <kbd class="keycap">ESC</kbd></button>
+                <header class="insp-head">
+                    <i class="sel-glyph" aria-hidden="true"></i>
+                    <div class="insp-head-copy">
+                        <div class="title">${escapeHtml(node.nickname || node.name || 'Unnamed')}</div>
+                        <div class="insp-sub muted">${escapeHtml(node.name || '')}</div>
                     </div>
-                    
-                    <div class="prop-row">
-                        <span class="prop-label">ID</span>
-                        <span class="prop-value" title="${node.id}">${(node.id || '').substring(0, 8)}...</span>
-                    </div>
-                    <div class="prop-row">
-                        <span class="prop-label">Position</span>
-                        <span class="prop-value">${Math.round(node.x)}, ${Math.round(node.y)}</span>
-                    </div>
-                    ${showHighLevelDetails && riskScore !== undefined ? `
-                    <div class="prop-row">
-                        <span class="prop-label">Risk Score</span>
-                        <span class="prop-value">${riskScore}${riskReasonText}</span>
-                    </div>` : ''}
-                    ${showHighLevelDetails && node.dx !== undefined ? `
-                    <div class="prop-row">
-                        <span class="prop-label">Movement</span>
-                        <span class="prop-value">Change: ${node.dx.toFixed(1)}, ${node.dy.toFixed(1)}</span>
-                    </div>` : ''}
-                </div>
-
-                ${renderChangeSummary(node)}
-                ${renderTopUserInputs ? renderUserInputSummary(node) : ''}
-                ${renderProperties(node)}
-                ${connectionsBlock}
+                    <span class="status-badge ${effectiveStatus}">${escapeHtml(effectiveStatus)}</span>
+                </header>
+                ${inspSection('Why it matters', whyBody)}
+                ${inspSection(isScriptComponent(node) ? 'Script' : (isClusterLikeNode(node) ? 'Cluster' : (isPanelLikeNode(node) ? 'Panel' : 'Component')), typeBody)}
+                ${inspSection('Connections', connBody)}
+                ${inspSection('Canvas', canvasBody)}
             `;
 
             detailsPaneInspector.innerHTML = html;
@@ -6486,6 +6563,9 @@
         }
 
         function bindInspectorActions() {
+            const back = document.getElementById('insp-summary');
+            if (back) back.addEventListener('click', () => clearCanvasSelection());
+
             detailsPaneInspector.querySelectorAll('.script-diff-open').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const encoded = btn.dataset.scriptKey || '';
@@ -6880,6 +6960,66 @@
             if (isScriptModalOpen()) {
                 renderExpandedScriptDiff(node, selectedEntry);
             }
+        }
+
+        function clusterGlyphLayout(node, scale) {
+            const s = Math.max(Number(scale) || 1, 0.01);
+            const boxW = 8;
+            const boxH = 6;
+            const stack = 2;
+            const glyphW = boxW + stack;
+            const glyphH = boxH + stack;
+            const gap = Math.max(4, 4 / s);
+            const inset = Math.max(4, 4 / s);
+            const gutter = glyphW + gap + inset;
+            const labelW = Math.max(4, node.w - gutter);
+            return {
+                boxW,
+                boxH,
+                stack,
+                glyphW,
+                glyphH,
+                gap,
+                inset,
+                gutter,
+                labelW,
+                gx: node.x + node.w - inset - glyphW,
+                gy: node.y + (node.h - glyphH) / 2,
+                labelCx: node.x + labelW / 2
+            };
+        }
+
+        function recordClusterGlyphDebug(node, layout) {
+            if (!window.__clusterGlyphs) window.__clusterGlyphs = [];
+            const scale = state.view.scale;
+            const toScreen = (x, y, w, h) => ({
+                x: x * scale + state.view.x,
+                y: y * scale + state.view.y,
+                w: w * scale,
+                h: h * scale
+            });
+            const labelRight = layout.labelRight != null ? layout.labelRight : (layout.labelCx + layout.labelW / 2);
+            const labelBox = toScreen(
+                layout.labelCx - (layout.labelTextW || layout.labelW) / 2,
+                node.y,
+                layout.labelTextW || layout.labelW,
+                node.h
+            );
+            const glyphBox = toScreen(layout.gx, layout.gy, layout.glyphW, layout.glyphH);
+            window.__clusterGlyphs.push({
+                id: node.id,
+                name: node.nickname || node.name || '',
+                zoom: scale,
+                dpr: window.devicePixelRatio || 1,
+                label: layout.displayLabel || '',
+                labelRight: labelRight * scale + state.view.x,
+                glyphLeft: glyphBox.x,
+                gap: glyphBox.x - (labelRight * scale + state.view.x),
+                insetRight: (node.x + node.w - (layout.gx + layout.glyphW)) * scale,
+                labelBox,
+                glyphBox,
+                nodeBox: toScreen(node.x, node.y, node.w, node.h)
+            });
         }
 
         function isClusterLikeNode(node) {
@@ -7657,35 +7797,13 @@
             const entries = getUserInputEntries(node);
             if (!entries.length) return '';
 
-            const rows = entries.map(entry => {
+            return entries.map(entry => {
                 if (entry.hasOld && entry.hasNew && entry.oldValue !== entry.newValue) {
-                    return `
-                        <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                            <span class="prop-label">${escapeHtml(entry.key)}</span>
-                            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7; white-space: pre-wrap;">${escapeHtml(entry.oldValue)}</span>
-                                <svg class="ico" width="12" height="12" style="margin:0 4px; color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
-                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; white-space: pre-wrap;">${escapeHtml(entry.newValue)}</span>
-                            </div>
-                        </div>
-                    `;
+                    return kvDelta(entry.key, entry.oldValue, entry.newValue);
                 }
-
                 const stableValue = entry.hasNew ? entry.newValue : entry.oldValue;
-                return `
-                    <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                        <span class="prop-label">${escapeHtml(entry.key)}</span>
-                        <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 180px; overflow-y: auto;">${escapeHtml(stableValue)}</span>
-                    </div>
-                `;
+                return kvPlain(entry.key, stableValue);
             }).join('');
-
-            return `
-                <div class="detail-card" style="border-left: 3px solid var(--accent-color);">
-                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">User Inputs</div>
-                    ${rows}
-                </div>
-            `;
         }
 
         function getChangedPropertyCount(node) {
@@ -7797,13 +7915,7 @@
                     : 'No explicit value-level changes detected for this component.');
             }
 
-            const rows = reasons.map(r => `<div class="prop-row"><span class="prop-label">Change</span><span class="prop-value">${escapeHtml(r)}</span></div>`).join('');
-            return `
-                <div class="detail-card" style="border-left: 3px solid var(--modified);">
-                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">What Changed</div>
-                    ${rows}
-                </div>
-            `;
+            return reasons.map(r => kvPlain('Change', r)).join('');
         }
 
         function renderProperties(node) {
@@ -7839,81 +7951,25 @@
                 const sizeFormatted = formatSize(clusterBytes) || 'Unknown';
                 const oldSizeFormatted = formatSize(oldClusterBytes);
 
-                clusterSection = `
-                    <div class="detail-card" style="border-left: 3px solid #7c4dff;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                            <svg class="ico" width="20" height="20" style="color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-package"></use></svg>
-                            <div class="node-name" style="font-size: 13px; margin-bottom: 0; color: #b388ff;">Cluster Component</div>
-                        </div>
-                        <div class="prop-row">
-                            <span class="prop-label">Type</span>
-                            <span class="prop-value" style="color: #b388ff;">Embedded Sub-Definition</span>
-                        </div>
-                        <div class="prop-row">
-                            <span class="prop-label">Size</span>
-                            <span class="prop-value">${sizeFormatted}</span>
-                        </div>
-                        ${clusterChanged ? `
-                        <div style="margin-top: 8px; padding: 8px; background: rgba(245, 127, 23, 0.15); border: 1px solid rgba(245, 127, 23, 0.3); border-radius: 6px;">
-                            <div style="font-size: 11px; font-weight: 600; color: var(--modified); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-                                <svg class="ico" width="14" height="14"><use href="/vendor/phosphor/icons.svg#ph-warning"></use></svg>
-                                Cluster Internals Modified
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-secondary);">
-                                The embedded sub-definition has changed.
-                                ${oldSizeFormatted ? `<br>Size: ${oldSizeFormatted} <svg class="ico" width="10" height="10" style="margin:0 2px;"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg> ${sizeFormatted}` : ''}
-                            </div>
-                            ${oldClusterHash && clusterHash ? `
-                            <div class="prop-row" style="margin-top: 6px;">
-                                <span class="prop-label">Old Hash</span>
-                                <span class="prop-value" style="font-size: 11px;">${oldClusterHash.substring(0, 12)}...</span>
-                            </div>
-                            <div class="prop-row">
-                                <span class="prop-label">New Hash</span>
-                                <span class="prop-value" style="font-size: 11px;">${clusterHash.substring(0, 12)}...</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                        ` : `
-                        <div style="margin-top: 8px; padding: 6px 8px; background: rgba(68, 183, 130, 0.1); border-radius: 4px; font-size: 11px; color: var(--success);">
-                            <svg class="ico" width="16" height="16" style="color:#44B782;"><use href="/vendor/phosphor/icons.svg#ph-check"></use></svg> Cluster internals unchanged
-                        </div>
-                        `}
-                        <button class="cluster-preview-open"
-                            style="width: 100%; margin-top: 10px; background: var(--bg-card); border: 1px solid var(--border-color); color: #b388ff; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                            Open Cluster Tab
-                        </button>
-                    </div>
-                `;
+                clusterSection = kvPlain('Type', 'Embedded sub-definition');
+                if (clusterChanged && oldSizeFormatted) {
+                    clusterSection += kvDelta('Size', oldSizeFormatted, sizeFormatted);
+                } else {
+                    clusterSection += kvPlain('Size', sizeFormatted);
+                }
+                if (clusterChanged && oldClusterHash && clusterHash) {
+                    clusterSection += kvDelta('Hash', `${oldClusterHash.substring(0, 12)}…`, `${clusterHash.substring(0, 12)}…`);
+                }
+                clusterSection += `<button type="button" class="script-diff-open cluster-preview-open"><svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-package"></use></svg>Open Cluster Tab</button>`;
             }
 
             let panelSection = '';
             if (isPanel && panelValue.hasAny) {
                 if (panelValue.changed && panelValue.hasOld && panelValue.hasNew) {
-                    panelSection = `
-                        <div class="detail-card" style="border-left: 3px solid var(--accent-color);">
-                            <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Panel Value</div>
-                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                                <span class="prop-label">UserText</span>
-                                <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                                    <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7; white-space: pre-wrap;">${escapeHtml(panelValue.oldValue)}</span>
-                                    <svg class="ico" width="12" height="12" style="margin:0 4px; color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
-                                    <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; white-space: pre-wrap;">${escapeHtml(panelValue.newValue)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    panelSection = kvDelta('UserText', panelValue.oldValue, panelValue.newValue);
                 } else {
                     const stableValue = panelValue.hasNew ? panelValue.newValue : panelValue.oldValue;
-                    panelSection = `
-                        <div class="detail-card" style="border-left: 3px solid var(--accent-color);">
-                            <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Panel Value</div>
-                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                                <span class="prop-label">UserText</span>
-                                <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 180px; overflow-y: auto;">${escapeHtml(stableValue)}</span>
-                            </div>
-                        </div>
-                    `;
+                    panelSection = kvPlain('UserText', stableValue);
                 }
             }
 
@@ -7944,77 +8000,23 @@
                         ? normalizeScriptForCompare(oldValue) !== normalizeScriptForCompare(newValue)
                         : newValue.length > 0;
                     if (showOnlyChangedValues && !scriptChanged) continue;
-                    const openButton = `
-                            <button class="script-diff-open" data-script-key="${encodeURIComponent(key)}"
-                                style="width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--accent-color); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                </svg>
-                                ${scriptChanged ? 'Open Script Diff' : 'Open Script'}
-                            </button>
-                    `;
-                    rows += `
-                        <div class="prop-row" style="flex-direction: column; gap: 8px; align-items: flex-start; padding-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                                <span class="prop-label">${escapeHtml(key)}</span>
-                                <span style="font-size: 11px; color: ${scriptChanged ? 'var(--modified)' : 'var(--text-secondary)'}; font-weight: 600;">
-                                    ${scriptChanged ? 'MODIFIED' : 'UNCHANGED'}
-                                </span>
-                            </div>
-                            ${openButton}
-                        </div>
-                    `;
+                    rows += kvPlain(key, scriptChanged ? 'Modified' : 'Unchanged');
+                    rows += `<button type="button" class="script-diff-open" data-script-key="${encodeURIComponent(key)}"><svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-file-code"></use></svg>${scriptChanged ? 'Open Script Diff' : 'Open Script'}</button>`;
                 } else if (hasValueDelta) {
-                    // Regular property changed
                     if (valueAdded) {
-                        rows += `
-                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                                <span class="prop-label">${escapeHtml(key)}</span>
-                                <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px;">${escapeHtml(newValue)}</span>
-                            </div>
-                        `;
+                        rows += kvPlain(key, newValue);
                     } else if (valueRemoved) {
-                        rows += `
-                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                                <span class="prop-label">${escapeHtml(key)}</span>
-                                <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${escapeHtml(oldValue)}</span>
-                            </div>
-                        `;
+                        rows += kvRow(key, `<span class="kv-old">${escapeHtml(oldValue)}</span>`);
                     } else {
-                        rows += `
-                            <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                                <span class="prop-label">${escapeHtml(key)}</span>
-                                <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                                    <span class="prop-value" style="background: rgba(200, 40, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px; text-decoration: line-through; opacity: 0.7;">${escapeHtml(oldValue)}</span>
-                                    <svg class="ico" width="12" height="12" style="margin:0 4px; color:var(--text-secondary);"><use href="/vendor/phosphor/icons.svg#ph-arrow-right"></use></svg>
-                                    <span class="prop-value" style="background: rgba(40, 200, 40, 0.2); padding: 6px; border-radius: 4px; flex: 1; font-size: 11px;">${escapeHtml(newValue)}</span>
-                                </div>
-                            </div>
-                        `;
+                        rows += kvDelta(key, oldValue, newValue);
                     }
                 } else {
                     if (showOnlyChangedValues) continue;
-                    // Show single value (unchanged or new property)
-                    rows += `
-                        <div class="prop-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
-                            <span class="prop-label">${escapeHtml(key)}</span>
-                            <span class="prop-value" style="background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; white-space: pre-wrap; font-size: 11px; max-height: 150px; overflow-y: auto;">${escapeHtml(newValue)}</span>
-                        </div>
-                    `;
+                    rows += kvPlain(key, newValue);
                 }
             }
 
-            return `
-                ${clusterSection}
-                ${panelSection}
-                ${rows ? `
-                <div class="detail-card">
-                    <div class="node-name" style="font-size: 12px; margin-bottom: 8px;">Component Values</div>
-                    ${rows}
-                </div>
-                ` : ''}
-            `;
+            return `${clusterSection}${panelSection}${rows}`;
         }
 
         function renderPorts(ports, title) {
