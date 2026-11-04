@@ -236,6 +236,120 @@ public class GhxParserTests
     }
 
     [Fact]
+    public void Parse_NestedClusterPreviewGraph_IsPreservedOnInnerClusterNode()
+    {
+        const string nestedInnerXml = """
+            <Archive>
+              <chunks>
+                <chunk name="Object">
+                  <chunks>
+                    <chunk name="Container">
+                      <items>
+                        <item name="InstanceGuid">nested-seed</item>
+                        <item name="Name">Number Slider</item>
+                        <item name="NickName">Seed</item>
+                      </items>
+                    </chunk>
+                  </chunks>
+                </chunk>
+              </chunks>
+            </Archive>
+            """;
+        var nestedPayload = Convert.ToBase64String(Encoding.UTF8.GetBytes(nestedInnerXml));
+        var parentInnerXml = $$"""
+            <Archive>
+              <chunks>
+                <chunk name="Object">
+                  <chunks>
+                    <chunk name="Container">
+                      <items>
+                        <item name="InstanceGuid">inner-slider</item>
+                        <item name="Name">Number Slider</item>
+                        <item name="NickName">Count</item>
+                      </items>
+                    </chunk>
+                  </chunks>
+                </chunk>
+                <chunk name="Object">
+                  <items>
+                    <item name="ClusterDocument">
+                      <stream>{{nestedPayload}}</stream>
+                    </item>
+                  </items>
+                  <chunks>
+                    <chunk name="Container">
+                      <items>
+                        <item name="InstanceGuid">inner-nested</item>
+                        <item name="Name">Cluster</item>
+                        <item name="NickName">Nested</item>
+                      </items>
+                    </chunk>
+                  </chunks>
+                </chunk>
+              </chunks>
+            </Archive>
+            """;
+        var parentPayload = Convert.ToBase64String(Encoding.UTF8.GetBytes(parentInnerXml));
+        var outerXml = $$"""
+            <Archive>
+              <chunks>
+                <chunk name="Object">
+                  <items>
+                    <item name="ClusterDocument">
+                      <stream>{{parentPayload}}</stream>
+                    </item>
+                  </items>
+                  <chunks>
+                    <chunk name="Container">
+                      <items>
+                        <item name="InstanceGuid">cluster-node-1</item>
+                        <item name="Name">Cluster</item>
+                        <item name="NickName">Cluster</item>
+                      </items>
+                    </chunk>
+                  </chunks>
+                </chunk>
+              </chunks>
+            </Archive>
+            """;
+
+        var parser = new GhxParser(NullLogger<GhxParser>.Instance);
+        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.ghx");
+        try
+        {
+            File.WriteAllText(tempPath, outerXml);
+            var graph = parser.Parse(tempPath);
+            var clusterNode = graph.Nodes.Values.Single();
+
+            Assert.True(clusterNode.Properties.TryGetValue("ClusterPreviewGraph", out var rawPreview));
+            using var previewDoc = JsonDocument.Parse(rawPreview);
+            var nodes = previewDoc.RootElement.GetProperty("Nodes");
+
+            var slider = nodes.EnumerateArray()
+                .First(n => n.GetProperty("Id").GetString() == "inner-slider");
+            Assert.False(slider.GetProperty("Properties").TryGetProperty("ClusterPreviewGraph", out _));
+
+            var nested = nodes.EnumerateArray()
+                .First(n => n.GetProperty("Id").GetString() == "inner-nested");
+            Assert.True(nested.GetProperty("IsCluster").GetBoolean());
+            var nestedProps = nested.GetProperty("Properties");
+            Assert.Equal("parsed", nestedProps.GetProperty("ClusterPreviewStatus").GetString());
+            Assert.True(nestedProps.TryGetProperty("ClusterPreviewGraph", out var nestedGraphRaw));
+
+            using var nestedDoc = JsonDocument.Parse(nestedGraphRaw.GetString()!);
+            var nestedNodes = nestedDoc.RootElement.GetProperty("Nodes");
+            Assert.Contains(nestedNodes.EnumerateArray(), n => n.GetProperty("Id").GetString() == "nested-seed");
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Fact]
     public void Parse_ExtractsInputOptions_FromParamInputChunks()
     {
         var xml = """

@@ -1110,6 +1110,7 @@
                 // Click handler
                 item.addEventListener('click', () => {
                     zoomToNode(node.id);
+                    tryOpenClusterGraphTab(node);
                 });
                 
                 // Keyboard handler for accessibility - only Enter and Space, not J/K
@@ -1117,6 +1118,7 @@
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         zoomToNode(node.id);
+                        tryOpenClusterGraphTab(node);
                     }
                 });
 
@@ -1268,7 +1270,9 @@
 
         function inspectAlarmBandNode() {
             const node = ensureAlarmBandTargetVisible();
-            if (node) zoomToNode(node.id);
+            if (!node) return;
+            if (tryOpenClusterGraphTab(node)) return;
+            zoomToNode(node.id);
         }
 
         function openAlarmBandScriptDiff() {
@@ -2010,12 +2014,14 @@
             state.view = tab.view ? { ...tab.view } : { x: 0, y: 0, scale: 1 };
             applyModificationStatusToNodes(state.nodes);
             rebuildSearchCatalog({ refreshView: false });
+            updateStats();
 
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             updateDetailsPanel(selectedNode || null);
 
             if (fit || !tab.view) {
                 fitView();
+                tab.view = { ...state.view };
             } else {
                 scheduleDraw();
             }
@@ -3633,16 +3639,31 @@
                         e.preventDefault();
                         moveFocusToPreviousRow();
                         break;
+                    case 'enter': {
+                        const selectedNode = state.nodes.find(n => String(n.id) === String(state.selected));
+                        if (selectedNode && tryOpenClusterGraphTab(selectedNode)) {
+                            e.preventDefault();
+                        }
+                        break;
+                    }
                     case 'escape':
                         if (viewerToastSticky) {
                             e.preventDefault();
                             hideViewerToast({ restoreFocus: true });
                             break;
                         }
-                        state.selected = null;
-                        updateDetailsPanel(null);
-                        renderComponentResultsList();
-                        scheduleDraw();
+                        if (state.selected) {
+                            state.selected = null;
+                            updateDetailsPanel(null);
+                            renderComponentResultsList();
+                            scheduleDraw();
+                            break;
+                        }
+                        if (state.activeGraphTabId && state.activeGraphTabId !== ROOT_GRAPH_TAB_ID) {
+                            e.preventDefault();
+                            closeGraphTab(state.activeGraphTabId);
+                            break;
+                        }
                         break;
                     case '1':
                     case '2':
@@ -4944,7 +4965,7 @@
 
                 // Cluster indicator: draw a special double-border and icon
                 const props = n.properties || n.Properties || {};
-                const isCluster = isTrueish(props.isCluster) || isTrueish(props.IsCluster) || /cluster/i.test(String(n.name || ''));
+                const isCluster = isClusterLikeNode(n);
                 if (isCluster) {
                     // Inner dashed border for cluster nodes
                     ctx.save();
@@ -5891,7 +5912,7 @@
             const props = node?.properties || {};
             const oldProps = node?.propertiesOld || {};
             const keys = [...Object.keys(props), ...Object.keys(oldProps)];
-            return keys.some(k => isLikelyScriptPropertyKey(k));
+            return keys.some(k => !isClusterMetadataPropertyKey(k) && isLikelyScriptPropertyKey(k));
         }
 
         function normalizeScriptForCompare(value) {
@@ -5909,6 +5930,7 @@
             const entries = [];
 
             keys.forEach(key => {
+                if (isClusterMetadataPropertyKey(key)) return;
                 const hasNew = Object.prototype.hasOwnProperty.call(props, key);
                 const hasOld = Object.prototype.hasOwnProperty.call(oldProps, key);
                 const rawNewValue = hasNew ? String(props[key] ?? '') : '';
@@ -6515,13 +6537,32 @@
                 const newInputs = n?.inputs || n?.Inputs || [];
                 const oldOutputs = o?.outputs || o?.Outputs || [];
                 const newOutputs = n?.outputs || n?.Outputs || [];
+                const ox = Number(o?.x ?? o?.X ?? 0);
+                const oy = Number(o?.y ?? o?.Y ?? 0);
+                const nx = Number(n?.x ?? n?.X ?? ox);
+                const ny = Number(n?.y ?? n?.Y ?? oy);
+                const dx = (o && n) ? nx - ox : 0;
+                const dy = (o && n) ? ny - oy : 0;
+                const typeName = String(base.name || base.Name || base.nickname || base.Nickname || id);
+                const nick = String(base.nickname || base.Nickname || typeName);
+                const riskScoreRaw = base.riskScore ?? base.RiskScore;
+                const riskScore = Number.isFinite(Number(riskScoreRaw)) ? Number(riskScoreRaw) : undefined;
+                const riskReasonsRaw = base.riskReasons ?? base.RiskReasons;
+                const riskReasons = Array.isArray(riskReasonsRaw)
+                    ? riskReasonsRaw.map(r => String(r || '').trim()).filter(Boolean)
+                    : [];
                 nodes.push({
                     id: String(id),
-                    name: base.nickname || base.Nickname || base.name || base.Name || id,
-                    x: Number(base.x ?? base.X ?? 0),
-                    y: Number(base.y ?? base.Y ?? 0),
+                    name: typeName,
+                    nickname: nick,
+                    x: n ? nx : ox,
+                    y: n ? ny : oy,
                     w: Number(base.w ?? base.W ?? 110),
                     h: Number(base.h ?? base.H ?? 38),
+                    dx,
+                    dy,
+                    riskScore,
+                    riskReasons,
                     properties: (n ? newProperties : oldProperties),
                     propertiesOld: (o && n && nodeStatus === 'modified')
                         ? buildClusterPreviewPropertiesOld(oldProperties, newProperties)
@@ -6603,7 +6644,7 @@
             const normalizedNodes = diffGraph.nodes.map(n => normalizeNode({
                 ...n,
                 name: n.name || n.id || 'Cluster Component',
-                nickname: n.name || n.id || 'Cluster Component'
+                nickname: n.nickname || n.name || n.id || 'Cluster Component'
             }));
             const { componentNodes, groupNodes } = splitComponentAndGroupNodes(normalizedNodes);
             applyModificationStatusToNodes(componentNodes, showHighLevelModificationDetails());
@@ -6696,10 +6737,17 @@
             return true;
         }
 
+        function tryOpenClusterGraphTab(node) {
+            if (!node) return false;
+            const preview = getClusterPreviewData(node);
+            if (!preview.isCluster) return false;
+            return openClusterGraphTab(node, preview);
+        }
+
         function openClusterPreview() {
             const selectedNode = state.nodes.find(n => n.id === state.selected);
             if (!selectedNode) return;
-            openClusterGraphTab(selectedNode);
+            tryOpenClusterGraphTab(selectedNode);
         }
 
         function getPropertyValueIgnoreCase(props, key) {

@@ -57,6 +57,7 @@ artifacts/
 *.gh
 *.ghx
 !Tests/data/*.ghx
+!Tests/data/cluster-interaction/*.ghx
 
 # IDE
 .vscode/

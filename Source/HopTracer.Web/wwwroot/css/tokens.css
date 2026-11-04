@@ -64,6 +64,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   font-family:var(--f-mono);font-weight:500;font-size:var(--t-label);letter-spacing:var(--t-track);text-transform:uppercase;white-space:nowrap;background:none}
 .btn.pri{background:var(--c-ultra);border-color:var(--c-ultra);color:var(--c-on-ultra)}
 .btn.band{height:var(--btn-band)}
+#btn-band-diff[hidden]{display:none!important}
 .btn.ghost{border-color:transparent;padding:0 var(--s8);color:var(--c-muted)}
 .btn.icon{width:var(--btn);padding:0;justify-content:center;border-color:transparent;color:var(--c-muted)}
 .btn.hover{background:var(--c-surface-hover);color:var(--c-text)} .btn.pri.hover{background:#4C4EFF}
