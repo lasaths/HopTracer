@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Archive name="Root">
+  <items>
+    <item name="plugin_version">1.0</item>
+  </items>
+  <chunks>
+    <chunk name="Definition">
+      <items>
+        <item name="ObjectCount" type_name="gh_int32" type_code="3">1</item>
+      </items>
+      <chunks>
+        <chunk name="Object" index="0">
+          <items>
+            <item name="GUID" type_name="gh_guid" type_code="9">f31d8d7a-7536-4ac8-9c96-fde6ecda4d0a</item>
+            <item name="Name" type_name="gh_string" type_code="10">Cluster</item>
+          </items>
+          <chunks>
+            <chunk name="Container">
+              <items>
+                <item name="InstanceGuid" type_name="gh_guid" type_code="9">cluster-guid-001</item>
+                <item name="Name" type_name="gh_string" type_code="10">Cluster</item>
+                <item name="NickName" type_name="gh_string" type_code="10">TestCluster</item>
+              </items>
+              <chunks>
+                <chunk name="Properties">
+                  <items>
+                    <item name="ClusterSize" type_name="gh_int32" type_code="3">100</item>
+                    <item name="ClusterHash" type_name="gh_string" type_code="10">hash1</item>
+                    <item name="ClusterPreviewGraph" type_name="gh_string" type_code="10">{"Objects":[{"GUID":"inner-add-guid","Name":"Addition","NickName":"Add1"},{"GUID":"inner-cs-guid","Name":"C# Script","NickName":"CS1","ScriptSource":"int x = 5;"}]}</item>
+                  </items>
+                </chunk>
+              </chunks>
+            </chunk>
+          </chunks>
+        </chunk>
+      </chunks>
+    </chunk>
+  </chunks>
+</Archive>
