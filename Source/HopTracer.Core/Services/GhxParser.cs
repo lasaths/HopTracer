@@ -1457,4 +1457,35 @@ public class GhxParser : IGhxParser
         public int ClusterPreviewDepthLimitHits { get; set; }
         public List<string> Messages { get; set; } = new();
     }
+
+    /// <summary>
+    /// Parses a ClusterDocument payload (Base64-encoded GZip XML) as a full graph.
+    /// </summary>
+    public Graph ParseClusterDocument(string base64Payload)
+    {
+        try
+        {
+            // Decode Base64
+            var compressedBytes = Convert.FromBase64String(base64Payload);
+            
+            // Decompress GZip
+            using var compressedStream = new System.IO.MemoryStream(compressedBytes);
+            using var gzipStream = new System.IO.Compression.GZipStream(compressedStream, System.IO.Compression.CompressionMode.Decompress);
+            using var decompressedStream = new System.IO.MemoryStream();
+            gzipStream.CopyTo(decompressedStream);
+            
+            // Parse as XML
+            var xml = System.Text.Encoding.UTF8.GetString(decompressedStream.ToArray());
+            var doc = XDocument.Parse(xml);
+            
+            // Parse using existing logic with cluster preview enabled at depth 0
+            var diagnostics = new ParseDiagnostics();
+            return ParseDocument(doc, includeClusterPreview: true, clusterDepth: 0, diagnostics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse ClusterDocument payload");
+            return new Graph { Nodes = new Dictionary<string, Node>(), Edges = new List<Edge>() };
+        }
+    }
 }

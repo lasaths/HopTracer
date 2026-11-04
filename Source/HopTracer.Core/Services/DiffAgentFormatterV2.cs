@@ -237,80 +237,174 @@ public static class DiffAgentFormatterV2
             }
 
             var clusterName = string.IsNullOrWhiteSpace(node.Nickname) ? node.Name : node.Nickname;
-            var oldPreview = node.PropertiesOld?.GetValueOrDefault("ClusterPreviewGraph");
-            var newPreview = node.Properties.GetValueOrDefault("ClusterPreviewGraph");
+            
+            // Use ClusterDocument for full parsing (Base64-encoded GZip XML)
+            var oldDoc = node.PropertiesOld?.GetValueOrDefault("ClusterDocument");
+            var newDoc = node.Properties.GetValueOrDefault("ClusterDocument");
 
-            if (string.IsNullOrEmpty(oldPreview) && string.IsNullOrEmpty(newPreview))
+            if (string.IsNullOrEmpty(oldDoc) && string.IsNullOrEmpty(newDoc))
             {
                 continue;
             }
 
-            // Parse and recursively process inner nodes
-            var innerChanges = BuildClusterInnerChanges(oldPreview, newPreview, clusterName, basePath);
+            // Parse and recursively process inner nodes using full GhxParser + Differ
+            var innerChanges = BuildClusterInnerChanges(oldDoc, newDoc, clusterName, basePath);
             clusterChanges.AddRange(innerChanges);
         }
 
         return clusterChanges.Take(20).ToList();
     }
 
-    private static List<ChangeItem> BuildClusterInnerChanges(string? oldPreview, string? newPreview, string clusterName, string[] parentPath)
+    private static List<ChangeItem> BuildClusterInnerChanges(string? oldDocument, string? newDocument, string clusterName, string[] parentPath)
     {
         var changes = new List<ChangeItem>();
         
-        // Parse inner cluster graph
-        var oldInnerNodes = ParseClusterPreview(oldPreview);
-        var newInnerNodes = ParseClusterPreview(newPreview);
-
-        // Simple matching: match by ID
-        var innerChanges = DiffInnerNodes(oldInnerNodes, newInnerNodes);
-        var currentPath = parentPath.Append(clusterName).ToArray();
-
-        foreach (var (innerNode, status) in innerChanges)
+        // Parse ClusterDocument payloads as full GH documents using GhxParser + Differ
+        try
         {
-            var shortId = GetSafeShortId(innerNode.Id, innerChanges.Select(c => c.Node.Id));
-            var label = string.IsNullOrWhiteSpace(innerNode.Nickname) ? innerNode.Name : innerNode.Nickname;
-
-            // Check if this inner node is also a cluster
-            var isCluster = innerNode.Name.Contains("Cluster", StringComparison.OrdinalIgnoreCase);
+            var parser = new GhxParser(Microsoft.Extensions.Logging.Abstractions.NullLogger<GhxParser>.Instance);
+            var differ = new Differ(Microsoft.Extensions.Logging.Abstractions.NullLogger<Differ>.Instance);
             
-            // Assign lower risk to inner cluster nodes (rank below top-level changes)
-            var riskScore = status switch
-            {
-                "removed" => 15,  // Low risk for inner removals
-                "added" => 10,    // Low risk for inner additions
-                "modified" => 5,  // Minimal risk for inner modifications
-                _ => 0
-            };
+            // Decode and parse both documents
+            var oldGraph = string.IsNullOrEmpty(oldDocument) 
+                ? new Graph { Nodes = new Dictionary<string, Node>(), Edges = new List<Edge>() }
+                : parser.ParseClusterDocument(oldDocument);
+            var newGraph = string.IsNullOrEmpty(newDocument)
+                ? new Graph { Nodes = new Dictionary<string, Node>(), Edges = new List<Edge>() }
+                : parser.ParseClusterDocument(newDocument);
             
-            changes.Add(new ChangeItem
+            // Run full differ on inner graphs
+            var innerDiff = differ.DiffDetailed(oldGraph, newGraph);
+            var currentPath = parentPath.Append(clusterName).ToArray();
+            
+            // Process inner changed nodes with full property/script/risk support
+            var changedNodes = innerDiff.Nodes.Where(n => n.Status != "same").ToList();
+            
+            foreach (var node in changedNodes)
             {
-                Id = shortId,
-                Name = label,
-                Type = innerNode.Name,
-                Path = currentPath,
-                Status = status,
-                Risk = new RiskInfo
-                {
-                    Score = riskScore,
-                    Level = GetRiskLevel(riskScore),
-                    Reasons = new List<string> { $"Inside cluster '{clusterName}'" }
-                },
-                Impact = new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 }
-            });
-
-            // Recursively process nested clusters
-            if (isCluster && !string.IsNullOrEmpty(innerNode.ClusterPreviewGraph))
-            {
-                var oldMatched = oldInnerNodes.FirstOrDefault(n => n.Id == innerNode.Id);
-                var oldNested = oldMatched?.ClusterPreviewGraph;
-                var newNested = status == "removed" ? null : innerNode.ClusterPreviewGraph;
+                var shortId = GetSafeShortId(node.Id, changedNodes.Select(n => n.Id));
+                var label = string.IsNullOrWhiteSpace(node.Nickname) ? node.Name : node.Nickname;
                 
-                var nestedChanges = BuildClusterInnerChanges(oldNested, newNested, label, currentPath);
-                changes.AddRange(nestedChanges);
+                // Build change item with full details from differ
+                var changeItem = new ChangeItem
+                {
+                    Id = shortId,
+                    Name = label,
+                    Type = node.Name,
+                    Path = currentPath,
+                    Status = node.Status,
+                    Risk = new RiskInfo
+                    {
+                        Score = node.RiskScore,
+                        Level = GetRiskLevel(node.RiskScore),
+                        Reasons = node.RiskReasons.ToList()
+                    },
+                    Impact = new ImpactInfo 
+                    { 
+                        Upstream = new List<ImpactNode>(), 
+                        Downstream = new List<ImpactNode>(), 
+                        DownstreamCount = 0 
+                    }
+                };
+                
+                // Add rename detection
+                if (node.PropertiesOld != null)
+                {
+                    var oldName = node.PropertiesOld.GetValueOrDefault("Name");
+                    var newName = node.Properties.GetValueOrDefault("Name");
+                    var oldNick = node.PropertiesOld.GetValueOrDefault("NickName");
+                    var newNick = node.Properties.GetValueOrDefault("NickName");
+                    
+                    if (!string.IsNullOrEmpty(oldNick) && !string.IsNullOrEmpty(newNick) && oldNick != newNick)
+                    {
+                        changeItem.Rename = new NameChange
+                        {
+                            OldNickname = oldNick,
+                            NewNickname = newNick
+                        };
+                    }
+                    else if (!string.IsNullOrEmpty(oldName) && !string.IsNullOrEmpty(newName) && oldName != newName)
+                    {
+                        changeItem.Rename = new NameChange
+                        {
+                            OldName = oldName,
+                            NewName = newName
+                        };
+                    }
+                }
+                
+                // Add parameter changes if available (from properties)
+                if (node.PropertiesOld != null)
+                {
+                    var paramChanges = new List<ParamChange>();
+                    foreach (var key in node.PropertiesOld.Keys.Take(3))
+                    {
+                        var oldVal = node.PropertiesOld[key];
+                        var newVal = node.Properties.GetValueOrDefault(key, string.Empty);
+                        if (oldVal != newVal && !key.Contains("Script", StringComparison.OrdinalIgnoreCase))
+                        {
+                            paramChanges.Add(new ParamChange
+                            {
+                                Key = key,
+                                Old = oldVal,
+                                New = newVal
+                            });
+                        }
+                    }
+                    if (paramChanges.Any())
+                    {
+                        changeItem.Params = paramChanges;
+                    }
+                }
+                
+                // Add script diff if present
+                var scriptKey = node.Properties.Keys.FirstOrDefault(k => 
+                    k.Contains("Script", StringComparison.OrdinalIgnoreCase) || 
+                    k.Contains("Code", StringComparison.OrdinalIgnoreCase));
+                
+                if (scriptKey != null && node.PropertiesOld != null && node.PropertiesOld.ContainsKey(scriptKey))
+                {
+                    var oldScript = node.PropertiesOld[scriptKey];
+                    var newScript = node.Properties[scriptKey];
+                    
+                    if (oldScript != newScript)
+                    {
+                        var (added, removed, diff, truncated, lineEndingChange) = UnifiedDiffV3.Generate(oldScript, newScript);
+                        changeItem.Script = new ScriptChange
+                        {
+                            Language = "csharp",
+                            UnifiedDiff = diff,
+                            LinesAdded = added,
+                            LinesRemoved = removed,
+                            Truncated = truncated,
+                            LineEndingChange = lineEndingChange
+                        };
+                    }
+                }
+                
+                changes.Add(changeItem);
+                
+                // Recursively process nested clusters using ClusterDocument property
+                if (node.Name.Contains("Cluster", StringComparison.OrdinalIgnoreCase))
+                {
+                    var oldClusterDoc = node.PropertiesOld?.GetValueOrDefault("ClusterDocument");
+                    var newClusterDoc = node.Properties.GetValueOrDefault("ClusterDocument");
+                    
+                    if (!string.IsNullOrEmpty(oldClusterDoc) || !string.IsNullOrEmpty(newClusterDoc))
+                    {
+                        var nestedChanges = BuildClusterInnerChanges(oldClusterDoc, newClusterDoc, label, currentPath);
+                        changes.AddRange(nestedChanges);
+                    }
+                }
             }
+            
+            return changes;
         }
-
-        return changes;
+        catch (Exception)
+        {
+            // Fallback: return empty if parsing fails
+            return changes;
+        }
     }
 
     private static List<ClusterInnerNode> ParseClusterPreview(string? json)
