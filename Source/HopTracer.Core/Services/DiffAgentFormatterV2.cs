@@ -8,8 +8,7 @@ namespace HopTracer.Core.Services;
 
 public static class DiffAgentFormatterV2
 {
-    private const int MaxChangesToShow = 100;
-    private const int ScriptDiffContextLines = 3;
+    private const int MaxScriptDiffLines = 80; // Cap per script: ~40 changed lines with context
 
     public static string Generate(DiffComputation diff, DiffOutputOptions options)
     {
@@ -30,8 +29,9 @@ public static class DiffAgentFormatterV2
             .ThenBy(n => n.Id)
             .ToList();
         
-        var displayedChanges = significantChanges.Take(MaxChangesToShow).ToList();
-        var omittedCount = Math.Max(0, significantChanges.Count - MaxChangesToShow);
+        var maxNodesToShow = options.MaxNodesToShow > 0 ? options.MaxNodesToShow : 100;
+        var displayedChanges = significantChanges.Take(maxNodesToShow).ToList();
+        var omittedCount = Math.Max(0, significantChanges.Count - maxNodesToShow);
         
         var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff)).ToList();
         var wires = BuildWireChanges(diff, resolver);
@@ -183,6 +183,12 @@ public static class DiffAgentFormatterV2
                 continue;
             }
 
+            // Skip ClusterPreviewGraph - it's a huge escaped JSON blob
+            if (key.Equals("ClusterPreviewGraph", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             // Skip Text only if it's a script duplicate
             if (key.Equals("Text", StringComparison.OrdinalIgnoreCase) && textIsScriptDuplicate)
             {
@@ -235,6 +241,14 @@ public static class DiffAgentFormatterV2
             }
 
             var (added, removed, diff, truncated, lineEndingChange) = UnifiedDiffV2.Generate(oldScript, newScript);
+
+            // Apply per-script line budget
+            if (diff.Split('\n').Length > MaxScriptDiffLines)
+            {
+                var lines = diff.Split('\n');
+                diff = string.Join('\n', lines.Take(MaxScriptDiffLines));
+                truncated = true;
+            }
 
             return new ScriptChange
             {
