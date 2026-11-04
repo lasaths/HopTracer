@@ -159,7 +159,7 @@ Key fields: `summary`, `wireChanges`, `propertyChanges`, `opaqueChanges`, `nodeC
 ### Automation
 
 ```bash
---fail-on-risk      # Exit with code 1 if critical/high risks found
+--fail-on-risk[=N]  # Exit 1 if max risk >= N (default 60=high/critical); exit 0 if no changes; exit 2 on errors
 ```
 
 ## Risk Assessment
@@ -286,6 +286,9 @@ EXIT_CODE=$?
 if [ $EXIT_CODE -eq 1 ]; then
   echo "❌ Critical changes detected in Grasshopper definition"
   exit 1
+elif [ $EXIT_CODE -eq 2 ]; then
+  echo "❌ Error: file not found, parse error, or invalid arguments"
+  exit 2
 fi
 ```
 
