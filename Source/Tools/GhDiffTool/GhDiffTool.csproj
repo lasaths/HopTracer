@@ -12,7 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
     <ProjectReference Include="..\..\HopTracer.Core\HopTracer.Core.csproj" />
   </ItemGroup>
 

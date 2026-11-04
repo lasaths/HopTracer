@@ -73,17 +73,27 @@ public static class CliRunner
     {
         var review = new ReviewWorkflowService();
         var deps = review.CheckDependencies();
+        var isNonWindows = !OperatingSystem.IsWindows();
+        var ghIoExpected = !isNonWindows;
+        var ready = deps.GhIoAvailable || (isNonWindows && !deps.GhIoAvailable);
+        
         var payload = new Dictionary<string, object?>
         {
             ["version"] = GetVersion(),
             ["ghIoAvailable"] = deps.GhIoAvailable,
             ["ghIoMessage"] = deps.GhIoMessage,
             ["baselinesPath"] = deps.BaselinesPath,
-            ["ready"] = deps.GhIoAvailable
+            ["ready"] = ready,
+            ["platform"] = isNonWindows ? "unix" : "windows"
         };
 
+        if (isNonWindows && !deps.GhIoAvailable)
+        {
+            payload["warning"] = "GH_IO is not available on this platform; .gh file conversion requires Rhino/Grasshopper";
+        }
+
         stdout.WriteLine(JsonSerializer.Serialize(payload));
-        return deps.GhIoAvailable ? 0 : 1;
+        return ready ? 0 : 2;
     }
 
     private static int RunBaseline(string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
@@ -302,7 +312,33 @@ public static class CliRunner
         {
             var preparedOld = PreparePath(oldPath, converter, temps);
             var preparedNew = PreparePath(newPath, converter, temps);
-            return differ.DiffDetailed(parser.Parse(preparedOld), parser.Parse(preparedNew));
+            
+            Graph oldGraph, newGraph;
+            try
+            {
+                oldGraph = parser.Parse(preparedOld);
+            }
+            catch (Exception ex) when (ex is System.Xml.XmlException || ex.InnerException is System.Xml.XmlException)
+            {
+                var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
+                throw new InvalidOperationException(
+                    $"XML parsing failed in old file '{Path.GetFileName(oldPath)}' at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}",
+                    ex);
+            }
+            
+            try
+            {
+                newGraph = parser.Parse(preparedNew);
+            }
+            catch (Exception ex) when (ex is System.Xml.XmlException || ex.InnerException is System.Xml.XmlException)
+            {
+                var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
+                throw new InvalidOperationException(
+                    $"XML parsing failed in new file '{Path.GetFileName(newPath)}' at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}",
+                    ex);
+            }
+            
+            return differ.DiffDetailed(oldGraph, newGraph);
         }
         finally
         {
@@ -388,7 +424,7 @@ public static class CliRunner
             {
                 payload["path"] = path;
             }
-            else if (!string.Equals(detail, message, StringComparison.Ordinal))
+            if (!string.Equals(detail, message, StringComparison.Ordinal))
             {
                 payload["detail"] = detail;
             }
@@ -400,7 +436,7 @@ public static class CliRunner
             stderr.WriteLine(message);
         }
 
-        return 1;
+        return 2;
     }
 
     private static bool UsesStructuredErrors(DiffOutputFormat format) =>
@@ -466,6 +502,9 @@ public static class CliRunner
                     break;
                 case "--no-nodes":
                     flags.NoNodes = true;
+                    break;
+                case "--no-timestamp":
+                    flags.NoTimestamp = true;
                     break;
                 default:
                     if (arg.StartsWith('-'))
@@ -573,6 +612,7 @@ Options:
   --no-risk                          Omit risk summary
   --no-risks                         Omit top risks list
   --no-nodes                         Omit changed nodes list
+  --no-timestamp                     Omit timestamp and use relative paths (deterministic output)
   --version, -V                      Show version
 """);
     }

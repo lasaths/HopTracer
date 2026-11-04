@@ -21,7 +21,7 @@ public class DiffOutputGenerator
         };
 
     public string GenerateAgentDiff(DiffComputation diff, DiffOutputOptions options) =>
-        DiffAgentFormatter.Generate(diff, options);
+        DiffAgentFormatterV2.Generate(diff, options);
 
     public string GenerateTextDiff(DiffComputation diff, DiffOutputOptions options)
     {
@@ -402,7 +402,7 @@ public class DiffOutputGenerator
         var resolver = new DiffGraphResolver(diff.Nodes);
         var result = new
         {
-            GeneratedAt = DateTimeOffset.UtcNow,
+            GeneratedAt = options.IncludeTimestamp ? DateTimeOffset.UtcNow : (DateTimeOffset?)null,
             FileOld = options.FileOld,
             FileNew = options.FileNew,
             Options = options,
@@ -489,7 +489,10 @@ public class DiffOutputGenerator
         sb.AppendLine("    <div class=\"container\">");
         sb.AppendLine("        <div class=\"header\">");
         sb.AppendLine("            <h1>🔍 HopTracer Diff Report</h1>");
-        sb.AppendLine($"            <p>Generated: {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</p>");
+        if (options.IncludeTimestamp)
+        {
+            sb.AppendLine($"            <p>Generated: {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</p>");
+        }
         
         if (!string.IsNullOrEmpty(options.FileOld) || !string.IsNullOrEmpty(options.FileNew))
         {

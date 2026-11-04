@@ -22,14 +22,16 @@ public sealed class CliFlags
     public bool NoRisk { get; set; }
     public bool NoRisks { get; set; }
     public bool NoNodes { get; set; }
+    public bool NoTimestamp { get; set; }
 
     public DiffOutputOptions ToOptions(string fileOld, string fileNew)
     {
         var isAgent = Format == DiffOutputFormat.Agent;
+        var makeRelative = NoTimestamp;
         return new DiffOutputOptions
         {
-            FileOld = FileOldLabel ?? fileOld,
-            FileNew = FileNewLabel ?? fileNew,
+            FileOld = makeRelative ? MakeRelativePath(FileOldLabel ?? fileOld) : (FileOldLabel ?? fileOld),
+            FileNew = makeRelative ? MakeRelativePath(FileNewLabel ?? fileNew) : (FileNewLabel ?? fileNew),
             CompactFormat = Compact,
             IncludeNodeDetails = Verbose && !isAgent,
             IncludeChangedEdges = ShowEdges || isAgent,
@@ -39,7 +41,26 @@ public sealed class CliFlags
             IncludeDiagnostics = !NoDiagnostics,
             IncludeRiskSummary = !NoRisk,
             IncludeTopRisks = !NoRisks,
-            IncludeChangedNodes = !NoNodes && !isAgent
+            IncludeChangedNodes = !NoNodes && !isAgent,
+            IncludeTimestamp = !NoTimestamp
         };
+    }
+
+    private static string MakeRelativePath(string path)
+    {
+        try
+        {
+            var currentDir = Directory.GetCurrentDirectory();
+            var fullPath = Path.GetFullPath(path);
+            if (fullPath.StartsWith(currentDir, StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.GetRelativePath(currentDir, fullPath);
+            }
+            return Path.GetFileName(fullPath);
+        }
+        catch
+        {
+            return path;
+        }
     }
 }
