@@ -66,15 +66,25 @@ public static class UnifiedDiffV3
                 break;
             }
 
-            // Hunk header: -0,0 for empty old text
+            // Hunk header: -0,0 for empty old text, +0,0 for empty new text
             var oldStart = hunk.OldStart;
             var oldCount = hunk.OldCount;
+            var newStart = hunk.NewStart;
+            var newCount = hunk.NewCount;
+            
             if (string.IsNullOrEmpty(oldText))
             {
-                oldStart = 0;
+                oldStart = -1;  // Will become 0 after +1
                 oldCount = 0;
             }
-            diffLines.Add($"@@ -{oldStart + 1},{oldCount} +{hunk.NewStart + 1},{hunk.NewCount} @@");
+            
+            if (string.IsNullOrEmpty(newText))
+            {
+                newStart = -1;  // Will become 0 after +1
+                newCount = 0;
+            }
+            
+            diffLines.Add($"@@ -{oldStart + 1},{oldCount} +{newStart + 1},{newCount} @@");
             
             // Hunk content
             foreach (var line in hunk.Lines)
