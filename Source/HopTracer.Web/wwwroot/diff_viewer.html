@@ -74,6 +74,8 @@
                             <span class="keycap-label">STEP</span>
                             <kbd class="keycap">F</kbd>
                             <span class="keycap-label">FIT</span>
+                            <kbd class="keycap">T</kbd>
+                            <span class="keycap-label">TAGS</span>
                         </div>
                     </div>
                 </div>
@@ -198,7 +200,7 @@
             </div>
 
             <div class="strip" role="group" aria-label="View controls">
-                <div class="sld" data-sld="wires" style="--sld-w:184px; --sld-val:0">
+                <div class="sld" data-sld="wires" style="--sld-val:0">
                     <div class="s-hd">
                         <span class="label" id="wire-slider-name">Wires</span>
                         <span class="label s-v" id="wire-label" aria-hidden="true">All</span>
@@ -218,7 +220,7 @@
                         <span class="label" data-at="100">None</span>
                     </div>
                 </div>
-                <div class="sld" data-sld="show" style="--sld-w:184px; --sld-val:50">
+                <div class="sld" data-sld="show" style="--sld-val:50">
                     <div class="s-hd">
                         <span class="label" id="version-slider-name">Show</span>
                         <span class="label s-v" id="version-label" aria-hidden="true">Both</span>
@@ -235,6 +237,25 @@
                         <span class="label" data-at="0">Old</span>
                         <span class="label on" data-at="50">Both</span>
                         <span class="label" data-at="100">New</span>
+                    </div>
+                </div>
+                <div class="sld" data-sld="tags" style="--sld-val:0">
+                    <div class="s-hd">
+                        <span class="label" id="tag-slider-name">Tags</span>
+                        <span class="label s-v" id="tag-label" aria-hidden="true">All</span>
+                    </div>
+                    <div class="s-tr">
+                        <i class="s-tk" data-at="0"></i>
+                        <i class="s-tk" data-at="50"></i>
+                        <i class="s-tk" data-at="100"></i>
+                        <i class="s-th"></i>
+                        <input type="range" id="tag-slider" min="0" max="100" step="50" value="0"
+                            aria-labelledby="tag-slider-name" aria-valuetext="All" aria-orientation="horizontal">
+                    </div>
+                    <div class="s-tl" aria-hidden="true">
+                        <span class="label on" data-at="0">All</span>
+                        <span class="label" data-at="50">Selected</span>
+                        <span class="label" data-at="100">Off</span>
                     </div>
                 </div>
             </div>

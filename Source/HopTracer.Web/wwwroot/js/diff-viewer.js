@@ -64,6 +64,7 @@
             sidebarHidden: false,
             detailsHidden: false,
             showChangedEdgesOnly: false,
+            tagMode: 'all',
             includeHighLevelModifications: false,
             largeModelMode: false,
             processingData: false,
@@ -2517,6 +2518,7 @@
 
             initializeGraphTabs(state.nodes, state.edges, state.groups);
             applyModificationStatusMode({ refreshUI: false });
+            resolveInitialTagMode(state.nodes);
             updateBounds();
             state.processingData = false;
             let perfMessage = '';
@@ -3625,6 +3627,10 @@
 
                 switch (key) {
                     case 'f': fitView(); break;
+                    case 't':
+                        if (e.ctrlKey || e.metaKey || e.altKey) break;
+                        cycleTagMode();
+                        break;
                     case 'j':
                         navigateToNext();
                         break;
@@ -4001,14 +4007,6 @@
             const wireLabel = document.getElementById('wire-label');
             const wireSld = wireSlider && wireSlider.closest('.sld');
 
-            function setDetentLabels(sld, value) {
-                if (!sld) return;
-                sld.querySelectorAll('.s-tl span').forEach(span => {
-                    const at = Number.parseInt(span.dataset.at || '', 10);
-                    span.classList.toggle('on', Number.isFinite(at) && at === value);
-                });
-            }
-
             function wireReadout(val) {
                 if (val === 0) return { visible: 'All', aria: 'All', threshold: Infinity };
                 if (val === 100) return { visible: 'None', aria: 'None', threshold: 0 };
@@ -4037,6 +4035,12 @@
                 return val;
             }
 
+            function snapTagValue(val) {
+                if (val < 25) return 0;
+                if (val < 75) return 50;
+                return 100;
+            }
+
             function valueFromPointer(input, clientX) {
                 const rect = input.getBoundingClientRect();
                 const thumb = 6;
@@ -4051,9 +4055,14 @@
 
                 let dragging = false;
                 let pointerFocus = false;
+                const snapValue = (val) => {
+                    if (typeof snap === 'function') return snap(val);
+                    if (snap) return snapShowValue(val);
+                    return val;
+                };
                 const commitPointer = (clientX) => {
                     let val = valueFromPointer(input, clientX);
-                    if (snap) val = snapShowValue(val);
+                    val = snapValue(val);
                     input.value = String(val);
                     onChange(val);
                     return val;
@@ -4177,6 +4186,19 @@
                 applyVersionMix(parseInt(verSlider.value, 10));
             }
 
+            const tagSlider = document.getElementById('tag-slider');
+            const tagSld = tagSlider && tagSlider.closest('.sld');
+            if (tagSlider) {
+                bindStripSlider(tagSlider, tagSld, {
+                    snap: snapTagValue,
+                    onChange: (val) => {
+                        applyTagMode(tagModeFromSlider(val), { persist: true });
+                        scheduleDraw();
+                    }
+                });
+                applyTagMode(state.tagMode || 'all', { persist: false });
+            }
+
             applyPanelVisibility();
         }
 
@@ -4237,6 +4259,97 @@
         }
 
         // --- Canvas status tags ---
+
+        const TAG_MODE_STORAGE_KEY = 'hoptracer:tagMode';
+        const TAG_MODE_STOPS = { all: 0, selected: 50, off: 100 };
+        const TAG_MODE_ARIA = { all: 'All', selected: 'Selected', off: 'Off' };
+
+        function setDetentLabels(sld, value) {
+            if (!sld) return;
+            sld.querySelectorAll('.s-tl span').forEach(span => {
+                const at = Number.parseInt(span.dataset.at || '', 10);
+                span.classList.toggle('on', Number.isFinite(at) && at === value);
+            });
+        }
+
+        function tagModeFromSlider(val) {
+            const snapped = val < 25 ? 0 : (val < 75 ? 50 : 100);
+            if (snapped === 50) return 'selected';
+            if (snapped === 100) return 'off';
+            return 'all';
+        }
+
+        function readSavedTagMode() {
+            try {
+                const raw = String(localStorage.getItem(TAG_MODE_STORAGE_KEY) || '').trim().toLowerCase();
+                if (raw === 'all' || raw === 'selected' || raw === 'off') return raw;
+            } catch (err) {
+                // Private mode / blocked storage.
+            }
+            return null;
+        }
+
+        function writeSavedTagMode(mode) {
+            try {
+                localStorage.setItem(TAG_MODE_STORAGE_KEY, mode);
+            } catch (err) {
+                // Ignore quota / privacy errors.
+            }
+        }
+
+        function countTaggableNodes(nodes) {
+            let count = 0;
+            const list = Array.isArray(nodes) ? nodes : [];
+            for (let i = 0; i < list.length; i++) {
+                const status = list[i] && list[i].status;
+                if (status === 'added' || status === 'removed' || status === 'modified') count++;
+            }
+            return count;
+        }
+
+        function clearCanvasStatusTags() {
+            canvasTagElements.forEach(el => el.remove());
+            canvasTagElements.clear();
+            canvasTagSizeCache.clear();
+        }
+
+        function applyTagMode(mode, options = {}) {
+            const persist = options.persist === true;
+            const next = (mode === 'selected' || mode === 'off') ? mode : 'all';
+            state.tagMode = next;
+            const sliderVal = TAG_MODE_STOPS[next];
+            const aria = TAG_MODE_ARIA[next];
+            const tagSlider = document.getElementById('tag-slider');
+            const tagLabel = document.getElementById('tag-label');
+            const tagSld = tagSlider && tagSlider.closest('.sld');
+            if (tagSlider) {
+                tagSlider.value = String(sliderVal);
+                tagSlider.setAttribute('aria-valuetext', aria);
+            }
+            if (tagLabel) tagLabel.textContent = aria;
+            if (tagSld) {
+                tagSld.style.setProperty('--sld-val', String(sliderVal));
+                setDetentLabels(tagSld, sliderVal);
+            }
+            if (persist) writeSavedTagMode(next);
+        }
+
+        function resolveInitialTagMode(nodes) {
+            const saved = readSavedTagMode();
+            if (saved) {
+                applyTagMode(saved, { persist: false });
+                return;
+            }
+            applyTagMode(countTaggableNodes(nodes) > 25 ? 'selected' : 'all', { persist: false });
+        }
+
+        function cycleTagMode() {
+            const order = ['all', 'selected', 'off'];
+            const index = order.indexOf(state.tagMode);
+            const next = order[(index < 0 ? 0 : index + 1) % order.length];
+            applyTagMode(next, { persist: true });
+            scheduleDraw();
+        }
 
         const CANVAS_TAG_GLYPH = {
             added: { href: '/vendor/phosphor/icons.svg#ph-plus-circle', cls: 'ad' },
@@ -4441,14 +4554,18 @@
         function layoutCanvasStatusTags(renderNodes, canvasW, canvasH, mix) {
             const leaders = [];
             if (!canvasTagsLayer) return leaders;
+            if (state.tagMode === 'off') {
+                clearCanvasStatusTags();
+                return leaders;
+            }
 
             const scale = state.view.scale || 1;
             const dpr = window.devicePixelRatio || 1;
             const keep = new Set();
-            const groupLabels = getGroupLabelScreenRects(renderNodes, mix);
-            const overlays = canvasTagOverlayRects;
+            const selectedId = state.selected != null ? String(state.selected) : null;
             const nodes = Array.from(renderNodes.values()).filter(n => {
                 if (n.status !== 'added' && n.status !== 'removed' && n.status !== 'modified') return false;
+                if (state.tagMode === 'selected' && (selectedId == null || String(n.id) !== selectedId)) return false;
                 if (n.alpha != null && n.alpha <= 0.05) return false;
                 const sx = n.x * scale + state.view.x;
                 const sy = n.y * scale + state.view.y;
@@ -4456,7 +4573,13 @@
                 const sh = n.h * scale;
                 return !(sx + sw < 0 || sy + sh < 0 || sx > canvasW || sy > canvasH);
             });
+            if (nodes.length === 0) {
+                clearCanvasStatusTags();
+                return leaders;
+            }
             nodes.sort((a, b) => compareNodesForComponentSort(a, b));
+            const groupLabels = getGroupLabelScreenRects(renderNodes, mix);
+            const overlays = canvasTagOverlayRects;
 
             const dirtySizes = [];
             for (let i = 0; i < nodes.length; i++) {
