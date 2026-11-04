@@ -1989,6 +1989,7 @@
                     closeGraphTab(tabId);
                 });
             });
+            refreshCanvasTagOverlayRects();
         }
 
         function switchGraphTab(tabId, options = {}) {
@@ -4172,6 +4173,7 @@
             minimap.width = miniContainer.clientWidth;
             minimap.height = miniContainer.clientHeight;
 
+            refreshCanvasTagOverlayRects();
             scheduleDraw();
         }
 
@@ -4221,6 +4223,8 @@
             modified: { href: '/vendor/phosphor/icons.svg#ph-pencil-simple-line', cls: 'ca' }
         };
         const canvasTagElements = new Map();
+        const canvasTagSizeCache = new Map();
+        let canvasTagOverlayRects = [];
 
         function canvasTagLabelText(node) {
             const name = String(node.nickname || node.name || 'Unnamed');
@@ -4236,19 +4240,63 @@
             return CONFIG.colors.same;
         }
 
-        function measureCanvasTagSize(text) {
-            const dpr = window.devicePixelRatio || 1;
-            ctx.save();
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace';
-            try { ctx.letterSpacing = '0.08em'; } catch (e) { /* older canvas */ }
-            const tw = ctx.measureText(String(text || '')).width;
-            ctx.restore();
-            return { w: Math.ceil(tw + 38), h: 24 };
+        function snapCssPx(v, dpr) {
+            return Math.round(v * dpr) / dpr;
         }
 
         function rectsOverlap(a, b) {
             return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+        }
+
+        function overlapArea(a, b) {
+            const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+            const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+            return w > 0 && h > 0 ? w * h : 0;
+        }
+
+        function totalOverlapArea(box, obstacles) {
+            let sum = 0;
+            for (let i = 0; i < obstacles.length; i++) sum += overlapArea(box, obstacles[i]);
+            return sum;
+        }
+
+        function firstOverlappingObstacle(box, obstacles) {
+            for (let i = 0; i < obstacles.length; i++) {
+                if (rectsOverlap(box, obstacles[i])) return obstacles[i];
+            }
+            return null;
+        }
+
+        function refreshCanvasTagOverlayRects() {
+            if (!canvas || !canvasTagsLayer) {
+                canvasTagOverlayRects = [];
+                return;
+            }
+            const origin = canvas.getBoundingClientRect();
+            const rects = [];
+            const add = (el, kind, requireChildren) => {
+                if (!el) return;
+                if (requireChildren && el.children.length === 0) return;
+                const cs = getComputedStyle(el);
+                if (cs.display === 'none' || cs.visibility === 'hidden') return;
+                const r = el.getBoundingClientRect();
+                if (r.width <= 0 || r.height <= 0) return;
+                rects.push({
+                    x: r.x - origin.x,
+                    y: r.y - origin.y,
+                    w: r.width,
+                    h: r.height,
+                    kind,
+                    name: kind
+                });
+            };
+            const main = document.getElementById('main-view');
+            add(main && main.querySelector('.strip'), 'strip');
+            add(graphTabsBar, 'graph-tabs', true);
+            add(main && main.querySelector('.overlay-controls'), 'zoom');
+            const mini = document.getElementById('minimap-container');
+            add(mini, 'minimap');
+            canvasTagOverlayRects = rects;
         }
 
         function getGroupLabelScreenRects(renderNodes, mix) {
@@ -4257,6 +4305,7 @@
             const scale = state.view.scale || 1;
             if (scale < 0.5) return rects;
             const lookup = buildNodeLookupMap(Array.from(renderNodes.values()));
+            const dpr = window.devicePixelRatio || 1;
             for (let i = 0; i < state.groups.length; i++) {
                 const group = state.groups[i];
                 const rect = computeGroupRenderRect(group, lookup, mix);
@@ -4264,7 +4313,6 @@
                 const groupLabel = String(group.name || '').trim();
                 if (!groupLabel || groupLabel.toLowerCase() === 'group') continue;
                 const screenPx = Math.max(11, Math.min(12 * scale, 14));
-                const dpr = window.devicePixelRatio || 1;
                 ctx.save();
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.font = `500 ${screenPx}px "IBM Plex Mono", ui-monospace, monospace`;
@@ -4274,9 +4322,30 @@
                     x: rect.x * scale + state.view.x + 8,
                     y: rect.y * scale + state.view.y - 4 - screenPx,
                     w: tw,
-                    h: screenPx
+                    h: screenPx,
+                    kind: 'group-label',
+                    name: groupLabel
                 });
             }
+            return rects;
+        }
+
+        function getNodeBodyScreenRects(renderNodes, exceptId) {
+            const scale = state.view.scale || 1;
+            const pad = 4;
+            const rects = [];
+            renderNodes.forEach(n => {
+                if (String(n.id) === String(exceptId)) return;
+                if (n.alpha != null && n.alpha <= 0.05) return;
+                rects.push({
+                    x: n.x * scale + state.view.x - pad,
+                    y: n.y * scale + state.view.y - pad,
+                    w: n.w * scale + pad * 2,
+                    h: n.h * scale + pad * 2,
+                    kind: 'node',
+                    name: String(n.nickname || n.name || n.id)
+                });
+            });
             return rects;
         }
 
@@ -4297,30 +4366,55 @@
             const label = document.createElement('span');
             el.appendChild(svg);
             el.appendChild(label);
+            el._tagRefs = { svg, use, label };
             canvasTagsLayer.appendChild(el);
             canvasTagElements.set(id, el);
             return el;
         }
 
+        function setTagClass(el, name, on) {
+            if (el.classList.contains(name) === on) return;
+            el.classList.toggle(name, on);
+        }
+
         function syncCanvasTagElement(el, node, selected, dimmed) {
             const status = node.status;
             const glyph = CANVAS_TAG_GLYPH[status];
-            el.classList.toggle('ad', status === 'added');
-            el.classList.toggle('em', status === 'removed');
-            el.classList.toggle('ca', status === 'modified');
-            el.classList.toggle('sel', !!selected);
-            el.classList.toggle('is-dim', !!dimmed);
-            const svg = el.querySelector('svg');
-            const use = svg && svg.querySelector('use');
-            if (svg && glyph) {
-                svg.setAttribute('class', `ico ${glyph.cls}`);
+            const refs = el._tagRefs || {
+                svg: el.querySelector('svg'),
+                use: el.querySelector('use'),
+                label: el.querySelector('span')
+            };
+            el._tagRefs = refs;
+            setTagClass(el, 'ad', status === 'added');
+            setTagClass(el, 'em', status === 'removed');
+            setTagClass(el, 'ca', status === 'modified');
+            setTagClass(el, 'sel', !!selected);
+            setTagClass(el, 'is-dim', !!dimmed);
+            if (refs.svg && glyph) {
+                const cls = `ico ${glyph.cls}`;
+                if (refs.svg.getAttribute('class') !== cls) refs.svg.setAttribute('class', cls);
             }
-            if (use && glyph) {
-                use.setAttribute('href', glyph.href);
-                use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', glyph.href);
+            if (refs.use && glyph && refs.use.getAttribute('href') !== glyph.href) {
+                refs.use.setAttribute('href', glyph.href);
+                refs.use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', glyph.href);
             }
-            const label = el.querySelector('span');
-            if (label) label.textContent = canvasTagLabelText(node);
+            const text = canvasTagLabelText(node);
+            if (refs.label && refs.label.textContent !== text) {
+                refs.label.textContent = text;
+                return true;
+            }
+            return false;
+        }
+
+        function clampAndSnapTagBox(box, canvasW, canvasH, dpr) {
+            let x = Math.min(Math.max(0, box.x), Math.max(0, canvasW - box.w));
+            let y = Math.min(Math.max(0, box.y), Math.max(0, canvasH - box.h));
+            x = snapCssPx(x, dpr);
+            y = snapCssPx(y, dpr);
+            x = Math.min(Math.max(0, x), Math.max(0, canvasW - box.w));
+            y = Math.min(Math.max(0, y), Math.max(0, canvasH - box.h));
+            return { x, y, w: box.w, h: box.h, slot: box.slot };
         }
 
         function layoutCanvasStatusTags(renderNodes, canvasW, canvasH, mix) {
@@ -4328,14 +4422,44 @@
             if (!canvasTagsLayer) return leaders;
 
             const scale = state.view.scale || 1;
+            const dpr = window.devicePixelRatio || 1;
             const keep = new Set();
-            const occupied = getGroupLabelScreenRects(renderNodes, mix);
-            const nodes = Array.from(renderNodes.values()).filter(n =>
-                (n.status === 'added' || n.status === 'removed' || n.status === 'modified') &&
-                (n.alpha == null || n.alpha > 0.05)
-            );
+            const groupLabels = getGroupLabelScreenRects(renderNodes, mix);
+            const overlays = canvasTagOverlayRects;
+            const nodes = Array.from(renderNodes.values()).filter(n => {
+                if (n.status !== 'added' && n.status !== 'removed' && n.status !== 'modified') return false;
+                if (n.alpha != null && n.alpha <= 0.05) return false;
+                const sx = n.x * scale + state.view.x;
+                const sy = n.y * scale + state.view.y;
+                const sw = n.w * scale;
+                const sh = n.h * scale;
+                return !(sx + sw < 0 || sy + sh < 0 || sx > canvasW || sy > canvasH);
+            });
             nodes.sort((a, b) => compareNodesForComponentSort(a, b));
 
+            const dirtySizes = [];
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                const el = ensureCanvasTagElement(n);
+                const selected = state.selected != null && String(state.selected) === String(n.id);
+                const dimmed = !doesNodeMatchStatusFilter(n.status);
+                const textChanged = syncCanvasTagElement(el, n, selected, dimmed);
+                const text = canvasTagLabelText(n);
+                const cached = canvasTagSizeCache.get(String(n.id));
+                if (textChanged || !cached || cached.text !== text) dirtySizes.push({ id: String(n.id), el, text });
+            }
+            if (dirtySizes.length) {
+                for (let i = 0; i < dirtySizes.length; i++) {
+                    const item = dirtySizes[i];
+                    canvasTagSizeCache.set(item.id, {
+                        text: item.text,
+                        w: item.el.offsetWidth,
+                        h: item.el.offsetHeight || 24
+                    });
+                }
+            }
+
+            const placedTags = [];
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
                 const sx = n.x * scale + state.view.x;
@@ -4344,45 +4468,75 @@
                 const sh = n.h * scale;
                 if (sx + sw < 0 || sy + sh < 0 || sx > canvasW || sy > canvasH) continue;
 
-                const text = canvasTagLabelText(n);
-                const size = measureCanvasTagSize(text);
+                const size = canvasTagSizeCache.get(String(n.id)) || { w: 120, h: 24 };
                 const tw = size.w;
                 const th = size.h;
                 const cx = sx + sw / 2 - tw / 2;
                 const candidates = [
-                    { x: cx, y: sy - 34 },
-                    { x: cx, y: sy + sh + 12 },
-                    { x: cx, y: sy - 82 }
+                    { slot: 'above', x: cx, y: sy - 34 },
+                    { slot: 'below', x: cx, y: sy + sh + 12 },
+                    { slot: 'above3', x: cx, y: sy - 82 },
+                    { slot: 'below3', x: cx, y: sy + sh + 60 }
                 ];
+                const obstacles = overlays.concat(groupLabels, getNodeBodyScreenRects(renderNodes, n.id), placedTags);
 
+                const blocked = [];
                 let chosen = null;
                 for (let c = 0; c < candidates.length; c++) {
-                    const box = { x: candidates[c].x, y: candidates[c].y, w: tw, h: th };
-                    const onCanvas = box.x >= 0 && box.y >= 0 && box.x + box.w <= canvasW && box.y + box.h <= canvasH;
-                    if (!onCanvas) continue;
-                    let hit = false;
-                    for (let o = 0; o < occupied.length; o++) {
-                        if (rectsOverlap(box, occupied[o])) { hit = true; break; }
-                    }
+                    const box = clampAndSnapTagBox({
+                        x: candidates[c].x,
+                        y: candidates[c].y,
+                        w: tw,
+                        h: th,
+                        slot: candidates[c].slot
+                    }, canvasW, canvasH, dpr);
+                    const hit = firstOverlappingObstacle(box, obstacles);
                     if (!hit) {
                         chosen = box;
                         break;
                     }
+                    blocked.push({ slot: candidates[c].slot, kind: hit.kind, name: hit.name });
                 }
                 if (!chosen) {
-                    chosen = { x: candidates[0].x, y: candidates[0].y, w: tw, h: th };
+                    let best = null;
+                    let bestArea = Infinity;
+                    for (let c = 0; c < candidates.length; c++) {
+                        const box = clampAndSnapTagBox({
+                            x: candidates[c].x,
+                            y: candidates[c].y,
+                            w: tw,
+                            h: th,
+                            slot: candidates[c].slot
+                        }, canvasW, canvasH, dpr);
+                        const area = totalOverlapArea(box, obstacles);
+                        if (area < bestArea) {
+                            bestArea = area;
+                            best = box;
+                        }
+                    }
+                    chosen = best;
                 }
-                chosen.x = Math.min(Math.max(0, chosen.x), Math.max(0, canvasW - tw));
-                chosen.y = Math.min(Math.max(0, chosen.y), Math.max(0, canvasH - th));
 
-                occupied.push(chosen);
+                placedTags.push({
+                    x: chosen.x,
+                    y: chosen.y,
+                    w: chosen.w,
+                    h: chosen.h,
+                    kind: 'tag',
+                    name: String(n.nickname || n.name || n.id)
+                });
                 keep.add(String(n.id));
 
-                const el = ensureCanvasTagElement(n);
+                const el = canvasTagElements.get(String(n.id));
                 const dimmed = !doesNodeMatchStatusFilter(n.status);
-                syncCanvasTagElement(el, n, state.selected != null && String(state.selected) === String(n.id), dimmed);
-                el.style.left = `${chosen.x}px`;
-                el.style.top = `${chosen.y}px`;
+                if (el.dataset.slot !== chosen.slot) el.dataset.slot = chosen.slot;
+                const avoided = blocked.map(b => `${b.kind}:${b.name}`).join('|');
+                if (el.dataset.avoided !== avoided) el.dataset.avoided = avoided;
+                if (el._tagX !== chosen.x || el._tagY !== chosen.y) {
+                    el.style.transform = `translate(${chosen.x}px, ${chosen.y}px)`;
+                    el._tagX = chosen.x;
+                    el._tagY = chosen.y;
+                }
 
                 const tagAbove = (chosen.y + th) <= sy + 1;
                 const from = tagAbove
@@ -4392,10 +4546,10 @@
                     ? { x: sx + sw / 2, y: sy }
                     : { x: sx + sw / 2, y: sy + sh };
                 leaders.push({
-                    x1: (from.x - state.view.x) / scale,
-                    y1: (from.y - state.view.y) / scale,
-                    x2: (to.x - state.view.x) / scale,
-                    y2: (to.y - state.view.y) / scale,
+                    x1: from.x,
+                    y1: from.y,
+                    x2: to.x,
+                    y2: to.y,
                     color: canvasTagStatusColor(n.status),
                     alpha: dimmed ? 0.38 : 1
                 });
@@ -4405,6 +4559,7 @@
                 if (!keep.has(id)) {
                     el.remove();
                     canvasTagElements.delete(id);
+                    canvasTagSizeCache.delete(id);
                 }
             });
             return leaders;
@@ -4412,21 +4567,34 @@
 
         function drawCanvasTagLeaders(leaders) {
             if (!leaders || leaders.length === 0) return;
-            const scale = state.view.scale || 1;
+            const dpr = window.devicePixelRatio || 1;
+            const half = 0.5 / dpr;
+            ctx.save();
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.lineWidth = 1;
+            ctx.lineCap = 'butt';
+            ctx.setLineDash([]);
             for (let i = 0; i < leaders.length; i++) {
                 const l = leaders[i];
-                ctx.save();
+                let x1 = snapCssPx(l.x1, dpr);
+                let y1 = snapCssPx(l.y1, dpr);
+                let x2 = snapCssPx(l.x2, dpr);
+                let y2 = snapCssPx(l.y2, dpr);
+                if (Math.abs(y2 - y1) >= Math.abs(x2 - x1)) {
+                    x1 += half;
+                    x2 += half;
+                } else {
+                    y1 += half;
+                    y2 += half;
+                }
                 ctx.globalAlpha = l.alpha;
                 ctx.strokeStyle = l.color;
-                ctx.lineWidth = 1 / scale;
-                ctx.lineCap = 'butt';
-                ctx.setLineDash([]);
                 ctx.beginPath();
-                ctx.moveTo(l.x1, l.y1);
-                ctx.lineTo(l.x2, l.y2);
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
                 ctx.stroke();
-                ctx.restore();
             }
+            ctx.restore();
         }
 
         // --- Drawing ---
@@ -4515,9 +4683,9 @@
             }
 
             const tagLeaders = layoutCanvasStatusTags(renderNodes, canvasWidth, canvasHeight, mix);
-            drawCanvasTagLeaders(tagLeaders);
 
             drawGroupBackgrounds(renderNodeLookup, viewLeft, viewTop, viewRight, viewBottom, mix, connectedIds, matchingNodeSet);
+            drawCanvasTagLeaders(tagLeaders);
 
             // Draw Edges
             state.edges.forEach(e => {
