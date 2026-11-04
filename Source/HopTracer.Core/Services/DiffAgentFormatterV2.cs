@@ -29,27 +29,26 @@ public static class DiffAgentFormatterV2
             .ThenBy(n => n.Id)
             .ToList();
         
-        // Adaptive limit: fewer changes shown for large graphs
-        int defaultMax = significantChanges.Count > 50 ? 10 : 100;
+        // Show top N nodes with full detail - cap at 30 for large graphs
+        int defaultMax = significantChanges.Count > 50 ? 30 : 100;
         var maxNodesToShow = options.MaxNodesToShow > 0 ? options.MaxNodesToShow : defaultMax;
         var displayedChanges = significantChanges.Take(maxNodesToShow).ToList();
-        var omittedCount = Math.Max(0, significantChanges.Count - maxNodesToShow);
+        var omittedChanges = significantChanges.Skip(maxNodesToShow).ToList();
         
         // Check for 8-char ID collisions
-        var idMap = BuildSafeIdMap(displayedChanges);
+        var idMap = BuildSafeIdMap(significantChanges);
         
-        bool isLargeGraph = significantChanges.Count > 50;
-        var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff, idMap, isLargeGraph)).ToList();
+        // Full detail for displayed nodes
+        var changes = displayedChanges.Select(node => BuildChange(node, resolver, diff, idMap, skipDetail: false)).ToList();
         
-        // Add recursive cluster changes (skip for large graphs to save size)
-        if (!isLargeGraph)
-        {
-            var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes, idMap);
-            changes.AddRange(clusterChanges);
-        }
+        // Add recursive cluster changes
+        var clusterChanges = BuildRecursiveClusterChanges(displayedChanges, diff.Nodes, idMap);
+        changes.AddRange(clusterChanges);
         
-        // Skip wires for large graphs
-        var wires = isLargeGraph ? new List<WireChange>() : BuildWireChanges(diff, resolver);
+        var wires = BuildWireChanges(diff, resolver);
+        
+        // Build omitted summary by category
+        var omittedSummary = omittedChanges.Any() ? BuildOmittedSummary(omittedChanges) : null;
         
         var result = new AgentDiffReportV2
         {
@@ -71,7 +70,8 @@ public static class DiffAgentFormatterV2
             {
                 Listed = displayedChanges.Count,
                 Total = significantChanges.Count,
-                OmittedLowRisk = omittedCount
+                OmittedLowRisk = omittedChanges.Count,
+                Omitted = omittedSummary
             }
         };
 
@@ -104,7 +104,7 @@ public static class DiffAgentFormatterV2
         return map;
     }
 
-    private static ChangeItem BuildChange(Node node, DiffGraphResolver resolver, DiffComputation diff, Dictionary<string, string> idMap, bool skipImpact = false)
+    private static ChangeItem BuildChange(Node node, DiffGraphResolver resolver, DiffComputation diff, Dictionary<string, string> idMap, bool skipDetail = false)
     {
         var nodeLabel = string.IsNullOrWhiteSpace(node.Nickname) ? node.Name : node.Nickname;
         var change = new ChangeItem
@@ -120,11 +120,10 @@ public static class DiffAgentFormatterV2
                 Level = GetRiskLevel(node.RiskScore),
                 Reasons = node.RiskReasons.Any() ? node.RiskReasons : new List<string> { "Node modified" }
             },
-            Impact = skipImpact ? new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 } : BuildImpact(node, diff)
+            Impact = BuildImpact(node, diff)
         };
 
-        // For large graphs, skip detailed params/scripts to save size
-        if (!skipImpact)
+        if (!skipDetail)
         {
             // Check for name/nickname changes
             var rename = TryGetRename(node);
@@ -185,13 +184,11 @@ public static class DiffAgentFormatterV2
 
     private static List<WireChange> BuildWireChanges(DiffComputation diff, DiffGraphResolver resolver)
     {
-        var changedEdges = diff.Edges.Where(e => e.Status != "same").ToList();
-        var wireLimit = changedEdges.Count > 50 ? 10 : 50;
-        
-        return changedEdges
+        return diff.Edges
+            .Where(e => e.Status != "same")
             .OrderBy(e => e.Status)
             .ThenBy(e => e.Source)
-            .Take(wireLimit)
+            .Take(20)
             .Select(e =>
             {
                 var resolved = resolver.Resolve(e);
@@ -340,6 +337,30 @@ public static class DiffAgentFormatterV2
         public string Id { get; init; } = string.Empty;
         public string Name { get; init; } = string.Empty;
         public string Nickname { get; init; } = string.Empty;
+    }
+
+    private static OmittedSummary BuildOmittedSummary(List<Node> omittedNodes)
+    {
+        var byStatus = omittedNodes.GroupBy(n => n.Status)
+            .ToDictionary(g => g.Key, g => g.Count());
+        
+        // Only list top 20 omitted nodes by risk
+        var nodes = omittedNodes
+            .OrderByDescending(n => n.RiskScore)
+            .Take(20)
+            .Select(n => new OmittedNode
+            {
+                Id = n.Id.Length > 8 ? n.Id.Substring(0, 8) : n.Id,
+                Name = string.IsNullOrWhiteSpace(n.Nickname) ? n.Name : n.Nickname,
+                Status = n.Status,
+                Risk = n.RiskScore
+            }).ToList();
+        
+        return new OmittedSummary
+        {
+            ByStatus = byStatus,
+            Nodes = nodes
+        };
     }
 
     private static Dictionary<string, (string Old, string New)> GetActualPropertyChanges(Node node)
@@ -751,6 +772,21 @@ internal sealed class TruncationInfo
     public int Listed { get; set; }
     public int Total { get; set; }
     public int OmittedLowRisk { get; set; }
+    public OmittedSummary? Omitted { get; set; }
+}
+
+internal sealed class OmittedSummary
+{
+    public Dictionary<string, int> ByStatus { get; set; } = new();
+    public List<OmittedNode> Nodes { get; set; } = new();
+}
+
+internal sealed class OmittedNode
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int Risk { get; set; }
 }
 
 internal sealed class WireChange
