@@ -34,7 +34,12 @@ public static class CliRunner
         }
         catch (Exception ex)
         {
-            return Fail(stderr, InferFormatFromArgs(args), "unknown_option", GetDeepMessage(ex), $"Error: {GetDeepMessage(ex)}");
+            var msg = GetDeepMessage(ex);
+            var code = msg.StartsWith("unknown_format:") ? "unknown_format" :
+                       msg.StartsWith("invalid_threshold:") ? "invalid_threshold" : "unknown_option";
+            var cleanMsg = msg.Replace("unknown_format:", "Unknown format:")
+                             .Replace("invalid_threshold:", "Invalid threshold:");
+            return Fail(stderr, InferFormatFromArgs(args), code, cleanMsg, $"Error: {cleanMsg}");
         }
 
         try
@@ -53,7 +58,8 @@ public static class CliRunner
         {
             var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
             var detail = $"XML parsing error at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}";
-            return FailWithXmlError(stderr, flags.Format, detail, xmlEx);
+            var filePath = xmlEx.SourceUri ?? (positional.Length > 0 ? positional[0] : "unknown");
+            return FailWithXmlError(stderr, flags.Format, detail, xmlEx, filePath);
         }
         catch (Exception ex)
         {
@@ -231,7 +237,8 @@ public static class CliRunner
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = flags.Format is DiffOutputFormat.Agent or DiffOutputFormat.Json
+            WriteIndented = flags.Format is DiffOutputFormat.Agent or DiffOutputFormat.Json,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
         stdout.WriteLine(json);
     }
@@ -425,7 +432,7 @@ public static class CliRunner
         return 2;
     }
 
-    private static int FailWithXmlError(TextWriter stderr, DiffOutputFormat format, string detail, System.Xml.XmlException xmlEx)
+    private static int FailWithXmlError(TextWriter stderr, DiffOutputFormat format, string detail, System.Xml.XmlException xmlEx, string file)
     {
         if (UsesStructuredErrors(format))
         {
@@ -434,6 +441,7 @@ public static class CliRunner
                 ["error"] = "xml_parse_error",
                 ["message"] = $"XML parsing error at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}",
                 ["detail"] = detail,
+                ["file"] = file,
                 ["line"] = xmlEx.LineNumber,
                 ["column"] = xmlEx.LinePosition
             };
@@ -528,7 +536,7 @@ public static class CliRunner
                         }
                         else
                         {
-                            throw new InvalidOperationException($"Invalid --fail-on-risk threshold: {value} (must be 0-100)");
+                            throw new InvalidOperationException($"invalid_threshold: --fail-on-risk={value} (must be 0-100)");
                         }
                     }
                     else if (arg.StartsWith('-'))
@@ -564,7 +572,7 @@ public static class CliRunner
         "html" => DiffOutputFormat.Html,
         "agent" => DiffOutputFormat.Agent,
         "agent-v1" => DiffOutputFormat.AgentV1,
-        _ => throw new InvalidOperationException($"Unknown format: {value}")
+        _ => throw new InvalidOperationException($"unknown_format: {value}")
     };
 
     private static void PrintHelp(TextWriter stdout, string? command)
