@@ -58,7 +58,12 @@ public static class CliRunner
         {
             var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
             var detail = $"XML parsing error at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}";
-            var filePath = xmlEx.SourceUri ?? (positional.Length > 0 ? positional[0] : "unknown");
+            // Try to extract file from args or exception
+            var filePath = xmlEx.SourceUri ?? string.Empty;
+            if (string.IsNullOrEmpty(filePath) && command == "compare" && positional.Length >= 1)
+            {
+                filePath = positional[0];
+            }
             return FailWithXmlError(stderr, flags.Format, detail, xmlEx, filePath);
         }
         catch (Exception ex)
