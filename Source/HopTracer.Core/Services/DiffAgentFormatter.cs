@@ -264,7 +264,7 @@ public static class DiffAgentFormatter
 
 internal sealed class AgentDiffReport
 {
-    public DateTimeOffset? GeneratedAt { get; set; }
+    public DateTimeOffset GeneratedAt { get; set; }
     public string? FileOld { get; set; }
     public string? FileNew { get; set; }
     public string Summary { get; set; } = string.Empty;
