@@ -305,7 +305,7 @@ public static class DiffAgentFormatterV2
             var doc = JsonDocument.Parse(json);
             var nodes = new List<ClusterInnerNode>();
 
-            // New format: {"Nodes": [...], "Edges": [...]}
+            // Try new format first: {"Nodes": [...], "Edges": [...]}
             if (doc.RootElement.TryGetProperty("Nodes", out var nodesArray))
             {
                 foreach (var obj in nodesArray.EnumerateArray())
@@ -323,6 +323,25 @@ public static class DiffAgentFormatterV2
                             clusterPreview = cp.GetString();
                         }
                     }
+
+                    nodes.Add(new ClusterInnerNode 
+                    { 
+                        Id = id, 
+                        Name = name, 
+                        Nickname = nickname,
+                        ClusterPreviewGraph = clusterPreview
+                    });
+                }
+            }
+            // Fall back to old format: {"Objects": [...]}
+            else if (doc.RootElement.TryGetProperty("Objects", out var objectsArray))
+            {
+                foreach (var obj in objectsArray.EnumerateArray())
+                {
+                    var id = obj.TryGetProperty("GUID", out var guid) ? guid.GetString() ?? string.Empty : string.Empty;
+                    var name = obj.TryGetProperty("Name", out var n) ? n.GetString() ?? string.Empty : string.Empty;
+                    var nickname = obj.TryGetProperty("NickName", out var nn) ? nn.GetString() ?? string.Empty : string.Empty;
+                    var clusterPreview = obj.TryGetProperty("ClusterPreviewGraph", out var cp) ? cp.GetString() : null;
 
                     nodes.Add(new ClusterInnerNode 
                     { 
@@ -356,9 +375,18 @@ public static class DiffAgentFormatterV2
             if (newById.TryGetValue(oldNode.Id, out var newNode))
             {
                 matchedNew.Add(newNode.Id);
-                if (oldNode.Name != newNode.Name || oldNode.Nickname != newNode.Nickname)
+                bool nameChanged = oldNode.Name != newNode.Name || oldNode.Nickname != newNode.Nickname;
+                bool previewChanged = oldNode.ClusterPreviewGraph != newNode.ClusterPreviewGraph;
+                
+                if (nameChanged || previewChanged)
                 {
                     changes.Add((newNode, "modified"));
+                }
+                // Always include inner clusters even if unchanged, for recursive processing
+                else if (newNode.Name.Contains("Cluster", StringComparison.OrdinalIgnoreCase) && 
+                         !string.IsNullOrEmpty(newNode.ClusterPreviewGraph))
+                {
+                    changes.Add((newNode, "same"));
                 }
             }
             else
