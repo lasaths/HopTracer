@@ -2,8 +2,8 @@
 
 ## Known Limitations & Dependencies
 
-### Cluster Risk Rollup
-Current risk scoring does not propagate internal cluster changes to the parent cluster's risk score. A cluster may show low risk even when its internal nodes have critical changes. **Workaround**: Agents should check `.changes[]` entries with `path: ["root", "<ClusterName>", ...]` to inspect cluster internals. This limitation will be addressed in a future PR.
+### Cluster Risk Rollup (PR #17 Dependency)
+Current risk scoring does not propagate internal cluster changes to the parent cluster's risk score. A cluster may show low risk even when its internal nodes have critical changes. **This depends on [PR #17: UI/UX Redesign: ANDURA Design System Implementation](https://github.com/lasaths/HopTracer/pull/17)** which implements risk rollup for clusters. Until that PR merges, agents should check `.changes[]` entries with `path: ["root", "<ClusterName>", ...]` to inspect cluster internals manually.
 
 ## Project Overview
 **HopTracer** is a desktop application for diffing Grasshopper (`.gh`, `.ghx`) files. It allows users to visualize changes between two versions of a Grasshopper definition, including added/removed nodes, modified connections, parameter changes, script code diffs, and cluster-level change previews.
