@@ -19,13 +19,13 @@ jobs:
         dotnet-version: '10.0.x'
     
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore Source/Tools/GhDiffTool/GhDiffTool.csproj
     
     - name: Build CLI
-      run: dotnet build Source/Tools/GhDiffTool/GhDiffTool.csproj -c Release
+      run: dotnet build Source/Tools/GhDiffTool/GhDiffTool.csproj --no-restore -c Release
     
     - name: Run tests
-      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj -c Release --no-build
+      run: dotnet test Tests/HopTracer.UnitTests/HopTracer.UnitTests.csproj -c Release
     
     - name: Test CLI
       run: |
