@@ -193,9 +193,13 @@ public static class CliRunner
         flags.FileOldLabel = $"{result.Baseline.Name} (baseline)";
         flags.FileNewLabel = Path.GetFileName(filePath);
         var code = WriteOutput(result.Diff, flags.FileOldLabel, flags.FileNewLabel, flags, stdout, stderr);
-        if (flags.FailOnRisk.HasValue && !result.Passed)
+        if (flags.FailOnRisk.HasValue)
         {
-            return 1;
+            var maxRisk = result.Diff.Nodes.Where(n => n.Status != "same").Max(n => (int?)n.RiskScore) ?? 0;
+            if (maxRisk >= flags.FailOnRisk.Value)
+            {
+                return 1;
+            }
         }
 
         return code;
