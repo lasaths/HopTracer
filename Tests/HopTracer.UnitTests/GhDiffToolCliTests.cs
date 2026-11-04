@@ -47,7 +47,22 @@ public class GhDiffToolCliTests
     }
 
     [Fact]
-    public void Compare_Fixtures_AgentFormat_ReturnsZero()
+    public void Compare_Fixtures_AgentV1Format_ReturnsZero()
+    {
+        var oldPath = FixturePath("compare-old.ghx");
+        var newPath = FixturePath("compare-new.ghx");
+        var stdout = new StringWriter();
+
+        var code = CliRunner.Run(["compare", oldPath, newPath, "--format", "agent-v1"], stdout);
+
+        Assert.Equal(0, code);
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        Assert.True(doc.RootElement.GetProperty("totalChangedNodes").GetInt32() >= 1);
+        Assert.Contains("added", doc.RootElement.GetProperty("summary").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Compare_Fixtures_AgentV2Format_HasSchema()
     {
         var oldPath = FixturePath("compare-old.ghx");
         var newPath = FixturePath("compare-new.ghx");
@@ -57,8 +72,8 @@ public class GhDiffToolCliTests
 
         Assert.Equal(0, code);
         using var doc = JsonDocument.Parse(stdout.ToString());
-        Assert.True(doc.RootElement.GetProperty("totalChangedNodes").GetInt32() >= 1);
-        Assert.Contains("added", doc.RootElement.GetProperty("summary").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("hoptracer.agent/2", doc.RootElement.GetProperty("schema").GetString());
+        Assert.True(doc.RootElement.GetProperty("summary").GetProperty("added").GetInt32() >= 0);
     }
 
     [Fact]
@@ -69,7 +84,7 @@ public class GhDiffToolCliTests
             ["compare", FixturePath("missing-old.ghx"), FixturePath("compare-new.ghx"), "--format", "agent"],
             stderr: stderr);
 
-        Assert.Equal(1, code);
+        Assert.Equal(2, code);
         using var doc = JsonDocument.Parse(stderr.ToString().Trim());
         Assert.Equal("file_not_found", doc.RootElement.GetProperty("error").GetString());
         Assert.True(doc.RootElement.TryGetProperty("path", out _));
@@ -83,7 +98,7 @@ public class GhDiffToolCliTests
             ["compare", FixturePath("missing-old.ghx"), FixturePath("compare-new.ghx")],
             stderr: stderr);
 
-        Assert.Equal(1, code);
+        Assert.Equal(2, code);
         Assert.StartsWith("File not found:", stderr.ToString().Trim());
         Assert.DoesNotContain("\"error\"", stderr.ToString());
     }
@@ -100,11 +115,11 @@ public class GhDiffToolCliTests
     }
 
     [Fact]
-    public void UnknownCommand_ReturnsOne()
+    public void UnknownCommand_ReturnsTwo()
     {
         var stderr = new StringWriter();
         var code = CliRunner.Run(["nope"], stderr: stderr);
-        Assert.Equal(1, code);
+        Assert.Equal(2, code);
         Assert.Contains("Unknown command", stderr.ToString());
     }
 
@@ -116,9 +131,9 @@ public class GhDiffToolCliTests
             ["compare", FixturePath("compare-old.ghx"), FixturePath("compare-new.ghx"), "--format", "agent", "--nope"],
             stderr: stderr);
 
-        Assert.Equal(1, code);
+        Assert.Equal(2, code);
         using var doc = JsonDocument.Parse(stderr.ToString().Trim());
-        Assert.Equal("error", doc.RootElement.GetProperty("error").GetString());
+        Assert.Equal("unknown_option", doc.RootElement.GetProperty("error").GetString());
     }
 
     [Fact]

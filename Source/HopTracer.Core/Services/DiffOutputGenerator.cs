@@ -17,11 +17,15 @@ public class DiffOutputGenerator
             DiffOutputFormat.Json => GenerateJsonDiff(diff, options),
             DiffOutputFormat.Html => GenerateHtmlDiff(diff, options),
             DiffOutputFormat.Agent => GenerateAgentDiff(diff, options),
+            DiffOutputFormat.AgentV1 => GenerateAgentV1Diff(diff, options),
             _ => GenerateTextDiff(diff, options)
         };
 
     public string GenerateAgentDiff(DiffComputation diff, DiffOutputOptions options) =>
         DiffAgentFormatterV2.Generate(diff, options);
+
+    public string GenerateAgentV1Diff(DiffComputation diff, DiffOutputOptions options) =>
+        DiffAgentFormatter.Generate(diff, options);
 
     public string GenerateTextDiff(DiffComputation diff, DiffOutputOptions options)
     {

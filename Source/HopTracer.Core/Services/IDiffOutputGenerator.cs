@@ -25,5 +25,6 @@ public enum DiffOutputFormat
     Markdown,
     Json,
     Html,
-    Agent
+    Agent,
+    AgentV1
 }

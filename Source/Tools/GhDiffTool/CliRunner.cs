@@ -34,7 +34,7 @@ public static class CliRunner
         }
         catch (Exception ex)
         {
-            return Fail(stderr, InferFormatFromArgs(args), "error", GetDeepMessage(ex), $"Error: {GetDeepMessage(ex)}");
+            return Fail(stderr, InferFormatFromArgs(args), "unknown_option", GetDeepMessage(ex), $"Error: {GetDeepMessage(ex)}");
         }
 
         try
@@ -48,6 +48,12 @@ public static class CliRunner
                 "report" => RunReport(positional, flags, stdout, stderr),
                 _ => Fail(stderr, flags.Format, "unknown_command", $"Unknown command: {command}", $"Unknown command: {command}")
             };
+        }
+        catch (Exception ex) when (ex is System.Xml.XmlException || ex.InnerException is System.Xml.XmlException)
+        {
+            var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
+            var detail = $"XML parsing error at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}";
+            return FailWithXmlError(stderr, flags.Format, detail, xmlEx);
         }
         catch (Exception ex)
         {
@@ -312,32 +318,8 @@ public static class CliRunner
         {
             var preparedOld = PreparePath(oldPath, converter, temps);
             var preparedNew = PreparePath(newPath, converter, temps);
-            
-            Graph oldGraph, newGraph;
-            try
-            {
-                oldGraph = parser.Parse(preparedOld);
-            }
-            catch (Exception ex) when (ex is System.Xml.XmlException || ex.InnerException is System.Xml.XmlException)
-            {
-                var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
-                throw new InvalidOperationException(
-                    $"XML parsing failed in old file '{Path.GetFileName(oldPath)}' at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}",
-                    ex);
-            }
-            
-            try
-            {
-                newGraph = parser.Parse(preparedNew);
-            }
-            catch (Exception ex) when (ex is System.Xml.XmlException || ex.InnerException is System.Xml.XmlException)
-            {
-                var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
-                throw new InvalidOperationException(
-                    $"XML parsing failed in new file '{Path.GetFileName(newPath)}' at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}",
-                    ex);
-            }
-            
+            var oldGraph = parser.Parse(preparedOld);
+            var newGraph = parser.Parse(preparedNew);
             return differ.DiffDetailed(oldGraph, newGraph);
         }
         finally
@@ -439,8 +421,31 @@ public static class CliRunner
         return 2;
     }
 
+    private static int FailWithXmlError(TextWriter stderr, DiffOutputFormat format, string detail, System.Xml.XmlException xmlEx)
+    {
+        if (UsesStructuredErrors(format))
+        {
+            var payload = new Dictionary<string, object?>
+            {
+                ["error"] = "xml_parse_error",
+                ["message"] = $"XML parsing error at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}",
+                ["detail"] = detail,
+                ["line"] = xmlEx.LineNumber,
+                ["column"] = xmlEx.LinePosition
+            };
+
+            stderr.WriteLine(JsonSerializer.Serialize(payload));
+        }
+        else
+        {
+            stderr.WriteLine(detail);
+        }
+
+        return 2;
+    }
+
     private static bool UsesStructuredErrors(DiffOutputFormat format) =>
-        format is DiffOutputFormat.Agent or DiffOutputFormat.Json;
+        format is DiffOutputFormat.Agent or DiffOutputFormat.AgentV1 or DiffOutputFormat.Json;
 
     private static (CliFlags Flags, string[] Positional) ParseArgs(string[] args)
     {
@@ -536,6 +541,7 @@ public static class CliRunner
         "json" => DiffOutputFormat.Json,
         "html" => DiffOutputFormat.Html,
         "agent" => DiffOutputFormat.Agent,
+        "agent-v1" => DiffOutputFormat.AgentV1,
         _ => throw new InvalidOperationException($"Unknown format: {value}")
     };
 
@@ -596,7 +602,7 @@ Usage:
     {
         stdout.WriteLine("""
 Options:
-  -f, --format <text|md|json|html|agent>   Output format (default: text)
+  -f, --format <text|md|json|html|agent|agent-v1>   Output format (default: text, agent=v2)
   -o, --output <file>                Write to file or output directory
   --commit <hash>                    Git commit to compare against (git command)
   --name <baselineName>              Baseline name (baseline save/compare)

@@ -12,7 +12,7 @@ public class DiffAgentFormatterTests
     private readonly Differ _differ = new(NullLogger<Differ>.Instance);
 
     [Fact]
-    public void Generate_Agent_ResolvesWireLabels()
+    public void Generate_AgentV1_ResolvesWireLabels()
     {
         var oldGraph = new Graph
         {
@@ -44,7 +44,7 @@ public class DiffAgentFormatterTests
         };
 
         var diff = _differ.DiffDetailed(oldGraph, newGraph);
-        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Agent);
+        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.AgentV1);
         using var doc = JsonDocument.Parse(json);
 
         var wire = doc.RootElement.GetProperty("wireChanges")[0];
@@ -55,10 +55,10 @@ public class DiffAgentFormatterTests
     }
 
     [Fact]
-    public void Generate_Agent_NodeChangesIncludeNodeId()
+    public void Generate_AgentV1_NodeChangesIncludeNodeId()
     {
         var diff = _differ.DiffDetailed(CreateOldGraph(), CreateNewGraph());
-        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Agent);
+        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.AgentV1);
         using var doc = JsonDocument.Parse(json);
 
         var nodeChange = doc.RootElement.GetProperty("nodeChanges")[0];
@@ -66,7 +66,7 @@ public class DiffAgentFormatterTests
     }
 
     [Fact]
-    public void Generate_Agent_ClassifiesPanelAndOpaqueProperties()
+    public void Generate_AgentV1_ClassifiesPanelAndOpaqueProperties()
     {
         var blobOld = new string('A', 300);
         var blobNew = new string('B', 300);
@@ -105,7 +105,7 @@ public class DiffAgentFormatterTests
         };
 
         var diff = _differ.DiffDetailed(oldGraph, newGraph);
-        var json = _generator.Generate(diff, new DiffOutputOptions { MaxNodesToShow = 10 }, DiffOutputFormat.Agent);
+        var json = _generator.Generate(diff, new DiffOutputOptions { MaxNodesToShow = 10 }, DiffOutputFormat.AgentV1);
 
         Assert.Contains("\"propertyChanges\"", json);
         Assert.Contains("old notes", json);
@@ -153,10 +153,10 @@ public class DiffAgentFormatterTests
     }
 
     [Fact]
-    public void Generate_Agent_Summary_NotEmptyWhenNodesAdded()
+    public void Generate_AgentV1_Summary_NotEmptyWhenNodesAdded()
     {
         var diff = _differ.DiffDetailed(CreateOldGraph(), CreateNewGraph());
-        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Agent);
+        var json = _generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.AgentV1);
         using var doc = JsonDocument.Parse(json);
 
         var summary = doc.RootElement.GetProperty("summary").GetString();
