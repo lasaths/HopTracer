@@ -453,7 +453,7 @@ html, body {
     gap: 8px;
     width: 100%;
     min-height: 40px;
-    height: 40px;
+    height: auto;
     text-align: left;
     padding: 8px 0;
     border: none;
@@ -961,10 +961,12 @@ footer .filter-btn[data-filter][aria-current="true"] {
 }
 
 .component-status-badge {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .component-status-badge.added {
@@ -1490,21 +1492,23 @@ footer .filter-btn[data-filter][aria-current="true"] {
 .icon-btn {
     width: 32px;
     height: 32px;
-    background: var(--bg-app);
-    border: 1px solid var(--border-hairline);
-    border-radius: var(--radius-sm);
-    color: var(--text-secondary);
+    background: var(--c-void);
+    border: 1px solid var(--c-line);
+    border-radius: 0;
+    color: var(--c-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-base);
+    transition: color var(--d-fast);
+}
+
+.icon-btn .ico {
+    fill: currentColor;
 }
 
 .icon-btn:hover {
-    background: var(--interactive-hover);
-    border-color: var(--border-hairline-strong);
-    color: var(--text-primary);
+    color: var(--c-text);
 }
 
 /* Details Panel Resizer */
@@ -1532,7 +1536,7 @@ footer .filter-btn[data-filter][aria-current="true"] {
 
 .details-tabs {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     height: 40px;
     border-bottom: 1px solid var(--border-hairline);
     padding: 0;
@@ -1549,6 +1553,8 @@ footer .filter-btn[data-filter][aria-current="true"] {
     font-size: 12px;
     cursor: pointer;
     transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
 }
 
 .details-tab:hover {
@@ -1624,6 +1630,7 @@ footer .filter-btn[data-filter][aria-current="true"] {
     color: var(--c-muted);
 }
 
+.insp-head + .insp-sec,
 .insp-sec + .insp-sec {
     margin-top: 32px;
 }

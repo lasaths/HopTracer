@@ -4916,7 +4916,7 @@
             const add = (slot, x, y, slideAxis) => {
                 list.push({ slot, x, y, w: tw, h: th, slideAxis });
             };
-            const gaps = [12, 8, 4, 2, 6, 16, 20, 24, 28, 36];
+            const gaps = [12, 8, 4, 2, 6, 16, 10, 14, 18, 20, 22, 24, 26, 28, 30, 32, 36, 40, 44, 48, 52, 56, 60, 68, 76, 84, 92, 100];
             for (let i = 0; i < gaps.length; i++) {
                 const g = gaps[i];
                 add('above', cx, sy - th - g, 'x');
@@ -5603,9 +5603,28 @@
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
 
-                    // Cluster nodes reserve a right gutter for the stacked-squares glyph.
-                    const maxWidth = clusterLayout ? clusterLayout.labelW : (n.w - 16);
-                    const tx = clusterLayout ? clusterLayout.labelCx : (n.x + n.w / 2);
+                    let maxWidth, tx;
+                    let hideGlyph = false;
+                    if (clusterLayout) {
+                        const fullLabelW = ctx.measureText(label).width;
+                        const availableWithGlyph = clusterLayout.labelW;
+                        const availableNoGlyph = clusterLayout.fullW - 16;
+                        if (fullLabelW <= availableWithGlyph) {
+                            maxWidth = availableWithGlyph;
+                            tx = clusterLayout.labelCx;
+                        } else if (fullLabelW <= availableNoGlyph) {
+                            hideGlyph = true;
+                            maxWidth = availableNoGlyph;
+                            tx = n.x + n.w / 2;
+                        } else {
+                            maxWidth = availableWithGlyph;
+                            tx = clusterLayout.labelCx;
+                        }
+                        clusterLayout.hideGlyph = hideGlyph;
+                    } else {
+                        maxWidth = n.w - 16;
+                        tx = n.x + n.w / 2;
+                    }
                     const ty = n.y + n.h / 2;
 
                     let displayLabel = label;
@@ -5628,7 +5647,7 @@
                 drawNodePortSockets(n, false, null);
 
                 // Cluster indicator: dashed inner outline + stacked-squares glyph
-                if (clusterLayout) {
+                if (clusterLayout && !clusterLayout.hideGlyph) {
                     const outlinePad = 2;
                     const dashRight = clusterLayout.gx - clusterLayout.gap;
                     const dashW = Math.max(0, dashRight - (n.x + outlinePad));
@@ -5652,6 +5671,8 @@
                         clusterLayout.boxW,
                         clusterLayout.boxH
                     );
+                }
+                if (clusterLayout) {
                     recordClusterGlyphDebug(n, clusterLayout);
                 }
 
@@ -6985,7 +7006,8 @@
                 labelW,
                 gx: node.x + node.w - inset - glyphW,
                 gy: node.y + (node.h - glyphH) / 2,
-                labelCx: node.x + labelW / 2
+                labelCx: node.x + labelW / 2,
+                fullW: node.w
             };
         }
 
