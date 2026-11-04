@@ -4428,6 +4428,7 @@
             add(main && main.querySelector('.strip'), 'strip');
             add(graphTabsBar, 'graph-tabs', true);
             add(main && main.querySelector('.overlay-controls'), 'zoom');
+            add(main && main.querySelector('.top-right-tools'), 'legend');
             const mini = document.getElementById('minimap-container');
             add(mini, 'minimap');
             canvasTagOverlayRects = rects;
@@ -4488,7 +4489,7 @@
             let el = canvasTagElements.get(id);
             if (el) return el;
             el = document.createElement('span');
-            el.className = 'tag';
+            el.className = 'cv-tag';
             el.dataset.nodeId = id;
             el.setAttribute('aria-hidden', 'true');
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -4511,44 +4512,166 @@
             el.classList.toggle(name, on);
         }
 
+        function setTagHidden(el, hidden) {
+            if (el._tagHidden === hidden) return;
+            el._tagHidden = hidden;
+            el.style.display = hidden ? 'none' : '';
+        }
+
         function syncCanvasTagElement(el, node, selected, dimmed) {
             const status = node.status;
-            const glyph = CANVAS_TAG_GLYPH[status];
+            const isSelected = !!selected;
+            const isDimmed = !!dimmed;
+            const text = canvasTagLabelText(node);
             const refs = el._tagRefs || {
                 svg: el.querySelector('svg'),
                 use: el.querySelector('use'),
                 label: el.querySelector('span')
             };
             el._tagRefs = refs;
-            setTagClass(el, 'ad', status === 'added');
-            setTagClass(el, 'em', status === 'removed');
-            setTagClass(el, 'ca', status === 'modified');
-            setTagClass(el, 'sel', !!selected);
-            setTagClass(el, 'is-dim', !!dimmed);
-            if (refs.svg && glyph) {
-                const cls = `ico ${glyph.cls}`;
-                if (refs.svg.getAttribute('class') !== cls) refs.svg.setAttribute('class', cls);
+            let textChanged = false;
+            if (el._tagStatus !== status) {
+                el._tagStatus = status;
+                setTagClass(el, 'ad', status === 'added');
+                setTagClass(el, 'em', status === 'removed');
+                setTagClass(el, 'ca', status === 'modified');
+                const glyph = CANVAS_TAG_GLYPH[status];
+                if (refs.svg && glyph) {
+                    const cls = `ico ${glyph.cls}`;
+                    if (refs.svg.getAttribute('class') !== cls) refs.svg.setAttribute('class', cls);
+                }
+                if (refs.use && glyph && refs.use.getAttribute('href') !== glyph.href) {
+                    refs.use.setAttribute('href', glyph.href);
+                    refs.use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', glyph.href);
+                }
             }
-            if (refs.use && glyph && refs.use.getAttribute('href') !== glyph.href) {
-                refs.use.setAttribute('href', glyph.href);
-                refs.use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', glyph.href);
+            if (el._tagSel !== isSelected) {
+                el._tagSel = isSelected;
+                setTagClass(el, 'sel', isSelected);
             }
-            const text = canvasTagLabelText(node);
-            if (refs.label && refs.label.textContent !== text) {
+            if (el._tagDim !== isDimmed) {
+                el._tagDim = isDimmed;
+                setTagClass(el, 'is-dim', isDimmed);
+            }
+            if (refs.label && el._tagText !== text) {
                 refs.label.textContent = text;
-                return true;
+                el._tagText = text;
+                textChanged = true;
             }
-            return false;
+            return textChanged;
         }
 
-        function clampAndSnapTagBox(box, canvasW, canvasH, dpr) {
-            let x = Math.min(Math.max(0, box.x), Math.max(0, canvasW - box.w));
-            let y = Math.min(Math.max(0, box.y), Math.max(0, canvasH - box.h));
-            x = snapCssPx(x, dpr);
-            y = snapCssPx(y, dpr);
-            x = Math.min(Math.max(0, x), Math.max(0, canvasW - box.w));
-            y = Math.min(Math.max(0, y), Math.max(0, canvasH - box.h));
-            return { x, y, w: box.w, h: box.h, slot: box.slot };
+        function rectGap(a, b) {
+            const dx = Math.max(0, b.x - (a.x + a.w), a.x - (b.x + b.w));
+            const dy = Math.max(0, b.y - (a.y + a.h), a.y - (b.y + b.h));
+            return Math.hypot(dx, dy);
+        }
+
+        function tagNearestNodeIsOwn(box, ownRect, renderNodes, scale, ownId) {
+            const ownDist = rectGap(box, ownRect);
+            let nearestOther = Infinity;
+            renderNodes.forEach(n => {
+                if (String(n.id) === String(ownId)) return;
+                if (n.alpha != null && n.alpha <= 0.05) return;
+                const r = {
+                    x: n.x * scale + state.view.x,
+                    y: n.y * scale + state.view.y,
+                    w: n.w * scale,
+                    h: n.h * scale
+                };
+                const d = rectGap(box, r);
+                if (d < nearestOther) nearestOther = d;
+            });
+            return ownDist < nearestOther;
+        }
+
+        function snapTagBox(box, dpr) {
+            return {
+                x: snapCssPx(box.x, dpr),
+                y: snapCssPx(box.y, dpr),
+                w: box.w,
+                h: box.h,
+                slot: box.slot
+            };
+        }
+
+        function clampTagBoxToCanvas(box, canvasW, canvasH, dpr) {
+            const maxX = Math.max(0, canvasW - box.w);
+            const maxY = Math.max(0, canvasH - box.h);
+            const x = Math.min(Math.max(0, box.x), maxX);
+            const y = Math.min(Math.max(0, box.y), maxY);
+            return snapTagBox({ x, y, w: box.w, h: box.h, slot: box.slot }, dpr);
+        }
+
+        function evaluateTagCandidate(raw, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId) {
+            let box = snapTagBox(raw, dpr);
+            const maxX = Math.max(0, canvasW - box.w);
+            const maxY = Math.max(0, canvasH - box.h);
+            const needsClamp = box.x < 0 || box.y < 0 || box.x > maxX || box.y > maxY;
+            if (needsClamp) {
+                box = clampTagBoxToCanvas(box, canvasW, canvasH, dpr);
+            }
+            if (firstOverlappingObstacle(box, obstacles)) return null;
+            if (!tagNearestNodeIsOwn(box, ownRect, renderNodes, scale, ownId)) return null;
+            return box;
+        }
+
+        function evaluateTagCandidateWithSlide(raw, slideAxis, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId) {
+            const direct = evaluateTagCandidate(raw, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId);
+            if (direct) return direct;
+            const range = slideAxis === 'x'
+                ? Math.max(ownRect.w, raw.w) + 16
+                : Math.max(ownRect.h, raw.h) + 16;
+            const step = 4;
+            for (let d = step; d <= range; d += step) {
+                for (let s = 0; s < 2; s++) {
+                    const trial = { x: raw.x, y: raw.y, w: raw.w, h: raw.h, slot: raw.slot };
+                    const delta = s === 0 ? d : -d;
+                    if (slideAxis === 'x') trial.x = raw.x + delta;
+                    else trial.y = raw.y + delta;
+                    const box = evaluateTagCandidate(trial, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, ownId);
+                    if (box) return box;
+                }
+            }
+            return null;
+        }
+
+        function leastOverlapTagBox(raws, canvasW, canvasH, dpr, obstacles) {
+            let best = null;
+            let bestArea = Infinity;
+            for (let c = 0; c < raws.length; c++) {
+                const box = clampTagBoxToCanvas(snapTagBox(raws[c], dpr), canvasW, canvasH, dpr);
+                const area = totalOverlapArea(box, obstacles);
+                if (area < bestArea) {
+                    bestArea = area;
+                    best = box;
+                }
+            }
+            return best;
+        }
+
+        function buildTagLeader(slot, tagBox, nodeRect, color, alpha) {
+            const tw = tagBox.w;
+            const th = tagBox.h;
+            const shared = (a0, a1, b0, b1, fallback) => {
+                const lo = Math.max(a0, b0);
+                const hi = Math.min(a1, b1);
+                return hi > lo ? (lo + hi) / 2 : fallback;
+            };
+            if (slot === 'left' || slot === 'right') {
+                const y = shared(tagBox.y, tagBox.y + th, nodeRect.y, nodeRect.y + nodeRect.h, tagBox.y + th / 2);
+                if (slot === 'right') {
+                    return { x1: tagBox.x, y1: y, x2: nodeRect.x + nodeRect.w, y2: y, axis: 'h', color, alpha };
+                }
+                return { x1: tagBox.x + tw, y1: y, x2: nodeRect.x, y2: y, axis: 'h', color, alpha };
+            }
+            const x = shared(tagBox.x, tagBox.x + tw, nodeRect.x, nodeRect.x + nodeRect.w, tagBox.x + tw / 2);
+            const above = slot === 'above' || slot === 'above3' ||
+                (slot !== 'below' && slot !== 'below3' && (tagBox.y + th) <= nodeRect.y + 1);
+            if (above) {
+                return { x1: x, y1: tagBox.y + th, x2: x, y2: nodeRect.y, axis: 'v', color, alpha };
+            }
+            return { x1: x, y1: tagBox.y, x2: x, y2: nodeRect.y + nodeRect.h, axis: 'v', color, alpha };
         }
 
         function layoutCanvasStatusTags(renderNodes, canvasW, canvasH, mix) {
@@ -4577,7 +4700,12 @@
                 clearCanvasStatusTags();
                 return leaders;
             }
-            nodes.sort((a, b) => compareNodesForComponentSort(a, b));
+            nodes.sort((a, b) => {
+                const aSel = selectedId != null && String(a.id) === selectedId;
+                const bSel = selectedId != null && String(b.id) === selectedId;
+                if (aSel !== bSel) return aSel ? -1 : 1;
+                return compareNodesForComponentSort(a, b);
+            });
             const groupLabels = getGroupLabelScreenRects(renderNodes, mix);
             const overlays = canvasTagOverlayRects;
 
@@ -4585,12 +4713,15 @@
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
                 const el = ensureCanvasTagElement(n);
-                const selected = state.selected != null && String(state.selected) === String(n.id);
+                const selected = selectedId != null && String(n.id) === selectedId;
                 const dimmed = !doesNodeMatchStatusFilter(n.status);
                 const textChanged = syncCanvasTagElement(el, n, selected, dimmed);
                 const text = canvasTagLabelText(n);
                 const cached = canvasTagSizeCache.get(String(n.id));
-                if (textChanged || !cached || cached.text !== text) dirtySizes.push({ id: String(n.id), el, text });
+                if (textChanged || !cached || cached.text !== text) {
+                    setTagHidden(el, false);
+                    dirtySizes.push({ id: String(n.id), el, text });
+                }
             }
             if (dirtySizes.length) {
                 for (let i = 0; i < dirtySizes.length; i++) {
@@ -4606,60 +4737,68 @@
             const placedTags = [];
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
+                const id = String(n.id);
+                const selected = selectedId != null && id === selectedId;
                 const sx = n.x * scale + state.view.x;
                 const sy = n.y * scale + state.view.y;
                 const sw = n.w * scale;
                 const sh = n.h * scale;
                 if (sx + sw < 0 || sy + sh < 0 || sx > canvasW || sy > canvasH) continue;
 
-                const size = canvasTagSizeCache.get(String(n.id)) || { w: 120, h: 24 };
+                const size = canvasTagSizeCache.get(id) || { w: 120, h: 24 };
                 const tw = size.w;
                 const th = size.h;
                 const cx = sx + sw / 2 - tw / 2;
+                const cy = sy + sh / 2 - th / 2;
+                const ownRect = { x: sx, y: sy, w: sw, h: sh };
                 const candidates = [
-                    { slot: 'above', x: cx, y: sy - 34 },
-                    { slot: 'below', x: cx, y: sy + sh + 12 },
-                    { slot: 'above3', x: cx, y: sy - 82 },
-                    { slot: 'below3', x: cx, y: sy + sh + 60 }
+                    { slot: 'above', x: cx, y: sy - 34, w: tw, h: th },
+                    { slot: 'below', x: cx, y: sy + sh + 12, w: tw, h: th },
+                    { slot: 'right', x: sx + sw + 12, y: cy, w: tw, h: th },
+                    { slot: 'left', x: sx - tw - 12, y: cy, w: tw, h: th },
+                    { slot: 'above3', x: cx, y: sy - 82, w: tw, h: th },
+                    { slot: 'below3', x: cx, y: sy + sh + 60, w: tw, h: th }
                 ];
                 const obstacles = overlays.concat(groupLabels, getNodeBodyScreenRects(renderNodes, n.id), placedTags);
 
                 const blocked = [];
                 let chosen = null;
                 for (let c = 0; c < candidates.length; c++) {
-                    const box = clampAndSnapTagBox({
-                        x: candidates[c].x,
-                        y: candidates[c].y,
-                        w: tw,
-                        h: th,
-                        slot: candidates[c].slot
-                    }, canvasW, canvasH, dpr);
-                    const hit = firstOverlappingObstacle(box, obstacles);
-                    if (!hit) {
+                    const slot = candidates[c].slot;
+                    const slideAxis = (slot === 'left' || slot === 'right') ? 'y' : 'x';
+                    const close = slot === 'above' || slot === 'below' || slot === 'left' || slot === 'right';
+                    const box = close
+                        ? evaluateTagCandidateWithSlide(
+                            candidates[c], slideAxis, canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, n.id
+                        )
+                        : evaluateTagCandidate(
+                            candidates[c], canvasW, canvasH, dpr, obstacles, ownRect, renderNodes, scale, n.id
+                        );
+                    if (box) {
                         chosen = box;
                         break;
                     }
-                    blocked.push({ slot: candidates[c].slot, kind: hit.kind, name: hit.name });
+                    const clamped = clampTagBoxToCanvas(snapTagBox(candidates[c], dpr), canvasW, canvasH, dpr);
+                    const hit = firstOverlappingObstacle(clamped, obstacles);
+                    blocked.push({
+                        slot: slot,
+                        kind: hit ? hit.kind : 'nearest-node',
+                        name: hit ? hit.name : 'other'
+                    });
                 }
+                if (!chosen && selected) {
+                    chosen = leastOverlapTagBox(candidates, canvasW, canvasH, dpr, obstacles);
+                }
+
+                keep.add(id);
+                const el = canvasTagElements.get(id);
+                const avoided = blocked.map(b => `${b.kind}:${b.name}`).join('|');
+                if (el.dataset.avoided !== avoided) el.dataset.avoided = avoided;
                 if (!chosen) {
-                    let best = null;
-                    let bestArea = Infinity;
-                    for (let c = 0; c < candidates.length; c++) {
-                        const box = clampAndSnapTagBox({
-                            x: candidates[c].x,
-                            y: candidates[c].y,
-                            w: tw,
-                            h: th,
-                            slot: candidates[c].slot
-                        }, canvasW, canvasH, dpr);
-                        const area = totalOverlapArea(box, obstacles);
-                        if (area < bestArea) {
-                            bestArea = area;
-                            best = box;
-                        }
-                    }
-                    chosen = best;
+                    setTagHidden(el, true);
+                    continue;
                 }
+                setTagHidden(el, false);
 
                 placedTags.push({
                     x: chosen.x,
@@ -4669,34 +4808,22 @@
                     kind: 'tag',
                     name: String(n.nickname || n.name || n.id)
                 });
-                keep.add(String(n.id));
 
-                const el = canvasTagElements.get(String(n.id));
                 const dimmed = !doesNodeMatchStatusFilter(n.status);
                 if (el.dataset.slot !== chosen.slot) el.dataset.slot = chosen.slot;
-                const avoided = blocked.map(b => `${b.kind}:${b.name}`).join('|');
-                if (el.dataset.avoided !== avoided) el.dataset.avoided = avoided;
                 if (el._tagX !== chosen.x || el._tagY !== chosen.y) {
                     el.style.transform = `translate(${chosen.x}px, ${chosen.y}px)`;
                     el._tagX = chosen.x;
                     el._tagY = chosen.y;
                 }
 
-                const tagAbove = (chosen.y + th) <= sy + 1;
-                const from = tagAbove
-                    ? { x: chosen.x + tw / 2, y: chosen.y + th }
-                    : { x: chosen.x + tw / 2, y: chosen.y };
-                const to = tagAbove
-                    ? { x: sx + sw / 2, y: sy }
-                    : { x: sx + sw / 2, y: sy + sh };
-                leaders.push({
-                    x1: from.x,
-                    y1: from.y,
-                    x2: to.x,
-                    y2: to.y,
-                    color: canvasTagStatusColor(n.status),
-                    alpha: dimmed ? 0.38 : 1
-                });
+                leaders.push(buildTagLeader(
+                    chosen.slot,
+                    chosen,
+                    ownRect,
+                    canvasTagStatusColor(n.status),
+                    dimmed ? 0.38 : 1
+                ));
             }
 
             canvasTagElements.forEach((el, id) => {
@@ -4712,10 +4839,11 @@
         function drawCanvasTagLeaders(leaders) {
             if (!leaders || leaders.length === 0) return;
             const dpr = window.devicePixelRatio || 1;
-            const half = 0.5 / dpr;
+            const lineWidthCss = 1;
+            const offset = ((lineWidthCss * dpr) % 2 ? 0.5 : 0) / dpr;
             ctx.save();
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.lineWidth = 1;
+            ctx.lineWidth = lineWidthCss;
             ctx.lineCap = 'butt';
             ctx.setLineDash([]);
             for (let i = 0; i < leaders.length; i++) {
@@ -4724,12 +4852,15 @@
                 let y1 = snapCssPx(l.y1, dpr);
                 let x2 = snapCssPx(l.x2, dpr);
                 let y2 = snapCssPx(l.y2, dpr);
-                if (Math.abs(y2 - y1) >= Math.abs(x2 - x1)) {
-                    x1 += half;
-                    x2 += half;
+                const vertical = l.axis === 'v' || (l.axis !== 'h' && Math.abs(y2 - y1) >= Math.abs(x2 - x1));
+                if (vertical) {
+                    const x = snapCssPx(x1, dpr) + offset;
+                    x1 = x;
+                    x2 = x;
                 } else {
-                    y1 += half;
-                    y2 += half;
+                    const y = snapCssPx(y1, dpr) + offset;
+                    y1 = y;
+                    y2 = y;
                 }
                 ctx.globalAlpha = l.alpha;
                 ctx.strokeStyle = l.color;

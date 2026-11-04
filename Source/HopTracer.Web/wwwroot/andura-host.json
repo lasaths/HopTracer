@@ -1,0 +1,24 @@
+{
+  "css": "css/tokens.css",
+  "density": "pointer",
+  "classes": {
+    "desktop": [1440, 900]
+  },
+  "roles": {
+    "void": "--c-void",
+    "surface": "--c-surface",
+    "line": "--c-line",
+    "muted": "--c-muted",
+    "text": "--c-text",
+    "accent": "--c-ultra",
+    "accent-text": "--c-ultra-text",
+    "emergency": "--c-emergency",
+    "caution": "--c-caution",
+    "focus": "--c-text",
+    "on-accent": "--c-on-ultra",
+    "header": "--top",
+    "footer": "--foot",
+    "target": "--btn",
+    "text-min": "--t-label"
+  }
+}
