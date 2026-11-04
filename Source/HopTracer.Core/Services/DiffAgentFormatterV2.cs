@@ -273,6 +273,15 @@ public static class DiffAgentFormatterV2
             // Check if this inner node is also a cluster
             var isCluster = innerNode.Name.Contains("Cluster", StringComparison.OrdinalIgnoreCase);
             
+            // Assign lower risk to inner cluster nodes (rank below top-level changes)
+            var riskScore = status switch
+            {
+                "removed" => 15,  // Low risk for inner removals
+                "added" => 10,    // Low risk for inner additions
+                "modified" => 5,  // Minimal risk for inner modifications
+                _ => 0
+            };
+            
             changes.Add(new ChangeItem
             {
                 Id = shortId,
@@ -282,8 +291,8 @@ public static class DiffAgentFormatterV2
                 Status = status,
                 Risk = new RiskInfo
                 {
-                    Score = 0,
-                    Level = "none",
+                    Score = riskScore,
+                    Level = GetRiskLevel(riskScore),
                     Reasons = new List<string> { $"Inside cluster '{clusterName}'" }
                 },
                 Impact = new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 }
