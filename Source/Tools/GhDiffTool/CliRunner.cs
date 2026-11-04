@@ -511,6 +511,9 @@ public static class CliRunner
                 case "--no-timestamp":
                     flags.NoTimestamp = true;
                     break;
+                case "--absolute-paths":
+                    flags.RelativePaths = false;
+                    break;
                 default:
                     if (arg.StartsWith('-'))
                     {
@@ -618,7 +621,8 @@ Options:
   --no-risk                          Omit risk summary
   --no-risks                         Omit top risks list
   --no-nodes                         Omit changed nodes list
-  --no-timestamp                     Omit timestamp and use relative paths (deterministic output)
+  --no-timestamp                     Omit timestamp (deterministic output)
+  --absolute-paths                   Use absolute paths instead of relative (default: relative)
   --version, -V                      Show version
 """);
     }

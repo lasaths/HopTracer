@@ -23,15 +23,15 @@ public sealed class CliFlags
     public bool NoRisks { get; set; }
     public bool NoNodes { get; set; }
     public bool NoTimestamp { get; set; }
+    public bool RelativePaths { get; set; } = true;
 
     public DiffOutputOptions ToOptions(string fileOld, string fileNew)
     {
         var isAgent = Format == DiffOutputFormat.Agent;
-        var makeRelative = NoTimestamp;
         return new DiffOutputOptions
         {
-            FileOld = makeRelative ? MakeRelativePath(FileOldLabel ?? fileOld) : (FileOldLabel ?? fileOld),
-            FileNew = makeRelative ? MakeRelativePath(FileNewLabel ?? fileNew) : (FileNewLabel ?? fileNew),
+            FileOld = RelativePaths ? MakeRelativePath(FileOldLabel ?? fileOld) : (FileOldLabel ?? fileOld),
+            FileNew = RelativePaths ? MakeRelativePath(FileNewLabel ?? fileNew) : (FileNewLabel ?? fileNew),
             CompactFormat = Compact,
             IncludeNodeDetails = Verbose && !isAgent,
             IncludeChangedEdges = ShowEdges || isAgent,
@@ -56,7 +56,8 @@ public sealed class CliFlags
             {
                 return Path.GetRelativePath(currentDir, fullPath);
             }
-            return Path.GetFileName(fullPath);
+            // For paths outside cwd, use absolute to avoid ambiguity
+            return fullPath;
         }
         catch
         {

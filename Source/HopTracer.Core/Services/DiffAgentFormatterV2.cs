@@ -14,14 +14,17 @@ public static class DiffAgentFormatterV2
     public static string Generate(DiffComputation diff, DiffOutputOptions options)
     {
         var resolver = new DiffGraphResolver(diff.Nodes);
-        var changedNodes = diff.Nodes.Where(n => n.Status != "same").ToList();
         
-        var cosmeticMoves = changedNodes.Count(n => 
-            n.Status == "same" && n.RiskScore <= 10 && 
-            n.PropertiesOld?.Count == 0 && (n.Dx != 0 || n.Dy != 0));
+        // Count cosmetic moves: nodes that only moved position, no other changes
+        var cosmeticMoves = diff.Nodes.Count(n => 
+            n.Status == "same" && 
+            n.RiskScore <= 10 && 
+            (n.PropertiesOld == null || n.PropertiesOld.Count == 0) && 
+            (n.Dx != 0 || n.Dy != 0));
         
-        var significantChanges = changedNodes
-            .Where(n => !(n.Status == "same" && n.RiskScore <= 10 && n.PropertiesOld?.Count == 0))
+        // Significant changes exclude cosmetic-only moves
+        var significantChanges = diff.Nodes
+            .Where(n => n.Status != "same" || n.RiskScore > 10 || (n.PropertiesOld != null && n.PropertiesOld.Count > 0))
             .OrderByDescending(n => n.RiskScore)
             .ThenBy(n => n.Status)
             .ThenBy(n => n.Id)
@@ -230,7 +233,7 @@ public static class DiffAgentFormatterV2
         var maxRisk = changes.Any() ? changes.Max(c => c.Risk.Score) : 0;
         var maxRiskLevel = GetRiskLevel(maxRisk);
 
-        var headline = BuildHeadline(changes, modified);
+        var headline = BuildHeadline(changes, added, removed, modified);
 
         return new SummaryInfo
         {
@@ -244,13 +247,23 @@ public static class DiffAgentFormatterV2
         };
     }
 
-    private static string BuildHeadline(List<ChangeItem> changes, int modifiedCount)
+    private static string BuildHeadline(List<ChangeItem> changes, int added, int removed, int modified)
     {
         var parts = new List<string>();
 
-        if (modifiedCount > 0)
+        if (added > 0)
         {
-            parts.Add($"{modifiedCount} node(s) modified");
+            parts.Add($"{added} node(s) added");
+        }
+        
+        if (removed > 0)
+        {
+            parts.Add($"{removed} node(s) removed");
+        }
+
+        if (modified > 0)
+        {
+            parts.Add($"{modified} node(s) modified");
         }
 
         var scriptChanges = changes.Where(c => c.Script != null).Take(2).ToList();
@@ -265,7 +278,7 @@ public static class DiffAgentFormatterV2
             parts.Add($"cluster '{change.Name}' internals changed");
         }
 
-        return parts.Any() ? string.Join("; ", parts) + "." : "No significant changes.";
+        return parts.Any() ? string.Join("; ", parts) + "." : "No changes.";
     }
 
     private static List<DiagnosticGroup> BuildDiagnosticsV2(List<DiffDiagnostic> diagnostics)
@@ -344,7 +357,8 @@ public static class DiffAgentFormatterV2
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 }
 
