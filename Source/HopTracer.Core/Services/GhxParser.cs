@@ -884,6 +884,9 @@ public class GhxParser : IGhxParser
                     var hash = SHA256.HashData(bytes);
                     result["ClusterHash"] = Convert.ToHexString(hash);
                     result["ClusterSize"] = bytes.Length.ToString();
+                    
+                    // Store the original Base64 payload for full parsing later
+                    result["ClusterDocument"] = base64Content;
 
                     if (includeClusterPreview)
                     {
@@ -1459,23 +1462,31 @@ public class GhxParser : IGhxParser
     }
 
     /// <summary>
-    /// Parses a ClusterDocument payload (Base64-encoded GZip XML) as a full graph.
+    /// Parses a ClusterDocument payload (Base64-encoded binary) as a full graph.
+    /// Uses GH_IO if available, falls back to text decode.
     /// </summary>
     public Graph ParseClusterDocument(string base64Payload)
     {
         try
         {
-            // Decode Base64
-            var compressedBytes = Convert.FromBase64String(base64Payload);
+            // Decode Base64 to binary
+            var bytes = Convert.FromBase64String(base64Payload);
             
-            // Decompress GZip
-            using var compressedStream = new System.IO.MemoryStream(compressedBytes);
-            using var gzipStream = new System.IO.Compression.GZipStream(compressedStream, System.IO.Compression.CompressionMode.Decompress);
-            using var decompressedStream = new System.IO.MemoryStream();
-            gzipStream.CopyTo(decompressedStream);
+            // Try GH_IO deserialization first
+            var xml = TryDeserializeClusterXmlWithGhIo(bytes);
+            if (string.IsNullOrWhiteSpace(xml))
+            {
+                // Fallback: decode as plain text (UTF-8 or nested Base64)
+                xml = TryDecodeClusterXmlText(bytes);
+            }
             
-            // Parse as XML
-            var xml = System.Text.Encoding.UTF8.GetString(decompressedStream.ToArray());
+            if (string.IsNullOrWhiteSpace(xml))
+            {
+                _logger.LogWarning("Failed to decode ClusterDocument: no XML content");
+                return new Graph { Nodes = new Dictionary<string, Node>(), Edges = new List<Edge>() };
+            }
+            
+            // Parse as XML document
             var doc = XDocument.Parse(xml);
             
             // Parse using existing logic with cluster preview enabled at depth 0

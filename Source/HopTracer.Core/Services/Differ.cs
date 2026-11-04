@@ -22,7 +22,8 @@ public class Differ : IDiffer
         "ClusterSize", "clusterSize",
         "ClusterPreviewStatus", "clusterPreviewStatus",
         "ClusterPreviewMessage", "clusterPreviewMessage",
-        "ClusterPreviewGraph", "clusterPreviewGraph"
+        "ClusterPreviewGraph", "clusterPreviewGraph",
+        "ClusterDocument", "clusterDocument"
     };
     private static readonly HashSet<string> BooleanPortOptionKeys = new(StringComparer.OrdinalIgnoreCase)
     {

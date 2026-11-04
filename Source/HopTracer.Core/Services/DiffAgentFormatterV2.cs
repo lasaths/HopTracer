@@ -238,17 +238,23 @@ public static class DiffAgentFormatterV2
 
             var clusterName = string.IsNullOrWhiteSpace(node.Nickname) ? node.Name : node.Nickname;
             
-            // Use ClusterDocument for full parsing (Base64-encoded GZip XML)
+            // Try ClusterDocument first (full binary), fallback to ClusterPreviewGraph (JSON)
             var oldDoc = node.PropertiesOld?.GetValueOrDefault("ClusterDocument");
             var newDoc = node.Properties.GetValueOrDefault("ClusterDocument");
+            
+            var oldPreview = node.PropertiesOld?.GetValueOrDefault("ClusterPreviewGraph");
+            var newPreview = node.Properties.GetValueOrDefault("ClusterPreviewGraph");
 
-            if (string.IsNullOrEmpty(oldDoc) && string.IsNullOrEmpty(newDoc))
+            if (string.IsNullOrEmpty(oldDoc) && string.IsNullOrEmpty(newDoc) &&
+                string.IsNullOrEmpty(oldPreview) && string.IsNullOrEmpty(newPreview))
             {
                 continue;
             }
 
-            // Parse and recursively process inner nodes using full GhxParser + Differ
-            var innerChanges = BuildClusterInnerChanges(oldDoc, newDoc, clusterName, basePath);
+            // Parse and recursively process inner nodes
+            var innerChanges = !string.IsNullOrEmpty(oldDoc) || !string.IsNullOrEmpty(newDoc)
+                ? BuildClusterInnerChanges(oldDoc, newDoc, clusterName, basePath)
+                : BuildClusterInnerChangesFromPreview(oldPreview, newPreview, clusterName, basePath);
             clusterChanges.AddRange(innerChanges);
         }
 
@@ -407,6 +413,64 @@ public static class DiffAgentFormatterV2
         }
     }
 
+    private static List<ChangeItem> BuildClusterInnerChangesFromPreview(string? oldPreview, string? newPreview, string clusterName, string[] parentPath)
+    {
+        var changes = new List<ChangeItem>();
+        
+        // Parse preview JSON to get inner node info
+        var oldInnerNodes = ParseClusterPreview(oldPreview);
+        var newInnerNodes = ParseClusterPreview(newPreview);
+        
+        // Simple matching by ID
+        var innerChanges = DiffInnerNodes(oldInnerNodes, newInnerNodes);
+        var currentPath = parentPath.Append(clusterName).ToArray();
+        
+        foreach (var (innerNode, status) in innerChanges)
+        {
+            var shortId = GetSafeShortId(innerNode.Id, innerChanges.Select(c => c.Node.Id));
+            var label = string.IsNullOrWhiteSpace(innerNode.Nickname) ? innerNode.Name : innerNode.Nickname;
+            
+            // Assign proper risk based on status (not hard-coded)
+            var riskScore = status switch
+            {
+                "removed" => 85,  // Match top-level removed risk
+                "added" => 70,    // Match top-level added risk  
+                "modified" => 45, // Match top-level modified risk
+                _ => 0
+            };
+            
+            changes.Add(new ChangeItem
+            {
+                Id = shortId,
+                Name = label,
+                Type = innerNode.Name,
+                Path = currentPath,
+                Status = status,
+                Risk = new RiskInfo
+                {
+                    Score = riskScore,
+                    Level = GetRiskLevel(riskScore),
+                    Reasons = new List<string> { $"Inside cluster '{clusterName}'",  $"Node {status}" }
+                },
+                Impact = new ImpactInfo { Upstream = new List<ImpactNode>(), Downstream = new List<ImpactNode>(), DownstreamCount = 0 }
+            });
+            
+            // Recursively process nested clusters
+            if (innerNode.Name.Contains("Cluster", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrEmpty(innerNode.ClusterPreviewGraph))
+            {
+                var oldMatched = oldInnerNodes.FirstOrDefault(n => n.Id == innerNode.Id);
+                var oldNested = oldMatched?.ClusterPreviewGraph;
+                var newNested = status == "removed" ? null : innerNode.ClusterPreviewGraph;
+                
+                var nestedChanges = BuildClusterInnerChangesFromPreview(oldNested, newNested, label, currentPath);
+                changes.AddRange(nestedChanges);
+            }
+        }
+        
+        return changes;
+    }
+    
     private static List<ClusterInnerNode> ParseClusterPreview(string? json)
     {
         if (string.IsNullOrEmpty(json))
