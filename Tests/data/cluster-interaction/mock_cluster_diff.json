@@ -1,0 +1,269 @@
+{
+  "meta": {
+    "fileOld": "cluster-old.ghx",
+    "fileNew": "cluster-new.ghx",
+    "commitHash": "clusterfix",
+    "commitMessage": "cluster internals",
+    "commitAuthor": "Lassie",
+    "stageTimings": [
+      {
+        "name": "parse",
+        "durationMs": 31
+      },
+      {
+        "name": "match",
+        "durationMs": 6
+      },
+      {
+        "name": "diff",
+        "durationMs": 4
+      }
+    ]
+  },
+  "oldMeta": {
+    "name": "cluster-old.ghx",
+    "date": "2026-03-12T10:15:00Z"
+  },
+  "newMeta": {
+    "name": "cluster-new.ghx",
+    "date": "2026-03-18T14:40:00Z"
+  },
+  "nodes": [
+    {
+      "id": "grp-rpg",
+      "name": "Group",
+      "nickname": "Random Point Generation",
+      "status": "same",
+      "x": 270,
+      "y": 150,
+      "w": 220,
+      "h": 100,
+      "properties": {
+        "isGroup": "true",
+        "GroupMemberIds": "[\"rectangle\",\"csharp\"]"
+      }
+    },
+    {
+      "id": "grp-tower",
+      "name": "Group",
+      "nickname": "Tower Create",
+      "status": "same",
+      "x": 530,
+      "y": 155,
+      "w": 200,
+      "h": 70,
+      "properties": {
+        "isGroup": "true",
+        "GroupMemberIds": "[\"xy\",\"cluster\"]"
+      }
+    },
+    {
+      "id": "grp-output",
+      "name": "Group",
+      "nickname": "Output",
+      "status": "same",
+      "x": 800,
+      "y": 130,
+      "w": 90,
+      "h": 50,
+      "properties": {
+        "isGroup": "true",
+        "GroupMemberIds": "[\"geo\"]"
+      }
+    },
+    {
+      "id": "rectangle",
+      "name": "Rectangle",
+      "nickname": "Rectangle",
+      "status": "same",
+      "x": 279,
+      "y": 160,
+      "w": 65,
+      "h": 84
+    },
+    {
+      "id": "csharp",
+      "name": "C# Script",
+      "nickname": "C#",
+      "status": "modified",
+      "x": 364,
+      "y": 170,
+      "w": 112,
+      "h": 44,
+      "riskScore": 78,
+      "riskReasons": [
+        "Script source changed"
+      ],
+      "dx": 0,
+      "dy": 0,
+      "properties": {
+        "ScriptSource": "using System;\\npublic class Script { }"
+      },
+      "propertiesOld": {
+        "ScriptSource": "using System;\\npublic class Script { int a; }"
+      }
+    },
+    {
+      "id": "xy",
+      "name": "XY Plane",
+      "nickname": "XY",
+      "status": "same",
+      "x": 547,
+      "y": 175,
+      "w": 65,
+      "h": 28
+    },
+    {
+      "id": "cluster",
+      "name": "Cluster",
+      "nickname": "Cluster",
+      "status": "modified",
+      "x": 633,
+      "y": 175,
+      "w": 81,
+      "h": 28,
+      "riskScore": 82,
+      "riskReasons": [
+        "Cluster internals changed"
+      ],
+      "properties": {
+        "isCluster": "true",
+        "ClusterHash": "NEWCLUSTERHASH001",
+        "ClusterSize": "2200",
+        "clusterPreviewStatus": "parsed",
+        "clusterPreviewMessage": "5 nodes, 4 edges.",
+        "ClusterPreviewGraph": "{\"nodes\": [{\"id\": \"inner-slider\", \"name\": \"Number Slider\", \"nickname\": \"Count\", \"x\": 40, \"y\": 80, \"w\": 140, \"h\": 24, \"riskScore\": 22, \"riskReasons\": [\"Parameter value changed\"], \"properties\": {\"Value\": \"25\"}, \"inputs\": [], \"outputs\": [{\"id\": \"inner-slider-out\", \"name\": \"Value\", \"nickname\": \"V\", \"kind\": \"output\", \"value\": \"25\"}]}, {\"id\": \"inner-csharp\", \"name\": \"C# Script\", \"nickname\": \"Inner C#\", \"x\": 220, \"y\": 70, \"w\": 120, \"h\": 44, \"riskScore\": 91, \"riskReasons\": [\"Script source changed\"], \"properties\": {\"ScriptSource\": \"using System;\\npublic class Script { }\"}, \"inputs\": [{\"id\": \"inner-csharp-in\", \"name\": \"x\", \"nickname\": \"x\", \"kind\": \"input\", \"value\": \"25\"}], \"outputs\": [{\"id\": \"inner-csharp-out\", \"name\": \"A\", \"nickname\": \"A\", \"kind\": \"output\"}]}, {\"id\": \"inner-area\", \"name\": \"Area\", \"nickname\": \"Area\", \"x\": 40, \"y\": 160, \"w\": 66, \"h\": 24, \"riskScore\": 34, \"properties\": {}, \"inputs\": [{\"id\": \"inner-area-in\", \"name\": \"Input\", \"nickname\": \"I\", \"kind\": \"input\"}], \"outputs\": [{\"id\": \"inner-area-out\", \"name\": \"Area\", \"nickname\": \"A\", \"kind\": \"output\"}]}, {\"id\": \"inner-xy\", \"name\": \"XY Plane\", \"nickname\": \"XY\", \"x\": 220, \"y\": 160, \"w\": 65, \"h\": 28, \"properties\": {}, \"inputs\": [{\"id\": \"inner-xy-in\", \"name\": \"Input\", \"nickname\": \"I\", \"kind\": \"input\"}], \"outputs\": []}, {\"id\": \"inner-nested\", \"name\": \"Cluster\", \"nickname\": \"Nested\", \"x\": 400, \"y\": 80, \"w\": 90, \"h\": 28, \"isCluster\": true, \"clusterHash\": \"NEWNESTEDHASH\", \"properties\": {\"isCluster\": \"true\", \"ClusterHash\": \"NEWNESTEDHASH\", \"ClusterSize\": \"720\", \"clusterPreviewStatus\": \"parsed\", \"clusterPreviewMessage\": \"2 nodes, 1 edges.\", \"ClusterPreviewGraph\": \"{\\\"nodes\\\": [{\\\"id\\\": \\\"nest-seed\\\", \\\"name\\\": \\\"Number Slider\\\", \\\"nickname\\\": \\\"Seed\\\", \\\"x\\\": 20, \\\"y\\\": 30, \\\"w\\\": 120, \\\"h\\\": 24, \\\"properties\\\": {\\\"Value\\\": \\\"7\\\"}, \\\"inputs\\\": [], \\\"outputs\\\": [{\\\"id\\\": \\\"nest-seed-out\\\", \\\"name\\\": \\\"Value\\\", \\\"nickname\\\": \\\"V\\\", \\\"kind\\\": \\\"output\\\", \\\"value\\\": \\\"7\\\"}]}, {\\\"id\\\": \\\"nest-hello\\\", \\\"name\\\": \\\"Panel\\\", \\\"nickname\\\": \\\"Hello\\\", \\\"x\\\": 170, \\\"y\\\": 24, \\\"w\\\": 90, \\\"h\\\": 40, \\\"properties\\\": {\\\"UserText\\\": \\\"hello nested\\\", \\\"PanelContent\\\": \\\"hello nested\\\"}, \\\"inputs\\\": [{\\\"id\\\": \\\"nest-hello-in\\\", \\\"name\\\": \\\"Input\\\", \\\"nickname\\\": \\\"I\\\", \\\"kind\\\": \\\"input\\\"}], \\\"outputs\\\": []}], \\\"edges\\\": [{\\\"source\\\": \\\"nest-seed\\\", \\\"target\\\": \\\"nest-hello\\\", \\\"sourcePort\\\": \\\"\\\", \\\"targetPort\\\": \\\"\\\"}], \\\"truncated\\\": false, \\\"depth\\\": 2}\"}, \"inputs\": [{\"id\": \"inner-nested-in\", \"name\": \"Input\", \"nickname\": \"I\", \"kind\": \"input\"}], \"outputs\": []}], \"edges\": [{\"source\": \"inner-slider\", \"target\": \"inner-csharp\", \"sourcePort\": \"\", \"targetPort\": \"\"}, {\"source\": \"inner-csharp\", \"target\": \"inner-nested\", \"sourcePort\": \"\", \"targetPort\": \"\"}, {\"source\": \"inner-slider\", \"target\": \"inner-area\", \"sourcePort\": \"\", \"targetPort\": \"\"}, {\"source\": \"inner-area\", \"target\": \"inner-xy\", \"sourcePort\": \"\", \"targetPort\": \"\"}], \"truncated\": false, \"depth\": 1}"
+      },
+      "propertiesOld": {
+        "ClusterHash": "OLDCLUSTERHASH001",
+        "ClusterSize": "1800",
+        "clusterPreviewStatus": "parsed",
+        "clusterPreviewMessage": "5 nodes, 4 edges.",
+        "ClusterPreviewGraph": "{\"nodes\": [{\"id\": \"inner-slider\", \"name\": \"Number Slider\", \"nickname\": \"Count\", \"x\": 40, \"y\": 80, \"w\": 140, \"h\": 24, \"properties\": {\"Value\": \"10\"}, \"inputs\": [], \"outputs\": [{\"id\": \"inner-slider-out\", \"name\": \"Value\", \"nickname\": \"V\", \"kind\": \"output\", \"value\": \"10\"}]}, {\"id\": \"inner-csharp\", \"name\": \"C# Script\", \"nickname\": \"Inner C#\", \"x\": 220, \"y\": 70, \"w\": 120, \"h\": 44, \"riskScore\": 91, \"riskReasons\": [\"Script source changed\"], \"properties\": {\"ScriptSource\": \"using System;\\npublic class Script { int a; }\"}, \"inputs\": [{\"id\": \"inner-csharp-in\", \"name\": \"x\", \"nickname\": \"x\", \"kind\": \"input\", \"value\": \"10\"}], \"outputs\": [{\"id\": \"inner-csharp-out\", \"name\": \"A\", \"nickname\": \"A\", \"kind\": \"output\"}]}, {\"id\": \"inner-panel\", \"name\": \"Panel\", \"nickname\": \"Note\", \"x\": 40, \"y\": 160, \"w\": 110, \"h\": 48, \"properties\": {\"UserText\": \"old cluster note\", \"PanelContent\": \"old cluster note\"}, \"inputs\": [{\"id\": \"inner-panel-in\", \"name\": \"Input\", \"nickname\": \"I\", \"kind\": \"input\"}], \"outputs\": [{\"id\": \"inner-panel-out\", \"name\": \"Output\", \"nickname\": \"O\", \"kind\": \"output\"}]}, {\"id\": \"inner-xy\", \"name\": \"XY Plane\", \"nickname\": \"XY\", \"x\": 220, \"y\": 160, \"w\": 65, \"h\": 28, \"properties\": {}, \"inputs\": [{\"id\": \"inner-xy-in\", \"name\": \"Input\", \"nickname\": \"I\", \"kind\": \"input\"}], \"outputs\": []}, {\"id\": \"inner-nested\", \"name\": \"Cluster\", \"nickname\": \"Nested\", \"x\": 400, \"y\": 80, \"w\": 90, \"h\": 28, \"isCluster\": true, \"clusterHash\": \"OLDNESTEDHASH\", \"properties\": {\"isCluster\": \"true\", \"ClusterHash\": \"OLDNESTEDHASH\", \"ClusterSize\": \"640\", \"clusterPreviewStatus\": \"parsed\", \"clusterPreviewMessage\": \"2 nodes, 1 edges.\", \"ClusterPreviewGraph\": \"{\\\"nodes\\\": [{\\\"id\\\": \\\"nest-seed\\\", \\\"name\\\": \\\"Number Slider\\\", \\\"nickname\\\": \\\"Seed\\\", \\\"x\\\": 20, \\\"y\\\": 30, \\\"w\\\": 120, \\\"h\\\": 24, \\\"properties\\\": {\\\"Value\\\": \\\"1\\\"}, \\\"inputs\\\": [], \\\"outputs\\\": [{\\\"id\\\": \\\"nest-seed-out\\\", \\\"name\\\": \\\"Value\\\", \\\"nickname\\\": \\\"V\\\", \\\"kind\\\": \\\"output\\\", \\\"value\\\": \\\"1\\\"}]}, {\\\"id\\\": \\\"nest-gone\\\", \\\"name\\\": \\\"Panel\\\", \\\"nickname\\\": \\\"Gone\\\", \\\"x\\\": 170, \\\"y\\\": 24, \\\"w\\\": 90, \\\"h\\\": 40, \\\"properties\\\": {\\\"UserText\\\": \\\"old nested note\\\", \\\"PanelContent\\\": \\\"old nested note\\\"}, \\\"inputs\\\": [{\\\"id\\\": \\\"nest-gone-in\\\", \\\"name\\\": \\\"Input\\\", \\\"nickname\\\": \\\"I\\\", \\\"kind\\\": \\\"input\\\"}], \\\"outputs\\\": []}], \\\"edges\\\": [{\\\"source\\\": \\\"nest-seed\\\", \\\"target\\\": \\\"nest-gone\\\", \\\"sourcePort\\\": \\\"\\\", \\\"targetPort\\\": \\\"\\\"}], \\\"truncated\\\": false, \\\"depth\\\": 2}\"}, \"inputs\": [{\"id\": \"inner-nested-in\", \"name\": \"Input\", \"nickname\": \"I\", \"kind\": \"input\"}], \"outputs\": []}], \"edges\": [{\"source\": \"inner-slider\", \"target\": \"inner-csharp\", \"sourcePort\": \"\", \"targetPort\": \"\"}, {\"source\": \"inner-csharp\", \"target\": \"inner-nested\", \"sourcePort\": \"\", \"targetPort\": \"\"}, {\"source\": \"inner-slider\", \"target\": \"inner-panel\", \"sourcePort\": \"\", \"targetPort\": \"\"}, {\"source\": \"inner-panel\", \"target\": \"inner-xy\", \"sourcePort\": \"\", \"targetPort\": \"\"}], \"truncated\": false, \"depth\": 1}"
+      }
+    },
+    {
+      "id": "util",
+      "name": "Cluster",
+      "nickname": "Util",
+      "status": "modified",
+      "x": 400,
+      "y": 250,
+      "w": 70,
+      "h": 28,
+      "riskScore": 41,
+      "riskReasons": [
+        "Cluster internals changed"
+      ],
+      "properties": {
+        "isCluster": "true",
+        "ClusterHash": "NEWUTILHASH",
+        "ClusterSize": "900",
+        "clusterPreviewStatus": "parsed",
+        "clusterPreviewMessage": "2 nodes, 1 edges.",
+        "ClusterPreviewGraph": "{\"nodes\": [{\"id\": \"util-num\", \"name\": \"Number Slider\", \"nickname\": \"Util Count\", \"x\": 30, \"y\": 40, \"w\": 130, \"h\": 24, \"properties\": {\"Value\": \"3\"}}, {\"id\": \"util-relay\", \"name\": \"Relay\", \"nickname\": \"Relay\", \"x\": 190, \"y\": 40, \"w\": 70, \"h\": 24, \"properties\": {}}], \"edges\": [{\"source\": \"util-num\", \"target\": \"util-relay\", \"sourcePort\": \"\", \"targetPort\": \"\"}], \"truncated\": false, \"depth\": 1}"
+      },
+      "propertiesOld": {
+        "ClusterHash": "OLDUTILHASH",
+        "ClusterSize": "700",
+        "clusterPreviewStatus": "parsed",
+        "clusterPreviewMessage": "1 nodes, 0 edges.",
+        "ClusterPreviewGraph": "{\"nodes\": [{\"id\": \"util-num\", \"name\": \"Number Slider\", \"nickname\": \"Util Count\", \"x\": 30, \"y\": 40, \"w\": 130, \"h\": 24, \"properties\": {\"Value\": \"3\"}}], \"edges\": [], \"truncated\": false, \"depth\": 1}"
+      }
+    },
+    {
+      "id": "point-count",
+      "name": "Point Count",
+      "nickname": "Point Count",
+      "status": "removed",
+      "x": 560,
+      "y": 220,
+      "w": 100,
+      "h": 28,
+      "riskScore": 62
+    },
+    {
+      "id": "area",
+      "name": "Area",
+      "nickname": "Area",
+      "status": "added",
+      "x": 740,
+      "y": 175,
+      "w": 66,
+      "h": 24,
+      "riskScore": 34
+    },
+    {
+      "id": "geo",
+      "name": "Geometry",
+      "nickname": "Geo",
+      "status": "modified",
+      "x": 823,
+      "y": 146,
+      "w": 50,
+      "h": 24,
+      "riskScore": 8,
+      "dx": 0,
+      "dy": -38,
+      "inputs": [
+        {
+          "id": "g",
+          "status": "modified",
+          "valueChanged": true,
+          "valueOld": "a",
+          "valueNew": "b"
+        }
+      ]
+    },
+    {
+      "id": "slider-a",
+      "name": "Number Slider",
+      "nickname": "Slider A",
+      "status": "same",
+      "x": 78,
+      "y": 184,
+      "w": 162,
+      "h": 20,
+      "riskScore": 12
+    },
+    {
+      "id": "slider-b",
+      "name": "Number Slider",
+      "nickname": "Slider B",
+      "status": "same",
+      "x": 78,
+      "y": 220,
+      "w": 162,
+      "h": 20,
+      "riskScore": 10
+    },
+    {
+      "id": "toggle",
+      "name": "Toggle",
+      "nickname": "Toggle",
+      "status": "same",
+      "x": 78,
+      "y": 256,
+      "w": 80,
+      "h": 20,
+      "riskScore": 4
+    }
+  ],
+  "edges": [
+    {
+      "source": "csharp",
+      "target": "point-count",
+      "status": "removed"
+    },
+    {
+      "source": "cluster",
+      "target": "geo",
+      "status": "same"
+    },
+    {
+      "source": "area",
+      "target": "geo",
+      "status": "added"
+    }
+  ]
+}

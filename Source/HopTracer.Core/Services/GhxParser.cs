@@ -1122,14 +1122,18 @@ public class GhxParser : IGhxParser
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
 
-        // Include full node details for cluster preview inspector, but avoid recursive/noisy preview metadata.
+        // Keep nested cluster preview graphs so the UI can open cluster-in-cluster tabs.
+        // Strip preview metadata from ordinary inner nodes to avoid recursive payload bloat.
         var blocked = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "ClusterPreviewGraph",
-            "ClusterPreviewStatus",
-            "ClusterPreviewMessage",
             "ClusterPreviewDepth"
         };
+        if (!IsClusterNode(props))
+        {
+            blocked.Add("ClusterPreviewGraph");
+            blocked.Add("ClusterPreviewStatus");
+            blocked.Add("ClusterPreviewMessage");
+        }
 
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var kv in props)

@@ -1,5 +1,6 @@
 using HopTracer.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace HopTracer.Core.Services;
 
@@ -10,6 +11,12 @@ public class Differ : IDiffer
 {
     private readonly ILogger<Differ> _logger;
     private const double MovementComparisonTolerance = 0.05;
+    private const int MaxInnerClusterRiskDepth = 4;
+    private int _innerClusterRiskDepth;
+    private static readonly JsonSerializerOptions ClusterPreviewJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
     private static readonly HashSet<string> ScriptPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "ScriptSource", "Code", "Script", "Expression",
@@ -64,6 +71,7 @@ public class Differ : IDiffer
             var nNew = newGraph.Nodes[pair.Value];
             var merged = BuildMergedNode(nOld, nNew);
             ScoreNodeRisk(merged, nOld, nNew);
+            ApplyInnerClusterRisk(merged, nOld, nNew);
             result.Nodes.Add(merged);
         }
 
@@ -342,7 +350,9 @@ public class Differ : IDiffer
     {
         var dx = NormalizeMovement(nNew.X - nOld.X);
         var dy = NormalizeMovement(nNew.Y - nOld.Y);
-        var modified = nOld.Name != nNew.Name || nOld.Nickname != nNew.Nickname;
+        var modified = nOld.Name != nNew.Name || nOld.Nickname != nNew.Nickname
+            || Math.Abs(nNew.W - nOld.W) >= MovementComparisonTolerance
+            || Math.Abs(nNew.H - nOld.H) >= MovementComparisonTolerance;
 
         var mergedInputs = DiffPorts(nOld.Inputs, nNew.Inputs);
         var mergedOutputs = DiffPorts(nOld.Outputs, nNew.Outputs);
@@ -772,6 +782,174 @@ public class Differ : IDiffer
         score = Math.Min(score, 100);
         target.RiskScore = score;
         target.RiskReasons = reasons;
+    }
+
+    private void ApplyInnerClusterRisk(Node target, Node? oldNode, Node? newNode)
+    {
+        if (_innerClusterRiskDepth >= MaxInnerClusterRiskDepth)
+        {
+            return;
+        }
+
+        var oldPreview = ParseClusterPreviewGraph(oldNode?.Properties);
+        var newPreview = ParseClusterPreviewGraph(newNode?.Properties ?? target.Properties);
+        if (oldPreview == null && newPreview == null)
+        {
+            return;
+        }
+
+        _innerClusterRiskDepth++;
+        try
+        {
+            var innerDiff = DiffDetailed(PreviewToGraph(oldPreview), PreviewToGraph(newPreview));
+            Node? best = null;
+            foreach (var inner in innerDiff.Nodes)
+            {
+                if (inner.RiskScore <= 0) continue;
+                if (best == null || inner.RiskScore > best.RiskScore)
+                {
+                    best = inner;
+                }
+            }
+
+            if (best == null || best.RiskScore <= target.RiskScore)
+            {
+                return;
+            }
+
+            target.RiskScore = best.RiskScore;
+            var name = string.IsNullOrWhiteSpace(best.Nickname) ? best.Name : best.Nickname;
+            if (string.IsNullOrWhiteSpace(name)) name = best.Id;
+            var label = name.StartsWith("Inner ", StringComparison.OrdinalIgnoreCase) ? name : $"Inner {name}";
+            var reason = $"{label} changed ({best.RiskScore})";
+            target.RiskReasons.Remove(reason);
+            target.RiskReasons.Insert(0, reason);
+        }
+        finally
+        {
+            _innerClusterRiskDepth--;
+        }
+    }
+
+    private static ClusterPreviewGraphDto? ParseClusterPreviewGraph(Dictionary<string, string>? props)
+    {
+        if (props == null) return null;
+        var raw = GetProp(props, "ClusterPreviewGraph");
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<ClusterPreviewGraphDto>(raw, ClusterPreviewJsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static Graph PreviewToGraph(ClusterPreviewGraphDto? preview)
+    {
+        var graph = new Graph();
+        if (preview?.Nodes == null) return graph;
+
+        foreach (var n in preview.Nodes)
+        {
+            if (string.IsNullOrWhiteSpace(n.Id)) continue;
+            var node = new Node
+            {
+                Id = n.Id,
+                Name = n.Name ?? string.Empty,
+                Nickname = n.Nickname ?? string.Empty,
+                X = n.X,
+                Y = n.Y,
+                W = n.W,
+                H = n.H,
+                Properties = n.Properties != null
+                    ? new Dictionary<string, string>(n.Properties, StringComparer.Ordinal)
+                    : new Dictionary<string, string>(StringComparer.Ordinal)
+            };
+            if (n.IsCluster && !ContainsKeyIgnoreCase(node.Properties, "IsCluster"))
+            {
+                node.Properties["IsCluster"] = "true";
+            }
+            if (!string.IsNullOrEmpty(n.ClusterHash) && !ContainsKeyIgnoreCase(node.Properties, "ClusterHash"))
+            {
+                node.Properties["ClusterHash"] = n.ClusterHash;
+            }
+            node.Inputs = (n.Inputs ?? []).Select(ToPreviewPort).ToList();
+            node.Outputs = (n.Outputs ?? []).Select(ToPreviewPort).ToList();
+            graph.Nodes[node.Id] = node;
+        }
+
+        foreach (var e in preview.Edges ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(e.Source) || string.IsNullOrWhiteSpace(e.Target)) continue;
+            graph.Edges.Add(new Edge
+            {
+                Source = e.Source,
+                SourcePort = e.SourcePort ?? string.Empty,
+                Target = e.Target,
+                TargetPort = e.TargetPort ?? string.Empty
+            });
+        }
+
+        return graph;
+    }
+
+    private static Port ToPreviewPort(ClusterPreviewPortDto src)
+    {
+        return new Port
+        {
+            Id = src.Id ?? string.Empty,
+            Name = src.Name ?? string.Empty,
+            Nickname = src.Nickname ?? string.Empty,
+            Kind = src.Kind ?? string.Empty,
+            Type = src.Type ?? string.Empty,
+            Value = src.Value,
+            Options = src.Options != null
+                ? new Dictionary<string, string>(src.Options, StringComparer.Ordinal)
+                : new Dictionary<string, string>(StringComparer.Ordinal)
+        };
+    }
+
+    private sealed class ClusterPreviewGraphDto
+    {
+        public List<ClusterPreviewNodeDto> Nodes { get; set; } = new();
+        public List<ClusterPreviewEdgeDto> Edges { get; set; } = new();
+    }
+
+    private sealed class ClusterPreviewNodeDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Nickname { get; set; } = string.Empty;
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double W { get; set; }
+        public double H { get; set; }
+        public bool IsCluster { get; set; }
+        public string? ClusterHash { get; set; }
+        public Dictionary<string, string>? Properties { get; set; }
+        public List<ClusterPreviewPortDto>? Inputs { get; set; }
+        public List<ClusterPreviewPortDto>? Outputs { get; set; }
+    }
+
+    private sealed class ClusterPreviewEdgeDto
+    {
+        public string Source { get; set; } = string.Empty;
+        public string SourcePort { get; set; } = string.Empty;
+        public string Target { get; set; } = string.Empty;
+        public string TargetPort { get; set; } = string.Empty;
+    }
+
+    private sealed class ClusterPreviewPortDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Nickname { get; set; } = string.Empty;
+        public string Kind { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string? Value { get; set; }
+        public Dictionary<string, string>? Options { get; set; }
     }
 
     private static bool HasSignificantMovement(double dx, double dy)
