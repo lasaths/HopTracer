@@ -227,6 +227,16 @@
         let currentOldFilePath = null;
         const gitStatusText = document.getElementById('gitStatusText');
 
+        function escapeHtml(text) {
+            if (text == null) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // Handle Browse buttons for native file picker
         browseOldBtn.onclick = async () => {
             try {
@@ -417,15 +427,16 @@
                 if (!res.ok) {
                     const errorData = await res.json().catch(() => ({ error: res.statusText }));
                     console.error('Fetch error:', errorData);
-                    list.innerHTML = `<div style="padding:40px; text-align:center; color:#ff6b6b;"><div style="font-size:32px; margin-bottom:12px;">❌</div><strong>Error</strong><br><br>${errorData.error || 'Failed to load commits'}</div>`;
-                    setStatus(errorData.error || 'Failed to load commits', 'error');
+                    const errMsg = errorData.error || 'Failed to load commits';
+                    list.innerHTML = `<div style="padding:40px; text-align:center; color:#ff6b6b;"><div style="font-size:32px; margin-bottom:12px;">❌</div><strong>Error</strong><br><br>${escapeHtml(errMsg)}</div>`;
+                    setStatus(errMsg, 'error');
                     return;
                 }
                 
                 const data = await res.json();
 
                 if (data.error) {
-                    list.innerHTML = `<div style="padding:40px; text-align:center; color:#ff6b6b;"><div style="font-size:32px; margin-bottom:12px;">❌</div><strong>Error</strong><br><br>${data.error}</div>`;
+                    list.innerHTML = `<div style="padding:40px; text-align:center; color:#ff6b6b;"><div style="font-size:32px; margin-bottom:12px;">❌</div><strong>Error</strong><br><br>${escapeHtml(data.error)}</div>`;
                     setStatus(data.error, 'error');
                     return;
                 }
@@ -481,9 +492,9 @@
 
                 item.innerHTML = `
                     <div>
-                        <div style="font-weight:600; font-size:13px;">${c.message}</div>
+                        <div style="font-weight:600; font-size:13px;">${escapeHtml(c.message)}</div>
                         <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">
-                            <span style="color:var(--accent); font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;">${c.hash}</span> • ${c.author} • ${c.date}
+                            <span style="color:var(--accent); font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;">${escapeHtml(c.hash)}</span> • ${escapeHtml(c.author)} • ${escapeHtml(c.date)}
                         </div>
                     </div>
                 `;

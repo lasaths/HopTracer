@@ -4,48 +4,67 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- HopTracer Design System Colors (Apple-inspired pro app) -->
-    
-    <!-- Base layers -->
-    <Color x:Key="HtBackgroundBase">#000000</Color>
-    <Color x:Key="HtBackgroundCanvas">#000000</Color>
-    <Color x:Key="HtBackgroundElevated1">#0f0f0f</Color>
-    <Color x:Key="HtBackgroundElevated2">#1a1a1a</Color>
-    <Color x:Key="HtBackgroundElevated3">#252525</Color>
-    
-    <!-- Text -->
-    <Color x:Key="HtTextPrimary">#ffffff</Color>
-    <Color x:Key="HtTextSecondary">#98989d</Color>
-    <Color x:Key="HtTextTertiary">#636366</Color>
-    
-    <!-- Borders -->
-    <Color x:Key="HtBorderSubtle">#2a2a2a</Color>
-    <Color x:Key="HtBorderStrong">#3a3a3a</Color>
-    
-    <!-- Status colors (ANDURA logic: grey when normal, colour when abnormal) -->
-    <Color x:Key="HtStatusUnchanged">#636366</Color>
-    <Color x:Key="HtStatusAdded">#30d158</Color>
-    <Color x:Key="HtStatusModified">#ffd60a</Color>
-    <Color x:Key="HtStatusRemoved">#ff453a</Color>
-    
-    <!-- Accent -->
-    <Color x:Key="HtAccent">#0a84ff</Color>
-    <Color x:Key="HtAccentHover">#409cff</Color>
-    
-    <!-- Standard .NET MAUI semantic colors (mapped to design system) -->
-    <Color x:Key="Primary">#0a84ff</Color>
-    <Color x:Key="Secondary">#636366</Color>
-    <Color x:Key="Tertiary">#30d158</Color>
-    
-    <Color x:Key="Gray100">#ffffff</Color>
-    <Color x:Key="Gray200">#98989d</Color>
-    <Color x:Key="Gray300">#636366</Color>
-    <Color x:Key="Gray400">#48484a</Color>
-    <Color x:Key="Gray500">#3a3a3a</Color>
-    <Color x:Key="Gray600">#2a2a2a</Color>
-    <Color x:Key="Gray900">#0f0f0f</Color>
-    <Color x:Key="Gray950">#000000</Color>
+    <!-- ANDURA Design System Colors (dark-only, monochrome, type-led UI)
+         Source: https://github.com/lasaths/andura-skill (commit 963ae3c)
+         License: MIT
+         Tokens from andura.tokens.json via export to Andura.cs -->
 
-    <Color x:Key="White">#ffffff</Color>
+    <!-- Primary Palette (v2.2) -->
+    <Color x:Key="Void">#000000</Color>
+    <Color x:Key="Surface">#090A0C</Color>
+    <Color x:Key="SurfaceHover">#141518</Color>
+    <Color x:Key="SurfaceLift">#1A1B1E</Color>
+    <Color x:Key="Line">#3C3D41</Color>
+    <Color x:Key="Muted">#8A8C91</Color>
+    <Color x:Key="Text">#DADADD</Color>
+    
+    <!-- Accent & Selection -->
+    <Color x:Key="Ultramarine">#3A3CFF</Color>
+    <Color x:Key="UltramarineText">#5A74F1</Color>
+    <Color x:Key="OnUltramarine">#DADADD</Color>
+    
+    <!-- Status Colors (color only for abnormal states) -->
+    <Color x:Key="Emergency">#F45536</Color>
+    <Color x:Key="Caution">#FBB636</Color>
+    <Color x:Key="Nominal">#44B782</Color>
+    
+    <!-- Legacy Compatibility Mappings -->
+    <Color x:Key="Primary">#3A3CFF</Color>
+    <Color x:Key="PrimaryDark">#3A3CFF</Color>
+    <Color x:Key="PrimaryDarkText">#DADADD</Color>
+    <Color x:Key="Secondary">#141518</Color>
+    <Color x:Key="SecondaryDarkText">#8A8C91</Color>
+    <Color x:Key="Tertiary">#3A3CFF</Color>
+    
+    <Color x:Key="White">#DADADD</Color>
     <Color x:Key="Black">#000000</Color>
+    <Color x:Key="Magenta">#3A3CFF</Color>
+    <Color x:Key="MidnightBlue">#000000</Color>
+    <Color x:Key="OffBlack">#090A0C</Color>
+    
+    <!-- Gray Scale (mapped to ANDURA monochrome) -->
+    <Color x:Key="Gray100">#DADADD</Color>
+    <Color x:Key="Gray200">#8A8C91</Color>
+    <Color x:Key="Gray300">#3C3D41</Color>
+    <Color x:Key="Gray400">#3C3D41</Color>
+    <Color x:Key="Gray500">#3C3D41</Color>
+    <Color x:Key="Gray600">#1A1B1E</Color>
+    <Color x:Key="Gray900">#141518</Color>
+    <Color x:Key="Gray950">#090A0C</Color>
+    
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Ultramarine}"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SurfaceHover}"/>
+    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Ultramarine}"/>
+    <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource Text}"/>
+    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Void}"/>
+    
+    <SolidColorBrush x:Key="Gray100Brush" Color="{StaticResource Gray100}"/>
+    <SolidColorBrush x:Key="Gray200Brush" Color="{StaticResource Gray200}"/>
+    <SolidColorBrush x:Key="Gray300Brush" Color="{StaticResource Gray300}"/>
+    <SolidColorBrush x:Key="Gray400Brush" Color="{StaticResource Gray400}"/>
+    <SolidColorBrush x:Key="Gray500Brush" Color="{StaticResource Gray500}"/>
+    <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
+    <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
+    <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
 </ResourceDictionary>

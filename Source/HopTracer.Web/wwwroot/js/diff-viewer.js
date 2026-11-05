@@ -2409,7 +2409,7 @@
                             const code = d.code || d.Code || 'INFO';
                             const msg = d.message || d.Message || '';
                             const sev = (d.severity || d.Severity || 'info').toUpperCase();
-                            return `<div style="margin-top:4px;"><strong>${sev}</strong> [${code}] ${escapeHtml(msg)}</div>`;
+                            return `<div style="margin-top:4px;"><strong>${escapeHtml(sev)}</strong> [${escapeHtml(String(code))}] ${escapeHtml(msg)}</div>`;
                         })
                         .join('');
                 } else {
@@ -6086,7 +6086,7 @@
                 tooltip.style.display = 'block';
                 tooltip.style.left = (e.clientX + 10) + 'px';
                 tooltip.style.top = (e.clientY + 10) + 'px';
-                tooltip.innerHTML = `<strong>${hovered.nickname || hovered.name}</strong><br><span style="color:var(--text-secondary)">${hovered.name}</span>`;
+                tooltip.innerHTML = `<strong>${escapeHtml(hovered.nickname || hovered.name || '')}</strong><br><span style="color:var(--text-secondary)">${escapeHtml(hovered.name || '')}</span>`;
                 setCanvasCursor('pointer');
             } else {
                 hideCanvasTooltip();

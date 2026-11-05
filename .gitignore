@@ -71,6 +71,9 @@ artifacts/
 Thumbs.db
 desktop.ini
 
+# Node (Playwright / local UI tooling — never commit vendor trees)
+node_modules/
+
 # Shortcuts
 *.lnk
 

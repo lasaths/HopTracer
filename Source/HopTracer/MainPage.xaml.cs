@@ -120,8 +120,13 @@ public partial class MainPage : ContentPage
                         app.UseCors(x => x.SetIsOriginAllowed(IsLoopbackOrigin)
                                           .AllowAnyMethod()
                                           .AllowAnyHeader());
-                        
-                        app.UseStaticFiles();
+
+                        // Portable builds serve wwwroot from embedded resources — pin the
+                        // provider explicitly so CSS/JS resolve outside a physical wwwroot.
+                        app.UseStaticFiles(new StaticFileOptions
+                        {
+                            FileProvider = embeddedProvider
+                        });
 
                         app.UseRouting();
                         app.UseMiddleware<SessionTokenMiddleware>();
