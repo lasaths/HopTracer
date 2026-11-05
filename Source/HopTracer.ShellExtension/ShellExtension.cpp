@@ -80,7 +80,7 @@ namespace
         return result;
     }
 
-    std::wstring GetHopTracerExePath()
+    std::wstring GetModuleDirectory()
     {
         wchar_t modulePath[MAX_PATH] = {};
         const DWORD len = GetModuleFileNameW(g_moduleInstance, modulePath, MAX_PATH);
@@ -96,7 +96,48 @@ namespace
             return L"";
         }
 
-        return path.substr(0, lastSlash + 1) + L"HopTracer.exe";
+        return path.substr(0, lastSlash + 1);
+    }
+
+    std::wstring GetHopTracerExePath()
+    {
+        const auto directory = GetModuleDirectory();
+        if (directory.empty())
+        {
+            return L"";
+        }
+
+        return directory + L"HopTracer.exe";
+    }
+
+    std::wstring GetContextMenuIconPath()
+    {
+        const auto directory = GetModuleDirectory();
+        if (directory.empty())
+        {
+            return L"";
+        }
+
+        // Prefer the packaged logo .ico — Explorer is more reliable with this than exe,0.
+        const std::wstring logoIco = directory + L"hoptrace_logo.ico";
+        if (GetFileAttributesW(logoIco.c_str()) != INVALID_FILE_ATTRIBUTES)
+        {
+            return logoIco;
+        }
+
+        const std::wstring appIco = directory + L"HopTracer.ico";
+        if (GetFileAttributesW(appIco.c_str()) != INVALID_FILE_ATTRIBUTES)
+        {
+            return appIco;
+        }
+
+        const std::wstring exePath = directory + L"HopTracer.exe";
+        if (GetFileAttributesW(exePath.c_str()) != INVALID_FILE_ATTRIBUTES)
+        {
+            return exePath + L",0";
+        }
+
+        return L"";
     }
 
     HRESULT CollectGhPaths(IShellItemArray* shellItems, std::vector<std::wstring>& outPaths)
@@ -239,13 +280,12 @@ public:
             return E_POINTER;
         }
 
-        auto iconPath = GetHopTracerExePath();
+        const auto iconPath = GetContextMenuIconPath();
         if (iconPath.empty())
         {
             return E_FAIL;
         }
 
-        iconPath.append(L",0");
         return SHStrDupW(iconPath.c_str(), ppszIcon);
     }
 
