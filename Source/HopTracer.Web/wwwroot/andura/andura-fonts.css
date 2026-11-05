@@ -1,0 +1,5 @@
+/* Generated from tokens/andura.tokens.json. IBM Plex is SIL OFL 1.1 and not bundled: run scripts/render_hero.py or put the
+   TTFs in render/fonts/ (or edit FONT_DIR in scripts/export_tokens.py). */
+@font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: local("IBM Plex Mono"), url("../../render/fonts/IBMPlexMono-Regular.ttf") format("truetype"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-display: swap; src: local("IBM Plex Mono Medium"), url("../../render/fonts/IBMPlexMono-Medium.ttf") format("truetype"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400 500; font-display: swap; src: local("IBM Plex Sans"), url("../../render/fonts/IBMPlexSans%5Bwdth,wght%5D.ttf") format("truetype"); }

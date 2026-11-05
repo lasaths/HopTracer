@@ -22,7 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.1] - 2026-07-10
+### Changed
+
+- **ANDURA design system**: Complete visual restyle of HopTracer's user interface following the ANDURA design system (MIT licensed, from https://github.com/lasaths/andura-skill commit 963ae3c). Dark-only, monochrome, type-led UI optimized for diff tool workflows.
+  - Replaced all hand-typed colors with ANDURA token system (`andura.css`, `Andura.cs`)
+  - Adopted IBM Plex Sans (text) and IBM Plex Mono (numbers/labels) at weights 400 and 500
+  - Applied "grey when normal, colour when abnormal" principle: unchanged elements in Muted/Line greys; selection and accents in Ultramarine
+  - Mapped diff status to ANDURA semantics: removed/critical → Emergency (P1 octagon + red); modified/medium → Caution (P2 triangle + amber); added/low-risk → Advisory or Ultramarine
+  - Updated XAML Colors.xaml and Styles.xaml to dark-only mode (ANDURA has no light theme)
+  - Updated all HTML pages (index.html, error.html, selection.html) to use ANDURA tokens
+  - Preserved all existing functionality; this is a visual-only restyle
+
+## [1.3.0] - 2026-07-06
 
 ### Added
 

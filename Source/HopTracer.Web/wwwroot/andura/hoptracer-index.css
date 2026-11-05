@@ -1,0 +1,473 @@
+/* HopTracer Index Page - ANDURA Design System
+   Source: https://github.com/lasaths/andura-skill (commit 963ae3c)
+   License: MIT
+   Dark-only, monochrome, type-led UI for diff tool interface */
+
+@import url('andura.css');
+@import url('andura-fonts.css');
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--andura-font-family-sans);
+    background: var(--andura-color-void);
+    color: var(--andura-color-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100%;
+    line-height: 1.45;
+}
+
+.no-glow,
+.no-glow * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+.hidden-file-input {
+    display: none;
+}
+
+.drop-zone {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    min-width: 0;
+    height: 200px;
+    background: var(--andura-color-surface);
+    border: 2px dashed var(--andura-color-line);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+    border-color: var(--andura-color-ultramarine);
+    background: var(--andura-color-surface-hover);
+    transform: translateY(-1px);
+}
+
+.drop-zone:focus-visible,
+.btn:focus-visible,
+.git-modal-close:focus-visible,
+.git-modal-cancel:focus-visible {
+    outline: 2px solid var(--andura-color-text);
+    outline-offset: 3px;
+}
+
+.drop-zone .label,
+.drop-zone .filename {
+    pointer-events: none;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.container {
+    width: min(800px, calc(100vw - 32px));
+    text-align: center;
+    padding: clamp(18px, 3vw, 30px);
+    border-radius: 18px;
+    border: 1px solid var(--andura-color-line);
+    background: var(--andura-color-surface);
+}
+
+h1 {
+    margin-bottom: 40px;
+    font-weight: 500;
+    font-size: 22px;
+    font-family: var(--andura-font-family-sans);
+    color: var(--andura-color-text);
+}
+
+.hero {
+    margin-bottom: 34px;
+}
+
+.hero-logo {
+    max-width: 150px;
+    height: auto;
+    margin-bottom: 16px;
+    filter: none;
+}
+
+.hero-title {
+    margin: 0 0 10px;
+    font-size: clamp(30px, 4vw, 36px);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.12;
+    font-family: var(--andura-font-family-sans);
+    color: var(--andura-color-text);
+}
+
+.hero-subtitle {
+    color: var(--andura-color-muted);
+    margin: 0;
+    font-size: clamp(15px, 2vw, 17px);
+}
+
+.drop-zone-container {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    color: var(--andura-color-muted);
+    pointer-events: none;
+}
+
+.label {
+    font-size: 14px;
+    color: var(--andura-color-muted);
+    font-weight: 500;
+    font-family: var(--andura-font-family-sans);
+    user-select: none;
+    pointer-events: none;
+}
+
+.filename {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--andura-color-ultramarine-text);
+    font-weight: 600;
+    font-family: var(--andura-font-family-mono);
+    user-select: none;
+    pointer-events: none;
+}
+
+.btn {
+    background: var(--andura-color-ultramarine);
+    color: var(--andura-color-on-ultramarine);
+    border: none;
+    padding: 12px 32px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: var(--andura-font-family-sans);
+    cursor: pointer;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.btn:focus-visible {
+    outline: 2px solid var(--andura-color-text);
+    outline-offset: 2px;
+}
+
+.btn:disabled {
+    background: var(--andura-color-line);
+    cursor: not-allowed;
+    color: var(--andura-color-muted);
+    transform: none;
+    opacity: 1;
+}
+
+/* Git Modal Styles */
+.git-modal-card {
+    background: var(--andura-color-surface);
+    padding: 0;
+    border-radius: 12px;
+    width: min(800px, calc(100vw - 24px));
+    height: min(600px, calc(100vh - 24px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--andura-color-line);
+}
+
+.git-modal-header,
+.git-modal-footer,
+.git-modal-file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.git-modal-header {
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid var(--andura-color-line);
+}
+
+.git-modal-header h3 {
+    font-family: var(--andura-font-family-sans);
+    font-weight: 500;
+    font-size: 18px;
+    color: var(--andura-color-text);
+    margin: 0;
+}
+
+.git-modal-file-row {
+    justify-content: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--andura-color-line);
+    flex-wrap: wrap;
+}
+
+.git-modal-footer {
+    justify-content: flex-end;
+    padding: 20px;
+    border-top: 1px solid var(--andura-color-line);
+    background: var(--andura-color-surface);
+}
+
+.git-modal-close {
+    background: none;
+    border: none;
+    color: var(--andura-color-muted);
+    cursor: pointer;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.git-modal-close:hover {
+    color: var(--andura-color-text);
+    background: var(--andura-color-surface-hover);
+}
+
+.git-modal-cancel {
+    background: transparent;
+    border: 1px solid var(--andura-color-line);
+}
+
+.commit-list {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid var(--andura-color-line);
+    border-radius: 6px;
+    background: var(--andura-color-void);
+}
+
+.commit-row {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: inherit;
+    border: none;
+    display: grid;
+    grid-template-columns: 80px 1fr 160px 110px 100px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--andura-color-line);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    align-items: center;
+    font-size: 13px;
+    font: inherit;
+    font-family: var(--andura-font-family-sans);
+}
+
+.commit-row:last-child {
+    border-bottom: none;
+}
+
+.commit-row:hover {
+    background: var(--andura-color-surface-hover);
+}
+
+.commit-row.selected {
+    background: var(--andura-color-surface-lift);
+    border-left: 3px solid var(--andura-color-ultramarine);
+}
+
+.commit-row.selected-old {
+    background: var(--andura-color-surface-lift);
+    border-left: 3px solid var(--andura-color-ultramarine);
+}
+
+.commit-row.selected-new {
+    background: var(--andura-color-surface-lift);
+    border-left: 3px solid var(--andura-color-nominal);
+}
+
+.commit-row:focus-visible {
+    outline: 2px solid var(--andura-color-text);
+    outline-offset: -2px;
+}
+
+.commit-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 160px 110px 100px;
+    padding: 12px 16px;
+    background: var(--andura-color-surface);
+    border-bottom: 1px solid var(--andura-color-line);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--andura-color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: var(--andura-font-family-mono);
+}
+
+.commit-hash {
+    font-family: var(--andura-font-family-mono);
+    color: var(--andura-color-ultramarine-text);
+}
+
+.commit-msg {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 10px;
+    font-weight: 500;
+}
+
+.commit-author,
+.commit-date,
+.commit-size {
+    color: var(--andura-color-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--andura-font-family-mono);
+    font-size: 12px;
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: var(--andura-color-surface);
+    color: var(--andura-color-text);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--andura-color-line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    max-width: 400px;
+    animation: slideIn 0.3s ease-out forwards;
+    font-size: 14px;
+}
+
+.toast.error {
+    border-left: 4px solid var(--andura-color-emergency);
+}
+
+.toast.success {
+    border-left: 4px solid var(--andura-color-nominal);
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--andura-color-text);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+@media (max-width: 900px) {
+    body {
+        justify-content: flex-start;
+        padding: 20px 0;
+    }
+
+    .drop-zone-container {
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .drop-zone {
+        height: 150px;
+    }
+
+    h1 {
+        margin-bottom: 24px;
+    }
+
+    .commit-header {
+        grid-template-columns: 80px 1fr;
+    }
+
+    .commit-header > :nth-child(3),
+    .commit-header > :nth-child(4),
+    .commit-header > :nth-child(5) {
+        display: none;
+    }
+
+    .commit-row {
+        grid-template-columns: 80px 1fr;
+    }
+
+    .commit-row .commit-author,
+    .commit-row .commit-date,
+    .commit-row .commit-size {
+        display: none;
+    }
+
+    .toast {
+        min-width: 0;
+        max-width: calc(100vw - 20px);
+    }
+}
