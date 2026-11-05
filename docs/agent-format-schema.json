@@ -1,0 +1,269 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hoptracer.dev/schemas/agent-v2.json",
+  "title": "HopTracer Agent Format v2",
+  "description": "AI-optimized diff format for Grasshopper definitions",
+  "type": "object",
+  "required": ["schema", "inputs", "summary", "changes", "truncation"],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "hoptracer.agent/2",
+      "description": "Schema version identifier"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the diff was generated (omitted with --no-timestamp)"
+    },
+    "inputs": {
+      "type": "object",
+      "required": ["old", "new"],
+      "properties": {
+        "old": {
+          "type": "string",
+          "description": "Path to the old/base file (relative with --no-timestamp)"
+        },
+        "new": {
+          "type": "string",
+          "description": "Path to the new/modified file (relative with --no-timestamp)"
+        },
+        "oldSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hash of the old file"
+        },
+        "newSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hash of the new file"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["added", "removed", "modified", "wiresAdded", "wiresRemoved", "maxRisk", "headline"],
+      "properties": {
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of nodes added"
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of nodes removed"
+        },
+        "modified": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of nodes modified (excluding cosmetic moves)"
+        },
+        "wiresAdded": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of wire connections added"
+        },
+        "wiresRemoved": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of wire connections removed"
+        },
+        "maxRisk": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Highest risk level found"
+        },
+        "headline": {
+          "type": "string",
+          "description": "Human-readable summary of the key changes"
+        }
+      }
+    },
+    "changes": {
+      "type": "array",
+      "description": "List of significant node changes, sorted by risk (highest first), limited to 100 entries",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type", "path", "status", "risk", "impact"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Short node ID (first 8 characters of GUID)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Node nickname or type name"
+          },
+          "type": {
+            "type": "string",
+            "description": "Node type/component name"
+          },
+          "path": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Path from root through any cluster hierarchy (e.g. ['root'] or ['root', 'MyCluster'])"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "removed", "modified", "same"],
+            "description": "Change status"
+          },
+          "risk": {
+            "type": "object",
+            "required": ["score", "level", "reasons"],
+            "properties": {
+              "score": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Numeric risk score (0-29 low, 30-59 medium, 60-79 high, 80+ critical)"
+              },
+              "level": {
+                "type": "string",
+                "enum": ["low", "medium", "high", "critical"]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Human-readable reasons for the risk level"
+              }
+            }
+          },
+          "params": {
+            "type": "array",
+            "description": "Parameter changes (only properties that actually changed, excluding scripts and opaque data)",
+            "items": {
+              "type": "object",
+              "required": ["key", "old", "new"],
+              "properties": {
+                "key": {"type": "string"},
+                "old": {"type": "string"},
+                "new": {"type": "string"}
+              }
+            }
+          },
+          "script": {
+            "type": "object",
+            "description": "Script/code change details (if this is a script component)",
+            "required": ["language", "linesAdded", "linesRemoved", "unifiedDiff"],
+            "properties": {
+              "language": {
+                "type": "string",
+                "enum": ["csharp", "python", "vb", "expression", "unknown"],
+                "description": "Detected language"
+              },
+              "linesAdded": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of lines added"
+              },
+              "linesRemoved": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of lines removed"
+              },
+              "unifiedDiff": {
+                "type": "string",
+                "description": "Unified diff format (@@ hunks with +/- lines, 3 lines of context)"
+              }
+            }
+          },
+          "impact": {
+            "type": "object",
+            "required": ["upstream", "downstream", "downstreamCount"],
+            "properties": {
+              "upstream": {
+                "type": "array",
+                "description": "Nodes that feed data into this node",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "name", "port"],
+                  "properties": {
+                    "id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "port": {"type": "string", "description": "Port GUID or name"}
+                  }
+                }
+              },
+              "downstream": {
+                "type": "array",
+                "description": "Nodes that receive data from this node",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "name", "port"],
+                  "properties": {
+                    "id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "port": {"type": "string"}
+                  }
+                }
+              },
+              "downstreamCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total count of downstream nodes"
+              }
+            }
+          }
+        }
+      }
+    },
+    "cosmetic": {
+      "type": "object",
+      "required": ["moved"],
+      "properties": {
+        "moved": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of cosmetic position-only moves (low-risk, no property changes)"
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "description": "Parse warnings and errors grouped by diagnostic code",
+      "items": {
+        "type": "object",
+        "required": ["code", "count", "graph"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Diagnostic code (e.g. 'UNRESOLVED_EDGE_REFERENCE', 'CLUSTER_PREVIEW_FAILED')"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of occurrences"
+          },
+          "graph": {
+            "type": "string",
+            "enum": ["old", "new", "both"],
+            "description": "Which graph(s) the diagnostic applies to"
+          }
+        }
+      }
+    },
+    "truncation": {
+      "type": "object",
+      "required": ["listed", "total", "omittedLowRisk"],
+      "properties": {
+        "listed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of changes shown in the 'changes' array"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of significant changes (excluding cosmetic moves)"
+        },
+        "omittedLowRisk": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of changes omitted (total - listed), sorted by ascending risk"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Archive name="Root" version="1.0">
+  <chunk name="Definition" index="0">
+    <items count="3">
+      <chunk name="Object" index="0">
+        <items count="2">
+          <item name="GUID" type_name="gh_guid" type_code="9">cluster</item>
+          <item name="Name" type_name="gh_string" type_code="10">Cluster</item>
+          <chunk name="Container">
+            <items count="3">
+              <item name="Description" type_name="gh_string" type_code="10">A cluster</item>
+              <item name="InstanceGuid" type_name="gh_guid" type_code="9">cluster</item>
+              <item name="Name" type_name="gh_string" type_code="10">Cluster</item>
+              <chunk name="Properties">
+                <items count="1">
+                  <item name="ClusterHash" type_name="gh_string" type_code="10">abc123</item>
+                </items>
+              </chunk>
+            </items>
+          </chunk>
+        </items>
+      </chunk>
+      <chunk name="Object" index="1">
+        <items count="2">
+          <item name="GUID" type_name="gh_guid" type_code="9">csharp</item>
+          <item name="Name" type_name="gh_string" type_code="10">C#</item>
+          <chunk name="Container">
+            <items count="3">
+              <item name="Description" type_name="gh_string" type_code="10">C# component</item>
+              <item name="InstanceGuid" type_name="gh_guid" type_code="9">csharp</item>
+              <item name="Name" type_name="gh_string" type_code="10">C#</item>
+              <chunk name="Properties">
+                <items count="1">
+                  <item name="ScriptSource" type_name="gh_string" type_code="10">using System;
+public class Script { int a; }</item>
+                </items>
+              </chunk>
+            </items>
+          </chunk>
+        </items>
+      </chunk>
+      <chunk name="Object" index="2">
+        <items count="2">
+          <item name="GUID" type_name="gh_guid" type_code="9">panel</item>
+          <item name="Name" type_name="gh_string" type_code="10">Panel</item>
+          <chunk name="Container">
+            <items count="3">
+              <item name="Description" type_name="gh_string" type_code="10">Panel</item>
+              <item name="InstanceGuid" type_name="gh_guid" type_code="9">panel</item>
+              <item name="Name" type_name="gh_string" type_code="10">Panel</item>
+            </items>
+          </chunk>
+        </items>
+      </chunk>
+    </items>
+  </chunk>
+</Archive>

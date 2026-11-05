@@ -34,7 +34,12 @@ public static class CliRunner
         }
         catch (Exception ex)
         {
-            return Fail(stderr, InferFormatFromArgs(args), "error", GetDeepMessage(ex), $"Error: {GetDeepMessage(ex)}");
+            var msg = GetDeepMessage(ex);
+            var code = msg.StartsWith("unknown_format:") ? "unknown_format" :
+                       msg.StartsWith("invalid_threshold:") ? "invalid_threshold" : "unknown_option";
+            var cleanMsg = msg.Replace("unknown_format:", "Unknown format:")
+                             .Replace("invalid_threshold:", "Invalid threshold:");
+            return Fail(stderr, InferFormatFromArgs(args), code, cleanMsg, $"Error: {cleanMsg}");
         }
 
         try
@@ -48,6 +53,18 @@ public static class CliRunner
                 "report" => RunReport(positional, flags, stdout, stderr),
                 _ => Fail(stderr, flags.Format, "unknown_command", $"Unknown command: {command}", $"Unknown command: {command}")
             };
+        }
+        catch (Exception ex) when (ex is System.Xml.XmlException || ex.InnerException is System.Xml.XmlException)
+        {
+            var xmlEx = (ex as System.Xml.XmlException) ?? (ex.InnerException as System.Xml.XmlException)!;
+            var detail = $"XML parsing error at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}: {xmlEx.Message}";
+            // Try to extract file from args or exception
+            var filePath = xmlEx.SourceUri ?? string.Empty;
+            if (string.IsNullOrEmpty(filePath) && command == "compare" && positional.Length >= 1)
+            {
+                filePath = positional[0];
+            }
+            return FailWithXmlError(stderr, flags.Format, detail, xmlEx, filePath);
         }
         catch (Exception ex)
         {
@@ -73,17 +90,27 @@ public static class CliRunner
     {
         var review = new ReviewWorkflowService();
         var deps = review.CheckDependencies();
+        var isNonWindows = !OperatingSystem.IsWindows();
+        var ghIoExpected = !isNonWindows;
+        var ready = deps.GhIoAvailable || (isNonWindows && !deps.GhIoAvailable);
+        
         var payload = new Dictionary<string, object?>
         {
             ["version"] = GetVersion(),
             ["ghIoAvailable"] = deps.GhIoAvailable,
             ["ghIoMessage"] = deps.GhIoMessage,
             ["baselinesPath"] = deps.BaselinesPath,
-            ["ready"] = deps.GhIoAvailable
+            ["ready"] = ready,
+            ["platform"] = isNonWindows ? "unix" : "windows"
         };
 
+        if (isNonWindows && !deps.GhIoAvailable)
+        {
+            payload["warning"] = "GH_IO is not available on this platform; .gh file conversion requires Rhino/Grasshopper";
+        }
+
         stdout.WriteLine(JsonSerializer.Serialize(payload));
-        return deps.GhIoAvailable ? 0 : 1;
+        return ready ? 0 : 2;
     }
 
     private static int RunBaseline(string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
@@ -166,9 +193,21 @@ public static class CliRunner
         flags.FileOldLabel = $"{result.Baseline.Name} (baseline)";
         flags.FileNewLabel = Path.GetFileName(filePath);
         var code = WriteOutput(result.Diff, flags.FileOldLabel, flags.FileNewLabel, flags, stdout, stderr);
-        if (flags.FailOnRisk && !result.Passed)
+        if (flags.FailOnRisk.HasValue)
         {
-            return 1;
+            var changedNodes = result.Diff.Nodes.Where(n => n.Status != "same").ToList();
+            
+            // If no changes and threshold is 0, exit 0
+            if (changedNodes.Count == 0)
+            {
+                return 0;
+            }
+            
+            var maxRisk = changedNodes.Max(n => (int?)n.RiskScore) ?? 0;
+            if (maxRisk >= flags.FailOnRisk.Value)
+            {
+                return 1;
+            }
         }
 
         return code;
@@ -215,7 +254,8 @@ public static class CliRunner
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = flags.Format is DiffOutputFormat.Agent or DiffOutputFormat.Json
+            WriteIndented = flags.Format is DiffOutputFormat.Agent or DiffOutputFormat.Json,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
         stdout.WriteLine(json);
     }
@@ -302,7 +342,9 @@ public static class CliRunner
         {
             var preparedOld = PreparePath(oldPath, converter, temps);
             var preparedNew = PreparePath(newPath, converter, temps);
-            return differ.DiffDetailed(parser.Parse(preparedOld), parser.Parse(preparedNew));
+            var oldGraph = parser.Parse(preparedOld);
+            var newGraph = parser.Parse(preparedNew);
+            return differ.DiffDetailed(oldGraph, newGraph);
         }
         finally
         {
@@ -342,9 +384,21 @@ public static class CliRunner
             stdout.Write(text);
         }
 
-        if (flags.FailOnRisk && diff.RiskSummary.CriticalCount + diff.RiskSummary.HighCount > 0)
+        if (flags.FailOnRisk.HasValue)
         {
-            return 1;
+            var changedNodes = diff.Nodes.Where(n => n.Status != "same").ToList();
+            
+            // If no changes and threshold is 0, exit 0 (no risk to fail on)
+            if (changedNodes.Count == 0)
+            {
+                return 0;
+            }
+            
+            var maxRisk = changedNodes.Max(n => (int?)n.RiskScore) ?? 0;
+            if (maxRisk >= flags.FailOnRisk.Value)
+            {
+                return 1;
+            }
         }
 
         return 0;
@@ -388,7 +442,7 @@ public static class CliRunner
             {
                 payload["path"] = path;
             }
-            else if (!string.Equals(detail, message, StringComparison.Ordinal))
+            if (!string.Equals(detail, message, StringComparison.Ordinal))
             {
                 payload["detail"] = detail;
             }
@@ -400,11 +454,35 @@ public static class CliRunner
             stderr.WriteLine(message);
         }
 
-        return 1;
+        return 2;
+    }
+
+    private static int FailWithXmlError(TextWriter stderr, DiffOutputFormat format, string detail, System.Xml.XmlException xmlEx, string file)
+    {
+        if (UsesStructuredErrors(format))
+        {
+            var payload = new Dictionary<string, object?>
+            {
+                ["error"] = "xml_parse_error",
+                ["message"] = $"XML parsing error at line {xmlEx.LineNumber}, position {xmlEx.LinePosition}",
+                ["detail"] = detail,
+                ["file"] = file,
+                ["line"] = xmlEx.LineNumber,
+                ["column"] = xmlEx.LinePosition
+            };
+
+            stderr.WriteLine(JsonSerializer.Serialize(payload));
+        }
+        else
+        {
+            stderr.WriteLine(detail);
+        }
+
+        return 2;
     }
 
     private static bool UsesStructuredErrors(DiffOutputFormat format) =>
-        format is DiffOutputFormat.Agent or DiffOutputFormat.Json;
+        format is DiffOutputFormat.Agent or DiffOutputFormat.AgentV1 or DiffOutputFormat.Json;
 
     private static (CliFlags Flags, string[] Positional) ParseArgs(string[] args)
     {
@@ -450,7 +528,7 @@ public static class CliRunner
                     flags.MaxEdges = int.Parse(NextArg(args, ref i, arg));
                     break;
                 case "--fail-on-risk":
-                    flags.FailOnRisk = true;
+                    flags.FailOnRisk = 60; // Default: high/critical
                     break;
                 case "--no-stats":
                     flags.NoStats = true;
@@ -467,12 +545,33 @@ public static class CliRunner
                 case "--no-nodes":
                     flags.NoNodes = true;
                     break;
+                case "--no-timestamp":
+                    flags.NoTimestamp = true;
+                    break;
+                case "--absolute-paths":
+                    flags.RelativePaths = false;
+                    break;
                 default:
-                    if (arg.StartsWith('-'))
+                    if (arg.StartsWith("--fail-on-risk=", StringComparison.Ordinal))
+                    {
+                        var value = arg.Substring("--fail-on-risk=".Length);
+                        if (int.TryParse(value, out var threshold) && threshold >= 0 && threshold <= 100)
+                        {
+                            flags.FailOnRisk = threshold;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"invalid_threshold: --fail-on-risk={value} (must be 0-100)");
+                        }
+                    }
+                    else if (arg.StartsWith('-'))
                     {
                         throw new InvalidOperationException($"Unknown option: {arg}");
                     }
-                    positional.Add(arg);
+                    else
+                    {
+                        positional.Add(arg);
+                    }
                     break;
             }
         }
@@ -497,7 +596,8 @@ public static class CliRunner
         "json" => DiffOutputFormat.Json,
         "html" => DiffOutputFormat.Html,
         "agent" => DiffOutputFormat.Agent,
-        _ => throw new InvalidOperationException($"Unknown format: {value}")
+        "agent-v1" => DiffOutputFormat.AgentV1,
+        _ => throw new InvalidOperationException($"unknown_format: {value}")
     };
 
     private static void PrintHelp(TextWriter stdout, string? command)
@@ -557,7 +657,7 @@ Usage:
     {
         stdout.WriteLine("""
 Options:
-  -f, --format <text|md|json|html|agent>   Output format (default: text)
+  -f, --format <text|md|json|html|agent|agent-v1>   Output format (default: text, agent=v2)
   -o, --output <file>                Write to file or output directory
   --commit <hash>                    Git commit to compare against (git command)
   --name <baselineName>              Baseline name (baseline save/compare)
@@ -573,6 +673,8 @@ Options:
   --no-risk                          Omit risk summary
   --no-risks                         Omit top risks list
   --no-nodes                         Omit changed nodes list
+  --no-timestamp                     Omit timestamp (deterministic output)
+  --absolute-paths                   Use absolute paths instead of relative (default: relative)
   --version, -V                      Show version
 """);
     }

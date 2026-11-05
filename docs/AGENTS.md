@@ -1,5 +1,10 @@
 # AGENTS.md
 
+## Known Limitations & Dependencies
+
+### Cluster Risk Rollup (PR #17 Dependency)
+Current risk scoring does not propagate internal cluster changes to the parent cluster's risk score. A cluster may show low risk even when its internal nodes have critical changes. **This depends on [PR #17: UI/UX Redesign: ANDURA Design System Implementation](https://github.com/lasaths/HopTracer/pull/17)** which implements risk rollup for clusters. Until that PR merges, agents should check `.changes[]` entries with `path: ["root", "<ClusterName>", ...]` to inspect cluster internals manually.
+
 ## Project Overview
 **HopTracer** is a desktop application for diffing Grasshopper (`.gh`, `.ghx`) files. It allows users to visualize changes between two versions of a Grasshopper definition, including added/removed nodes, modified connections, parameter changes, script code diffs, and cluster-level change previews.
 
@@ -26,14 +31,27 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses
     - **Type**: .NET Console (`Source/Tools/GhDiffTool`).
     - **Role**: `compare` and `git` commands with text, markdown, JSON, HTML, and **agent** output formats.
     - **Agent skill**: [`skills/hoptracer/SKILL.md`](../skills/hoptracer/SKILL.md) — `npx skills add lasaths/HopTracer@hoptracer`; commands, `--format agent`, baselines, forensic report.
+    - **Agent format v2**: AI-optimized JSON output with unified diffs, impact analysis, and deterministic output.
+    - **Exit codes**: `0` = success, `1` = risk threshold hit (`--fail-on-risk`), `2+` = error.
+    - **Cross-platform**: Builds and runs on Linux, macOS, and Windows.
 
 ### CLI Data Flow (agents / CI)
 1. `hoptracer compare <old> <new> --format agent` (or `hoptracer git <file> --commit <hash>`).
 2. For `git`, the tool writes the commit snapshot to a temp file, then diffs it against the working-tree file.
-3. `ConverterService` converts `.gh` → `.ghx` when `GH_IO.dll` is present.
+3. `ConverterService` converts `.gh` → `.ghx` when `GH_IO.dll` is present (optional on Linux/macOS).
 4. `GhxParser` + `Differ` produce `DiffComputation`.
-5. `DiffAgentFormatter` emits JSON with resolved wires, property deltas, risk summary, and diagnostics.
-6. Exit `1` when `--fail-on-risk` detects critical/high risks.
+5. `DiffAgentFormatterV2` emits JSON (`hoptracer.agent/2` schema) with:
+   - Unified diffs for scripts (not full old+new bodies)
+   - Only properties that actually changed (filters out old==new)
+   - Upstream/downstream impact from wire graph
+   - SHA-256 hashes of input files
+   - Relative paths with `--no-timestamp` for deterministic output
+   - Explicit truncation reporting (top 100 changes shown, sorted by risk)
+   - Grouped diagnostics by code
+6. Exit codes:
+   - `0`: Success
+   - `1`: Risk threshold exceeded (`--fail-on-risk` with critical/high risks present)
+   - `2+`: Error (file not found, parse failure, invalid arguments)
 
 ### Desktop Data Flow
 1.  User drops files in MAUI WebView.
@@ -44,18 +62,191 @@ The project is a **Hybrid .NET MAUI** application targeting **.NET 10**. It uses
 6.  Controller injects the Diff JSON into `diff_viewer.html`.
 7.  WebView renders the interactive graph.
 
+## Agent Format v2 (`hoptracer.agent/2`)
+
+The `--format agent` output is optimized for AI consumption in CI/CD, code review, and automated analysis workflows.
+
+### Key Features
+- **Schema version**: `hoptracer.agent/2` for forward compatibility
+- **File integrity**: SHA-256 hashes for both input files
+- **Unified diffs**: Script changes as compact unified diffs (not full source dumps)
+- **Filtered properties**: Only parameters that actually changed (excludes old==new noise)
+- **Impact analysis**: Upstream/downstream node connections with port names
+- **Risk scoring**: Unified risk model (0-29 low, 30-59 medium, 60-79 high, 80+ critical)
+- **Explicit truncation**: Top 100 changes shown with count of omitted low-risk items
+- **Cosmetic tracking**: Position-only moves counted separately
+- **Grouped diagnostics**: Parse warnings grouped by code with counts
+- **Deterministic output**: `--no-timestamp` flag for diffable outputs with relative paths
+
+### Usage Examples
+
+```bash
+# Basic comparison
+hoptracer compare old.ghx new.ghx --format agent
+
+# Deterministic output for CI diffs
+hoptracer compare old.ghx new.ghx --format agent --no-timestamp > diff.json
+
+# Fail CI on high-risk changes (default threshold: 60 = high/critical)
+hoptracer compare old.ghx new.ghx --format agent --fail-on-risk
+# Exit 0: OK, 1: risk threshold hit, 2+: error
+
+# Custom risk threshold (fail on medium+ changes)
+hoptracer compare old.ghx new.ghx --format agent --fail-on-risk=30
+# Exit 0: OK, 1: risk >= 30, 2+: error
+
+# Compare against git history
+hoptracer git path/to/definition.ghx --commit HEAD~5 --format agent
+```
+
+### Before/After Example
+
+**Before (v1):**
+```json
+{
+  "totalChangedNodes": 3,
+  "summary": "3 node(s) modified; script changes detected.",
+  "wireChanges": [...large array...],
+  "nodeChanges": [...large array...],
+  "propertyChanges": [...includes unchanged properties...],
+  "opaqueChanges": {...base64 blobs...}
+}
+```
+
+**After (v2):**
+```json
+{
+  "schema": "hoptracer.agent/2",
+  "inputs": { "old": "old.ghx", "new": "new.ghx", "oldSha256": "abc...", "newSha256": "def..." },
+  "summary": {
+    "added": 0, "removed": 0, "modified": 3,
+    "maxRisk": "medium",
+    "headline": "3 node(s) modified; C# Script script changed (15 added, 8 removed)."
+  },
+  "changes": [
+    {
+      "id": "12345678",
+      "name": "C# Script",
+      "status": "modified",
+      "risk": { "score": 75, "level": "high", "reasons": ["Node modified", "Script/code change"] },
+      "script": {
+        "language": "C#",
+        "linesAdded": 15,
+        "linesRemoved": 8,
+        "unifiedDiff": "@@ -10,3 +10,10 @@\n ...",
+        "truncated": null
+      },
+      "impact": { "upstream": [...], "downstream": [...], "downstreamCount": 5 }
+    }
+  ],
+  "wires": [{ "status": "added", "from": "NodeA.Output", "to": "NodeB.Input", "wire": "NodeA.Output → NodeB.Input" }],
+  "cosmetic": { "moved": 2 },
+  "truncation": { "listed": 3, "total": 3, "omittedLowRisk": 0 }
+}
+```
+
+**Size reduction:** v2 is ~70% smaller on cluster/synthetic graphs by dropping unchanged properties, raw `ClusterPreviewGraph` blobs, and using unified diffs instead of full script bodies.
+
+### Output Structure
+
+See [`docs/agent-format-schema.json`](./agent-format-schema.json) for the full JSON schema.
+
+```json
+{
+  "schema": "hoptracer.agent/2",
+  "inputs": {
+    "old": "old.ghx",
+    "new": "new.ghx",
+    "oldSha256": "985b2a35...",
+    "newSha256": "614ab755..."
+  },
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "modified": 2,
+    "wiresAdded": 0,
+    "wiresRemoved": 0,
+    "maxRisk": "high",
+    "headline": "2 node(s) modified; C# script changed (35 added, 33 removed)."
+  },
+  "changes": [
+    {
+      "id": "e73058b7",
+      "name": "C#",
+      "type": "C# Script",
+      "path": ["root"],
+      "status": "modified",
+      "risk": {
+        "score": 75,
+        "level": "high",
+        "reasons": ["Node modified", "Script/code change"]
+      },
+      "script": {
+        "language": "csharp",
+        "linesAdded": 35,
+        "linesRemoved": 33,
+        "unifiedDiff": "@@ -23,56 +23,58 @@\n..."
+      },
+      "impact": {
+        "upstream": [{"id": "1c92aab1", "name": "Geo", "port": "x"}],
+        "downstream": [{"id": "...", "name": "Panel", "port": "a"}],
+        "downstreamCount": 1
+      }
+    }
+  ],
+  "cosmetic": {"moved": 0},
+  "diagnostics": [
+    {"code": "UNRESOLVED_EDGE_REFERENCE", "count": 2, "graph": "both"}
+  ],
+  "truncation": {
+    "listed": 2,
+    "total": 2,
+    "omittedLowRisk": 0
+  }
+}
+```
+
+### Interpreting the Output
+
+An AI agent reading this format can answer:
+- **What changed**: Check `summary.headline` and `changes[].params/script`
+- **Where**: `changes[].path` shows cluster nesting, `changes[].name` identifies the node
+- **Risk**: `summary.maxRisk` and per-node `changes[].risk.score` with human-readable `reasons`
+- **Downstream impact**: `changes[].impact.downstream` lists affected nodes and ports
+- **Script diffs**: `changes[].script.unifiedDiff` shows line-level changes without repeating unchanged code
+- **Completeness**: `truncation.omittedLowRisk` reports how many low-priority changes were excluded
+
+### Baseline & Baseline Paths
+
+Baselines are stored in:
+- **Windows**: `%LOCALAPPDATA%\HopTracer\baselines`
+- **Linux**: `~/.local/share/HopTracer/baselines`
+- **macOS**: `~/.local/share/HopTracer/baselines`
+
+```bash
+hoptracer baseline save definition.ghx --name golden
+hoptracer baseline compare definition-new.ghx --name golden --format agent
+```
+
 ## Development Workflow
 
 ### Prerequisites
 - .NET 10 SDK
-- Visual Studio 2022 (17.12+) or VS Code
-- Windows 10/11
-- Optional: Rhino 7/8 for enhanced cluster archive decoding (`GH_IO.dll`)
+- Visual Studio 2022 (17.12+) or VS Code (Windows/Linux/macOS)
+- For MAUI app: Windows 10/11
+- For CLI: Windows, Linux, or macOS
+- Optional: Rhino 7/8 for `.gh` binary file conversion (`GH_IO.dll`, Windows only)
 
 ### Setup
-`GH_IO.dll` is optional for build/test. If you need full `.gh` conversion and enhanced cluster archive decoding, run:
+`GH_IO.dll` is optional for build/test. It is only available on Windows and only needed for `.gh` binary file conversion. The CLI works with `.ghx` files on all platforms without any dependencies.
 
-`scripts/setup_dependencies.ps1`
+If you need full `.gh` conversion and enhanced cluster archive decoding on Windows:
+
+```powershell
+scripts/setup_dependencies.ps1
+```
+
+On Linux/macOS, the `doctor` command will warn that GH_IO is unavailable but will still report ready status. The CLI can compare `.ghx` files without any external dependencies.
 
 ### Building and Running
 1.  Open `Source/HopTracer.sln`.

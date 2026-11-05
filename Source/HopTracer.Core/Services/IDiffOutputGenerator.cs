@@ -16,6 +16,7 @@ public class DiffOutputOptions
     public int MaxNodesToShow { get; set; } = 20;
     public int MaxEdgesToShow { get; set; } = 10;
     public bool CompactFormat { get; set; } = false;
+    public bool IncludeTimestamp { get; set; } = true;
 }
 
 public enum DiffOutputFormat
@@ -24,5 +25,6 @@ public enum DiffOutputFormat
     Markdown,
     Json,
     Html,
-    Agent
+    Agent,
+    AgentV1
 }

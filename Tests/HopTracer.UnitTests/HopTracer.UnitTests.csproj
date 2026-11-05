@@ -1,11 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">net10.0;net10.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="'$(OS)' != 'Windows_NT'">net10.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <!-- Exclude Web-dependent tests on non-Windows targets -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Compile Remove="FileValidationServiceTests.cs" />
+    <Compile Remove="SessionTokenMiddlewareTests.cs" />
+    <Compile Remove="SessionTokenServiceTests.cs" />
+    <Compile Remove="TempFileManagerTests.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
@@ -16,8 +29,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Source\HopTracer.Core\HopTracer.Core.csproj" />
-    <ProjectReference Include="..\..\Source\HopTracer.Web\HopTracer.Web.csproj" />
     <ProjectReference Include="..\..\Source\Tools\GhDiffTool\GhDiffTool.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <ProjectReference Include="..\..\Source\HopTracer.Web\HopTracer.Web.csproj" />
   </ItemGroup>
 
 </Project>

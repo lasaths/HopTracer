@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Archive name="Root">
+  <items>
+    <item name="plugin_version">1.0</item>
+  </items>
+  <chunks>
+    <chunk name="Definition">
+      <items>
+        <item name="ObjectCount" type_name="gh_int32" type_code="3">1</item>
+      </items>
+      <chunks>
+        <chunk name="Object" index="0">
+          <items>
+            <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
+            <item name="Name" type_name="gh_string" type_code="10">Number Slider</item>
+          </items>
+          <chunks>
+            <chunk name="Container">
+              <items>
+                <item name="InstanceGuid" type_name="gh_guid" type_code="9">slider-guid-001</item>
+                <item name="Name" type_name="gh_string" type_code="10">Number Slider</item>
+                <item name="NickName" type_name="gh_string" type_code="10">Sld</item>
+              </items>
+            </chunk>
+          </chunks>
+        </chunk>
+      </chunks>
+    </chunk>
+  </chunks>
+</Archive>

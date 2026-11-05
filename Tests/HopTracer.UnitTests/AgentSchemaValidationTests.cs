@@ -31,7 +31,7 @@ public class AgentSchemaValidationTests
     }
 
     [Fact]
-    public void AgentOutput_FromFixtures_MatchesDocumentedContract()
+    public void AgentV1Output_FromFixtures_MatchesDocumentedContract()
     {
         var oldPath = Path.Combine(RepoRoot, "Tests", "data", "compare-old.ghx");
         var newPath = Path.Combine(RepoRoot, "Tests", "data", "compare-new.ghx");
@@ -40,7 +40,7 @@ public class AgentSchemaValidationTests
         {
             FileOld = oldPath,
             FileNew = newPath
-        }, DiffOutputFormat.Agent);
+        }, DiffOutputFormat.AgentV1);
 
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -62,10 +62,10 @@ public class AgentSchemaValidationTests
     }
 
     [Fact]
-    public void AgentOutput_IncludesNodeIdAndTruncationMetadata()
+    public void AgentV1Output_IncludesNodeIdAndTruncationMetadata()
     {
         var diff = Differ.DiffDetailed(CreateOldGraph(), CreateNewGraph());
-        var json = Generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.Agent);
+        var json = Generator.Generate(diff, new DiffOutputOptions(), DiffOutputFormat.AgentV1);
         using var doc = JsonDocument.Parse(json);
 
         var root = doc.RootElement;
@@ -78,7 +78,7 @@ public class AgentSchemaValidationTests
     }
 
     [Fact]
-    public void AgentOutput_PropertyChange_IncludesNodeIdWhenPresent()
+    public void AgentV1Output_PropertyChange_IncludesNodeIdWhenPresent()
     {
         var oldGraph = new Graph
         {
@@ -102,7 +102,7 @@ public class AgentSchemaValidationTests
         };
 
         var diff = Differ.DiffDetailed(oldGraph, newGraph);
-        var json = Generator.Generate(diff, new DiffOutputOptions { MaxNodesToShow = 10 }, DiffOutputFormat.Agent);
+        var json = Generator.Generate(diff, new DiffOutputOptions { MaxNodesToShow = 10 }, DiffOutputFormat.AgentV1);
         using var doc = JsonDocument.Parse(json);
 
         var change = doc.RootElement.GetProperty("propertyChanges")[0];

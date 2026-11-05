@@ -33,7 +33,10 @@ public class ConverterService : IConverterService
         var archiveType = ResolveGhArchiveType();
         if (archiveType == null)
         {
-            throw new InvalidOperationException("GH_IO dependency unavailable. Run scripts/setup_dependencies.ps1 or ensure GH_IO.dll is available.");
+            var setupHint = OperatingSystem.IsWindows() 
+                ? "Run scripts/setup_dependencies.ps1 or ensure GH_IO.dll is available."
+                : "GH_IO.dll is not available on this platform.";
+            throw new InvalidOperationException($"GH_IO dependency unavailable. {setupHint}");
         }
 
         var archive = Activator.CreateInstance(archiveType);
@@ -76,7 +79,10 @@ public class ConverterService : IConverterService
             var archiveType = ResolveGhArchiveType();
             if (archiveType == null)
             {
-                message = "GH_IO dependency unavailable. Run scripts/setup_dependencies.ps1 or place GH_IO.dll in the app directory.";
+                var setupHint = OperatingSystem.IsWindows() 
+                    ? "Run scripts/setup_dependencies.ps1 or place GH_IO.dll in the app directory."
+                    : "GH_IO.dll is not available on this platform.";
+                message = $"GH_IO dependency unavailable. {setupHint}";
                 return false;
             }
 
