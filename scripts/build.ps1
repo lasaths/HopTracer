@@ -26,14 +26,11 @@ $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = "1"
 $env:DOTNET_NOLOGO = "1"
 $env:APPDATA = Join-Path $dotnetAppData "Roaming"
 $env:LOCALAPPDATA = Join-Path $dotnetAppData "Local"
-$env:RestoreSources = "$localPackages;$nugetSource"
+# Do not set RestoreSources or pass --source https://... : MSBuild turns the
+# URL into a relative path (NU1801 / NU1101). Use NuGet.Config under DOTNET_CLI_HOME.
+Remove-Item Env:RestoreSources -ErrorAction SilentlyContinue
 $env:RestoreIgnoreFailedSources = "true"
 $env:NuGetAudit = "false"
-
-$restoreSourceArgs = @("--source", $nugetSource)
-if (Test-Path $localPackages) {
-    $restoreSourceArgs = @("--source", $localPackages) + $restoreSourceArgs
-}
 
 if (-not (Test-Path $dotnetHome)) {
     New-Item -ItemType Directory -Path $dotnetHome | Out-Null
@@ -69,11 +66,11 @@ if (-not $SkipClean) {
 
 # Step 2: Restore
 Write-Host "`n[2/5] Restoring dependencies..." -ForegroundColor Yellow
-dotnet restore $appProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
+dotnet restore $appProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false
 if ($LASTEXITCODE -ne 0) { throw "App restore failed" }
-dotnet restore $cliProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
+dotnet restore $cliProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false
 if ($LASTEXITCODE -ne 0) { throw "CLI restore failed" }
-dotnet restore $testProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false @restoreSourceArgs
+dotnet restore $testProject --verbosity normal --ignore-failed-sources -p:NuGetAudit=false -p:BuildInParallel=false
 if ($LASTEXITCODE -ne 0) { throw "Test restore failed" }
 Write-Host "  OK Dependencies restored" -ForegroundColor Green
 
@@ -119,8 +116,7 @@ dotnet publish $appProject `
     --verbosity quiet `
     --ignore-failed-sources `
     -p:NuGetAudit=false `
-    -p:BuildInParallel=false `
-    @restoreSourceArgs
+    -p:BuildInParallel=false
 
 if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
@@ -134,8 +130,7 @@ dotnet publish $cliProject `
     --verbosity quiet `
     --ignore-failed-sources `
     -p:NuGetAudit=false `
-    -p:BuildInParallel=false `
-    @restoreSourceArgs
+    -p:BuildInParallel=false
 
 if ($LASTEXITCODE -ne 0) { throw "CLI publish failed" }
 
