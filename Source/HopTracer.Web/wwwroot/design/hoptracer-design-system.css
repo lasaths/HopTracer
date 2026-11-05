@@ -1,0 +1,317 @@
+/**
+ * HopTracer Design System
+ * 
+ * Apple-inspired pro app design: Information hierarchy, restraint, materials,
+ * purposeful spring-based motion, and respect for reduced motion.
+ * 
+ * Inspired by: Xcode, Final Cut Pro, Logic Pro (dark mode)
+ * 
+ * Principles:
+ * - True dark mode: Pure black base with subtle elevated surfaces
+ * - Clear focus: Graph first, quiet chrome
+ * - Purposeful motion: Spring-based, interruptible, meaningful
+ * - Status visibility: ANDURA logic - grey when normal, colour when abnormal
+ * - Single source of truth: All colors from tokens, no hard-coded values
+ */
+
+/* ========================================
+   1. COLOR SYSTEM
+   ======================================== */
+
+:root {
+  /* Base layers (true dark) */
+  --ht-bg-base: #000000;
+  --ht-bg-canvas: #000000;
+  --ht-bg-elevated-1: #0f0f0f;
+  --ht-bg-elevated-2: #1a1a1a;
+  --ht-bg-elevated-3: #252525;
+  
+  /* Chrome */
+  --ht-bg-header: #0f0f0f;
+  --ht-bg-sidebar: #0f0f0f;
+  --ht-bg-inspector: #0f0f0f;
+  --ht-bg-panel: #1a1a1a;
+  
+  /* Borders and dividers */
+  --ht-border-subtle: #2a2a2a;
+  --ht-border-strong: #3a3a3a;
+  --ht-divider: #2a2a2a;
+  
+  /* Text hierarchy */
+  --ht-text-primary: #ffffff;
+  --ht-text-secondary: #98989d;
+  --ht-text-tertiary: #636366;
+  --ht-text-quaternary: #48484a;
+  
+  /* Status colors (ANDURA logic: normal = grey, abnormal = colour) */
+  --ht-status-unchanged: #636366;
+  --ht-status-unchanged-dim: #48484a;
+  --ht-status-added: #30d158;
+  --ht-status-added-dim: #248a3d;
+  --ht-status-modified: #ffd60a;
+  --ht-status-modified-dim: #b89806;
+  --ht-status-removed: #ff453a;
+  --ht-status-removed-dim: #b42f27;
+  
+  /* Accent */
+  --ht-accent: #0a84ff;
+  --ht-accent-hover: #409cff;
+  --ht-accent-pressed: #0070e5;
+  
+  /* Interactive states */
+  --ht-interactive-hover: rgba(255, 255, 255, 0.04);
+  --ht-interactive-pressed: rgba(255, 255, 255, 0.08);
+  
+  /* Overlays */
+  --ht-overlay-light: rgba(255, 255, 255, 0.08);
+  --ht-overlay-medium: rgba(255, 255, 255, 0.12);
+  --ht-overlay-heavy: rgba(255, 255, 255, 0.16);
+  --ht-scrim: rgba(0, 0, 0, 0.5);
+  
+  /* Shadows (subtle) */
+  --ht-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --ht-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --ht-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+/* ========================================
+   2. TYPOGRAPHY
+   ======================================== */
+
+:root {
+  /* San Francisco-inspired system stack */
+  --ht-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --ht-font-mono: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Consolas", monospace;
+  
+  /* Font sizes (precise, Pro app-inspired) */
+  --ht-text-xs: 11px;
+  --ht-text-sm: 12px;
+  --ht-text-base: 13px;
+  --ht-text-md: 14px;
+  --ht-text-lg: 15px;
+  --ht-text-xl: 17px;
+  --ht-text-2xl: 20px;
+  --ht-text-3xl: 24px;
+  
+  /* Line heights */
+  --ht-leading-tight: 1.25;
+  --ht-leading-normal: 1.4;
+  --ht-leading-relaxed: 1.5;
+  
+  /* Font weights */
+  --ht-weight-regular: 400;
+  --ht-weight-medium: 500;
+  --ht-weight-semibold: 600;
+}
+
+/* ========================================
+   3. SPACING (8pt grid)
+   ======================================== */
+
+:root {
+  --ht-space-1: 4px;
+  --ht-space-2: 8px;
+  --ht-space-3: 12px;
+  --ht-space-4: 16px;
+  --ht-space-5: 20px;
+  --ht-space-6: 24px;
+  --ht-space-8: 32px;
+  --ht-space-10: 40px;
+  --ht-space-12: 48px;
+  --ht-space-16: 64px;
+}
+
+/* ========================================
+   4. LAYOUT
+   ======================================== */
+
+:root {
+  --ht-header-height: 48px;
+  --ht-sidebar-width: 260px;
+  --ht-inspector-width: 300px;
+  --ht-toolbar-height: 40px;
+  
+  --ht-radius-sm: 4px;
+  --ht-radius-md: 6px;
+  --ht-radius-lg: 8px;
+  --ht-radius-full: 9999px;
+}
+
+/* ========================================
+   5. MOTION (Apple-style springs)
+   ======================================== */
+
+:root {
+  /* Durations */
+  --ht-duration-instant: 0ms;
+  --ht-duration-fast: 150ms;
+  --ht-duration-base: 250ms;
+  --ht-duration-slow: 350ms;
+  --ht-duration-slower: 500ms;
+  
+  /* Spring-like easings (approximating Apple's animations) */
+  --ht-ease-spring: cubic-bezier(0.5, 1.5, 0.5, 1);
+  --ht-ease-spring-gentle: cubic-bezier(0.5, 1.25, 0.5, 1);
+  --ht-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ht-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ht-ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ht-duration-instant: 0ms;
+    --ht-duration-fast: 0ms;
+    --ht-duration-base: 0ms;
+    --ht-duration-slow: 0ms;
+    --ht-duration-slower: 0ms;
+    --ht-ease-spring: linear;
+    --ht-ease-spring-gentle: linear;
+    --ht-ease-out: linear;
+    --ht-ease-in-out: linear;
+    --ht-ease-smooth: linear;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+   6. COMPONENT FOUNDATIONS
+   ======================================== */
+
+/* Focus visible (accessibility) */
+*:focus-visible {
+  outline: 2px solid var(--ht-accent);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--ht-accent);
+  color: white;
+}
+
+/* Scrollbar (WebKit) */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ht-bg-elevated-3);
+  border-radius: var(--ht-radius-full);
+  border: 2px solid var(--ht-bg-base);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Scrollbar (Firefox) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ht-bg-elevated-3) transparent;
+}
+
+/* ========================================
+   7. UTILITY CLASSES
+   ======================================== */
+
+.ht-elevated-1 { background-color: var(--ht-bg-elevated-1); }
+.ht-elevated-2 { background-color: var(--ht-bg-elevated-2); }
+.ht-elevated-3 { background-color: var(--ht-bg-elevated-3); }
+
+.ht-text-primary { color: var(--ht-text-primary); }
+.ht-text-secondary { color: var(--ht-text-secondary); }
+.ht-text-tertiary { color: var(--ht-text-tertiary); }
+
+.ht-divider {
+  height: 1px;
+  background-color: var(--ht-divider);
+  border: none;
+}
+
+/* ========================================
+   8. ANIMATION MIXINS
+   ======================================== */
+
+.ht-transition-colors {
+  transition: color var(--ht-duration-base) var(--ht-ease-out),
+              background-color var(--ht-duration-base) var(--ht-ease-out),
+              border-color var(--ht-duration-base) var(--ht-ease-out);
+}
+
+.ht-transition-transform {
+  transition: transform var(--ht-duration-base) var(--ht-ease-spring-gentle);
+}
+
+.ht-transition-opacity {
+  transition: opacity var(--ht-duration-base) var(--ht-ease-out);
+}
+
+.ht-transition-all {
+  transition: all var(--ht-duration-base) var(--ht-ease-smooth);
+}
+
+/* ========================================
+   9. STATUS BADGE COMPONENTS
+   ======================================== */
+
+.ht-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ht-space-1);
+  padding: 2px var(--ht-space-2);
+  border-radius: var(--ht-radius-sm);
+  font-family: var(--ht-font-sans);
+  font-size: var(--ht-text-xs);
+  font-weight: var(--ht-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.ht-badge-added {
+  color: var(--ht-status-added);
+  background-color: rgba(48, 209, 88, 0.12);
+}
+
+.ht-badge-removed {
+  color: var(--ht-status-removed);
+  background-color: rgba(255, 69, 58, 0.12);
+}
+
+.ht-badge-modified {
+  color: var(--ht-status-modified);
+  background-color: rgba(255, 214, 10, 0.12);
+}
+
+.ht-badge-unchanged {
+  color: var(--ht-status-unchanged);
+  background-color: rgba(99, 99, 102, 0.12);
+}
+
+/* Status glyphs (Unicode symbols as fallback) */
+.ht-glyph::before {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.ht-glyph-added::before { content: "+"; }
+.ht-glyph-removed::before { content: "−"; }
+.ht-glyph-modified::before { content: "~"; }
+.ht-glyph-unchanged::before { content: "•"; }

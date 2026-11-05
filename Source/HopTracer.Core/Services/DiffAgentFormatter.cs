@@ -17,14 +17,14 @@ public static class DiffAgentFormatter
         var changedNodes = GetChangedNodes(diff, options.MaxNodesToShow);
         var wireChanges = GetWireChanges(diff, resolver, options.MaxEdgesToShow);
         var (propertyChanges, opaqueChanges) = GetPropertyChanges(changedNodes);
-        var nodeChanges = BuildNodeChanges(changedNodes, wireChanges);
+        var nodeChanges = BuildNodeChanges(diff, changedNodes, wireChanges, resolver);
 
         var result = new AgentDiffReport
         {
             GeneratedAt = DateTimeOffset.UtcNow,
             FileOld = options.FileOld,
             FileNew = options.FileNew,
-            Summary = BuildSummary(stats, wireChanges, propertyChanges, opaqueChanges),
+            Summary = BuildSummary(stats, diff.RiskSummary, wireChanges, propertyChanges, opaqueChanges),
             Statistics = stats,
             RiskSummary = diff.RiskSummary,
             TopRisks = diff.TopRisks,
@@ -114,20 +114,37 @@ public static class DiffAgentFormatter
     }
 
     private static List<AgentNodeChange> BuildNodeChanges(
+        DiffComputation diff,
         IEnumerable<Node> changedNodes,
-        IReadOnlyList<ResolvedEdge> wireChanges)
+        IReadOnlyList<ResolvedEdge> wireChanges,
+        DiffGraphResolver resolver)
     {
         var upstream = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var downstream = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        var allEdges = diff.Edges;
 
         foreach (var wire in wireChanges)
         {
             AddNeighbor(downstream, wire.Source, wire.TargetLabel);
             AddNeighbor(upstream, wire.Target, wire.SourceLabel);
-            if (wire.Status == "removed")
+        }
+
+        foreach (var node in changedNodes)
+        {
+            var existingConnections = allEdges
+                .Where(e => (e.Source == node.Id || e.Target == node.Id) && e.Status == "same");
+            foreach (var edge in existingConnections)
             {
-                AddNeighbor(downstream, wire.Source, wire.TargetLabel);
-                AddNeighbor(upstream, wire.Target, wire.SourceLabel);
+                if (edge.Source == node.Id)
+                {
+                    var targetLabel = resolver.LabelNode(edge.Target);
+                    AddNeighbor(downstream, node.Id, targetLabel);
+                }
+                if (edge.Target == node.Id)
+                {
+                    var sourceLabel = resolver.LabelNode(edge.Source);
+                    AddNeighbor(upstream, node.Id, sourceLabel);
+                }
             }
         }
 
@@ -137,20 +154,47 @@ public static class DiffAgentFormatter
             upstream.TryGetValue(node.Id, out var up);
             downstream.TryGetValue(node.Id, out var down);
 
+            var category = GetComponentCategory(node.Name);
+            var groupContext = GetGroupContext(node);
+
             return new AgentNodeChange
             {
                 NodeId = node.Id,
                 Label = label,
+                ComponentName = node.Name,
+                Category = category,
                 Status = node.Status,
                 RiskScore = node.RiskScore,
                 Reasons = node.RiskReasons,
+                GroupContext = groupContext,
+                Position = new AgentPosition
+                {
+                    X = Math.Round(node.X, 1),
+                    Y = Math.Round(node.Y, 1)
+                },
+                Movement = node.Dx != 0 || node.Dy != 0
+                    ? new AgentMovement
+                    {
+                        Dx = Math.Round(node.Dx, 1),
+                        Dy = Math.Round(node.Dy, 1)
+                    }
+                    : null,
                 Neighbors = new AgentNeighbors
                 {
                     Upstream = up?.OrderBy(x => x, StringComparer.Ordinal).ToList() ?? [],
                     Downstream = down?.OrderBy(x => x, StringComparer.Ordinal).ToList() ?? []
-                }
+                },
+                ConnectionChanges = node.InAdded + node.InRemoved + node.OutAdded + node.OutRemoved > 0
+                    ? new AgentConnectionChanges
+                    {
+                        InAdded = node.InAdded,
+                        InRemoved = node.InRemoved,
+                        OutAdded = node.OutAdded,
+                        OutRemoved = node.OutRemoved
+                    }
+                    : null
             };
-        }).ToList();
+        }).OrderByDescending(n => n.RiskScore).ThenBy(n => n.Status).ThenBy(n => n.Label).ToList();
     }
 
     private static void AddNeighbor(Dictionary<string, HashSet<string>> map, string nodeId, string neighborLabel)
@@ -165,38 +209,54 @@ public static class DiffAgentFormatter
 
     private static string BuildSummary(
         DiffStatistics stats,
+        DiffRiskSummary risks,
         IReadOnlyList<ResolvedEdge> wireChanges,
         IReadOnlyList<AgentPropertyChange> propertyChanges,
         IReadOnlyList<AgentOpaqueChange> opaqueChanges)
     {
-        var parts = new List<string>
-        {
-            $"{stats.AddedNodes} added, {stats.RemovedNodes} removed, {stats.ModifiedNodes} modified nodes"
-        };
+        var parts = new List<string>();
 
-        foreach (var wire in wireChanges.Take(3))
+        if (stats.AddedNodes == 0 && stats.RemovedNodes == 0 && stats.ModifiedNodes == 0)
         {
-            parts.Add($"{wire.Status} wire {wire.Wire}");
+            return "No changes detected.";
         }
 
-        var panelChange = propertyChanges.FirstOrDefault(p =>
-            p.Key.Contains("Panel", StringComparison.OrdinalIgnoreCase) ||
-            p.Key.Contains("Text", StringComparison.OrdinalIgnoreCase));
-        if (panelChange != null)
+        var nodeSummary = new List<string>();
+        if (stats.AddedNodes > 0) nodeSummary.Add($"{stats.AddedNodes} added");
+        if (stats.RemovedNodes > 0) nodeSummary.Add($"{stats.RemovedNodes} removed");
+        if (stats.ModifiedNodes > 0) nodeSummary.Add($"{stats.ModifiedNodes} modified");
+        parts.Add($"{string.Join(", ", nodeSummary)} nodes");
+
+        if (risks.CriticalCount > 0 || risks.HighCount > 0)
         {
-            parts.Add($"{panelChange.Node}.{panelChange.Key} updated");
+            var riskParts = new List<string>();
+            if (risks.CriticalCount > 0) riskParts.Add($"{risks.CriticalCount} critical");
+            if (risks.HighCount > 0) riskParts.Add($"{risks.HighCount} high");
+            parts.Add($"Risk: {string.Join(", ", riskParts)}");
         }
 
-        var scriptChange = propertyChanges.FirstOrDefault(p => IsScriptLikeKey(p.Key));
-        if (scriptChange != null)
+        var scriptChanges = propertyChanges.Where(p => IsScriptLikeKey(p.Key)).ToList();
+        if (scriptChanges.Count > 0)
         {
-            parts.Add($"{scriptChange.Node} script updated");
+            parts.Add($"{scriptChanges.Count} script/code changes");
+        }
+
+        var wiresByStatus = wireChanges.GroupBy(w => w.Status).ToDictionary(g => g.Key, g => g.Count());
+        if (wiresByStatus.Count > 0)
+        {
+            var wireParts = new List<string>();
+            if (wiresByStatus.TryGetValue("added", out var addedWires) && addedWires > 0)
+                wireParts.Add($"{addedWires} added");
+            if (wiresByStatus.TryGetValue("removed", out var removedWires) && removedWires > 0)
+                wireParts.Add($"{removedWires} removed");
+            if (wireParts.Count > 0)
+                parts.Add($"Connections: {string.Join(", ", wireParts)}");
         }
 
         var opaqueDataCount = opaqueChanges.Count(p => p.Key.Equals("ON_Data", StringComparison.OrdinalIgnoreCase));
         if (opaqueDataCount > 0)
         {
-            parts.Add($"{opaqueDataCount} geometry/data caches updated");
+            parts.Add($"{opaqueDataCount} geometry caches updated");
         }
 
         return string.Join("; ", parts) + ".";
@@ -254,6 +314,68 @@ public static class DiffAgentFormatter
             n.InAdded > 0 || n.InRemoved > 0 || n.OutAdded > 0 || n.OutRemoved > 0)
     };
 
+    private static string? GetComponentCategory(string componentName)
+    {
+        if (string.IsNullOrWhiteSpace(componentName)) return null;
+
+        var categoryMap = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Params"] = ["Number Slider", "Panel", "Number", "Point", "Vector", "Integer", "Boolean", "Text", "Curve", "Surface", "Brep", "Mesh", "Geometry"],
+            ["Maths"] = ["Addition", "Subtraction", "Multiplication", "Division", "Modulus", "Power", "Expression", "Function", "Evaluate"],
+            ["Sets"] = ["List Item", "List Length", "Reverse", "Sort", "Cull", "Shift", "Split", "Merge", "Flatten", "Graft", "Simplify"],
+            ["Vector"] = ["Unit X", "Unit Y", "Unit Z", "Vector", "Amplitude", "Rotate", "Angle"],
+            ["Curve"] = ["Line", "Circle", "Arc", "Polyline", "Interpolate", "Bezier", "Nurbs", "Divide", "Evaluate"],
+            ["Surface"] = ["Plane Surface", "Boundary Surface", "Extrude", "Loft", "Sweep", "Revolve", "Patch"],
+            ["Mesh"] = ["Mesh Sphere", "Mesh Box", "Mesh Quad", "Mesh Triangle", "Mesh Edges", "Mesh Vertices"],
+            ["Intersect"] = ["Line | Line", "Curve | Curve", "Brep | Brep", "Plane | Plane", "Region Intersection"],
+            ["Transform"] = ["Move", "Rotate", "Scale", "Mirror", "Orient", "Project", "Morph", "Array"],
+            ["Display"] = ["Custom Preview", "Text Tag", "Point List", "Curve", "Surface", "Mesh", "Geometry"],
+            ["Script"] = ["Python", "C#", "VB", "Grasshopper", "Expression"]
+        };
+
+        foreach (var (category, components) in categoryMap)
+        {
+            if (components.Any(c => componentName.Contains(c, StringComparison.OrdinalIgnoreCase)))
+            {
+                return category;
+            }
+        }
+
+        if (componentName.Contains("Script", StringComparison.OrdinalIgnoreCase) ||
+            componentName.Contains("Code", StringComparison.OrdinalIgnoreCase) ||
+            componentName.Contains("Python", StringComparison.OrdinalIgnoreCase) ||
+            componentName.Contains("C#", StringComparison.OrdinalIgnoreCase) ||
+            componentName.Contains("VB", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Script";
+        }
+
+        return null;
+    }
+
+    private static AgentGroupContext? GetGroupContext(Node node)
+    {
+        if (!node.Properties.TryGetValue("IsGroup", out var isGroup) || isGroup != "true")
+        {
+            return null;
+        }
+
+        var context = new AgentGroupContext();
+
+        if (node.Properties.TryGetValue("GroupMemberCount", out var countStr) &&
+            int.TryParse(countStr, out var count))
+        {
+            context.MemberCount = count;
+        }
+
+        if (node.Properties.TryGetValue("GroupColor", out var color))
+        {
+            context.Color = color;
+        }
+
+        return context;
+    }
+
     private static readonly JsonSerializerOptions AgentJsonOptions = new()
     {
         WriteIndented = true,
@@ -305,14 +427,46 @@ internal sealed class AgentNodeChange
 {
     public string NodeId { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
+    public string ComponentName { get; set; } = string.Empty;
+    public string? Category { get; set; }
     public string Status { get; set; } = string.Empty;
     public int RiskScore { get; set; }
     public List<string> Reasons { get; set; } = new();
+    public AgentGroupContext? GroupContext { get; set; }
+    public AgentPosition Position { get; set; } = new();
+    public AgentMovement? Movement { get; set; }
     public AgentNeighbors Neighbors { get; set; } = new();
+    public AgentConnectionChanges? ConnectionChanges { get; set; }
 }
 
 internal sealed class AgentNeighbors
 {
     public List<string> Upstream { get; set; } = new();
     public List<string> Downstream { get; set; } = new();
+}
+
+internal sealed class AgentGroupContext
+{
+    public int MemberCount { get; set; }
+    public string? Color { get; set; }
+}
+
+internal sealed class AgentPosition
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+}
+
+internal sealed class AgentMovement
+{
+    public double Dx { get; set; }
+    public double Dy { get; set; }
+}
+
+internal sealed class AgentConnectionChanges
+{
+    public int InAdded { get; set; }
+    public int InRemoved { get; set; }
+    public int OutAdded { get; set; }
+    public int OutRemoved { get; set; }
 }

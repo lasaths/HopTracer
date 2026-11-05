@@ -1,0 +1,360 @@
+/**
+ * HopTracer ANDURA Theme
+ * 
+ * Adapts the ANDURA design system (mission-critical dark UI) for Grasshopper diff visualization.
+ * Source: https://github.com/lasaths/andura-skill (commit 963ae3c)
+ * 
+ * ANDURA is dark-only, monochrome, type-led. Grey when normal, colour only for abnormal states.
+ * Every status gets colour + glyph + word. Never hide a status.
+ * 
+ * Status Mapping:
+ * - Unchanged nodes/edges: Muted/Line greys
+ * - Removed nodes + Critical risk: Emergency (red octagon)
+ * - Modified nodes + Medium risk: Caution (yellow triangle)
+ * - Added nodes + Low risk: Advisory (blue circle) or Ultramarine
+ * 
+ * Vendored files (credited to andura-skill):
+ * - andura.tokens.json
+ * - andura.css
+ * - andura-fonts.css (modified to use Google Fonts CDN)
+ */
+
+:root {
+  /* ANDURA Core Palette v2.2 */
+  --andura-void: #000000;
+  --andura-surface: #090A0C;
+  --andura-surface-hover: #141518;
+  --andura-surface-lift: #1A1B1E;
+  --andura-line: #3C3D41;
+  --andura-muted: #8A8C91;
+  --andura-text: #DADADD;
+  --andura-ultramarine: #3A3CFF;
+  --andura-ultramarine-text: #5A74F1;
+  --andura-on-ultramarine: #DADADD;
+  --andura-emergency: #F45536;
+  --andura-caution: #FBB636;
+  --andura-nominal: #44B782;
+
+  /* Typography */
+  --andura-font-sans: "IBM Plex Sans", sans-serif;
+  --andura-font-mono: "IBM Plex Mono", monospace;
+  --andura-weight-regular: 400;
+  --andura-weight-medium: 500;
+
+  /* Spacing (8px grid) */
+  --andura-space-4: 4px;
+  --andura-space-8: 8px;
+  --andura-space-16: 16px;
+  --andura-space-24: 24px;
+  --andura-space-32: 32px;
+  --andura-space-48: 48px;
+
+  /* Motion */
+  --andura-duration-instant: 0ms;
+  --andura-duration-fast: 120ms;
+  --andura-duration-base: 200ms;
+  --andura-duration-slow: 400ms;
+
+  /* Opacity */
+  --andura-opacity-dim: 0.55;
+  --andura-opacity-scrim: 0.6;
+
+  /* HopTracer Status Mapping */
+  --ht-status-unchanged: var(--andura-muted);
+  --ht-status-added: var(--andura-ultramarine);
+  --ht-status-removed: var(--andura-emergency);
+  --ht-status-modified: var(--andura-caution);
+  --ht-status-same: var(--andura-line);
+
+  /* Risk-based overrides */
+  --ht-risk-critical: var(--andura-emergency);    /* ≥80 */
+  --ht-risk-high: var(--andura-emergency);        /* 60-79 */
+  --ht-risk-medium: var(--andura-caution);        /* 30-59 */
+  --ht-risk-low: var(--andura-ultramarine);       /* 1-29 */
+
+  /* Background layers */
+  --ht-bg-canvas: var(--andura-void);
+  --ht-bg-surface: var(--andura-surface);
+  --ht-bg-hover: var(--andura-surface-hover);
+  --ht-bg-lift: var(--andura-surface-lift);
+
+  /* Borders and lines */
+  --ht-border: var(--andura-line);
+  --ht-border-focus: var(--andura-text);
+}
+
+/* Base reset and layout */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--andura-font-sans);
+  font-weight: var(--andura-weight-regular);
+  font-size: 15px;
+  line-height: 1.3333;
+  color: var(--andura-text);
+  background-color: var(--ht-bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography scale (desktop) */
+.andura-display {
+  font-family: var(--andura-font-mono);
+  font-weight: var(--andura-weight-regular);
+  font-size: 64px;
+  line-height: 1.0;
+  letter-spacing: -0.02em;
+  color: var(--andura-text);
+}
+
+.andura-value-l {
+  font-family: var(--andura-font-mono);
+  font-weight: var(--andura-weight-regular);
+  font-size: 36px;
+  line-height: 1.1111;
+  letter-spacing: -0.01em;
+  color: var(--andura-text);
+}
+
+.andura-value-m {
+  font-family: var(--andura-font-mono);
+  font-weight: var(--andura-weight-regular);
+  font-size: 22px;
+  line-height: 1.2727;
+  color: var(--andura-text);
+}
+
+.andura-h1 {
+  font-family: var(--andura-font-sans);
+  font-weight: var(--andura-weight-medium);
+  font-size: 22px;
+  line-height: 1.2727;
+  color: var(--andura-muted);
+}
+
+.andura-title {
+  font-family: var(--andura-font-sans);
+  font-weight: var(--andura-weight-medium);
+  font-size: 18px;
+  line-height: 1.3333;
+  color: var(--andura-text);
+}
+
+.andura-body {
+  font-family: var(--andura-font-sans);
+  font-weight: var(--andura-weight-regular);
+  font-size: 15px;
+  line-height: 1.3333;
+  color: var(--andura-text);
+}
+
+.andura-label {
+  font-family: var(--andura-font-mono);
+  font-weight: var(--andura-weight-medium);
+  font-size: 12px;
+  line-height: 1.3333;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--andura-muted);
+}
+
+/* Status colors (use only for abnormal states) */
+.status-added {
+  color: var(--ht-status-added);
+}
+
+.status-removed {
+  color: var(--ht-status-removed);
+}
+
+.status-modified {
+  color: var(--ht-status-modified);
+}
+
+.status-unchanged {
+  color: var(--ht-status-unchanged);
+}
+
+.status-same {
+  color: var(--ht-status-same);
+}
+
+/* Risk-based coloring */
+.risk-critical {
+  color: var(--ht-risk-critical);
+}
+
+.risk-high {
+  color: var(--ht-risk-high);
+}
+
+.risk-medium {
+  color: var(--ht-risk-medium);
+}
+
+.risk-low {
+  color: var(--ht-risk-low);
+}
+
+/* Surface and interactive elements */
+.andura-surface {
+  background-color: var(--ht-bg-surface);
+  border: 1px solid var(--ht-border);
+}
+
+.andura-surface:hover {
+  background-color: var(--ht-bg-hover);
+}
+
+.andura-button {
+  font-family: var(--andura-font-sans);
+  font-weight: var(--andura-weight-medium);
+  font-size: 15px;
+  padding: var(--andura-space-8) var(--andura-space-16);
+  background-color: var(--andura-ultramarine);
+  color: var(--andura-on-ultramarine);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color var(--andura-duration-fast);
+}
+
+.andura-button:hover {
+  background-color: var(--andura-ultramarine-text);
+}
+
+.andura-button:focus-visible {
+  outline: 2px solid var(--ht-border-focus);
+  outline-offset: 2px;
+}
+
+/* Node/edge visualization */
+.node-card {
+  background-color: var(--ht-bg-surface);
+  border-left: 3px solid var(--ht-border);
+  padding: var(--andura-space-16);
+  margin-bottom: var(--andura-space-8);
+  transition: background-color var(--andura-duration-fast);
+}
+
+.node-card:hover {
+  background-color: var(--ht-bg-hover);
+}
+
+.node-card.status-added {
+  border-left-color: var(--ht-status-added);
+}
+
+.node-card.status-removed {
+  border-left-color: var(--ht-status-removed);
+}
+
+.node-card.status-modified {
+  border-left-color: var(--ht-status-modified);
+}
+
+/* Status badges with glyph + word (ANDURA rule: never colour alone) */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--andura-space-4);
+  font-family: var(--andura-font-mono);
+  font-weight: var(--andura-weight-medium);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: var(--andura-space-4) var(--andura-space-8);
+  border-radius: 0;
+}
+
+.status-badge.added {
+  color: var(--ht-status-added);
+  background-color: color-mix(in srgb, var(--ht-status-added) 10%, transparent);
+}
+
+.status-badge.removed {
+  color: var(--ht-status-removed);
+  background-color: color-mix(in srgb, var(--ht-status-removed) 10%, transparent);
+}
+
+.status-badge.modified {
+  color: var(--ht-status-modified);
+  background-color: color-mix(in srgb, var(--ht-status-modified) 10%, transparent);
+}
+
+/* Focus ring (ANDURA: 2px Text ring, 2px gap, never Ultramarine) */
+*:focus-visible {
+  outline: 2px solid var(--ht-border-focus);
+  outline-offset: 2px;
+}
+
+/* Whitespace before lines before boxes (ANDURA rule 6) */
+.section {
+  margin-top: var(--andura-space-32);
+}
+
+.section-title {
+  margin-bottom: var(--andura-space-16);
+  padding-bottom: var(--andura-space-8);
+  border-bottom: 1px solid var(--ht-border);
+}
+
+/* Animation: opacity only (ANDURA rule 9) */
+.fade-in {
+  animation: fadeIn var(--andura-duration-base);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Utility classes */
+.muted {
+  color: var(--andura-muted);
+}
+
+.text-primary {
+  color: var(--andura-text);
+}
+
+.grid-8 {
+  display: grid;
+  gap: var(--andura-space-8);
+}
+
+.grid-16 {
+  display: grid;
+  gap: var(--andura-space-16);
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  gap: var(--andura-space-8);
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--andura-space-8);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--ht-bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--andura-line);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--andura-muted);
+}

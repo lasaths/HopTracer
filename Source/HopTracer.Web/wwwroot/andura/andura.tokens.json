@@ -1,0 +1,1570 @@
+{
+ "$description": "ANDURA design tokens, single source of truth (W3C Design Tokens Community Group format). px = dp = CSS px at 1x. Generated exports: scripts/export_tokens.py.",
+ "$extensions": {
+  "andura": {
+   "version": "0.6.0-draft",
+   "modes": {
+    "sunlit": {
+     "$description": "Sunlit-tablet mode: positive polarity (dark on light) with raised contrast for direct sun or > 10 000 lx. Set data-andura-mode=\"sunlit\" on <html>. Same names, same rules; only colour values change. Rationale and when to use: references/colour.md §9.",
+     "color": {
+      "void": "#F5F5F2",
+      "surface": "#E6E6E2",
+      "surface-hover": "#D9D9D4",
+      "surface-lift": "#FFFFFF",
+      "line": "#6E7075",
+      "muted": "#3E4045",
+      "text": "#0B0B0D",
+      "ultramarine": "#2426D6",
+      "ultramarine-text": "#1E20B0",
+      "emergency": "#B42A12",
+      "caution": "#8C5A00",
+      "nominal": "#1D6B43",
+      "3d.face-1": "#DEDED9",
+      "3d.face-2": "#D6D6D1",
+      "3d.face-3": "#CFCFCA",
+      "3d.base": "#C8C8C3",
+      "3d.element": "#C0C0BB",
+      "3d.link": "#B4B4AF",
+      "3d.joint": "#9C9C97",
+      "3d.edge": "#75767A",
+      "3d.detail": "#5E6064",
+      "3d.link-line": "#4A4C50",
+      "3d.joint-line": "#3A3C40",
+      "on-ultramarine": "#F5F5F2"
+     },
+     "contrast-targets": [
+      [
+       "text",
+       "void",
+       15
+      ],
+      [
+       "text",
+       "surface",
+       15
+      ],
+      [
+       "muted",
+       "void",
+       7
+      ],
+      [
+       "muted",
+       "surface",
+       7
+      ],
+      [
+       "line",
+       "void",
+       3
+      ],
+      [
+       "line",
+       "surface",
+       3
+      ],
+      [
+       "ultramarine",
+       "void",
+       4.5
+      ],
+      [
+       "ultramarine-text",
+       "void",
+       4.5
+      ],
+      [
+       "ultramarine-text",
+       "surface",
+       4.5
+      ],
+      [
+       "emergency",
+       "void",
+       4.5
+      ],
+      [
+       "emergency",
+       "surface",
+       4.5
+      ],
+      [
+       "caution",
+       "void",
+       4.5
+      ],
+      [
+       "caution",
+       "surface",
+       4.5
+      ],
+      [
+       "emergency",
+       "3d.face-3",
+       3
+      ],
+      [
+       "caution",
+       "3d.face-3",
+       3
+      ],
+      [
+       "ultramarine",
+       "3d.link",
+       3
+      ],
+      [
+       "on-ultramarine",
+       "ultramarine",
+       4.5
+      ]
+     ]
+    }
+   }
+  }
+ },
+ "color": {
+  "void": {
+   "$type": "color",
+   "$value": "#000000",
+   "$description": "Outer canvas"
+  },
+  "surface": {
+   "$type": "color",
+   "$value": "#090A0C",
+   "$description": "The only raised layer: 3D viewport, alarm band, popovers"
+  },
+  "surface-hover": {
+   "$type": "color",
+   "$value": "#141518",
+   "$description": "Hover lift on Surface rows and cards; never the only hover signifier"
+  },
+  "surface-lift": {
+   "$type": "color",
+   "$value": "#1A1B1E",
+   "$description": "Active tool, toast background"
+  },
+  "line": {
+   "$type": "color",
+   "$value": "#3C3D41",
+   "$description": "Hairlines, grid, separators. Never text"
+  },
+  "muted": {
+   "$type": "color",
+   "$value": "#8A8C91",
+   "$description": "Labels, units, secondary text, stale values"
+  },
+  "text": {
+   "$type": "color",
+   "$value": "#DADADD",
+   "$description": "Values, primary text, focus ring"
+  },
+  "ultramarine": {
+   "$type": "color",
+   "$value": "#3A3CFF",
+   "$description": "Selection, commanded path, primary button fill. Never text, never focus"
+  },
+  "ultramarine-text": {
+   "$type": "color",
+   "$value": "#5A74F1",
+   "$description": "Accent text and links only"
+  },
+  "on-ultramarine": {
+   "$type": "color",
+   "$value": "#DADADD",
+   "$description": "Text and glyphs on an Ultramarine fill (primary button); equals Text in the dark theme"
+  },
+  "emergency": {
+   "$type": "color",
+   "$value": "#F45536",
+   "$description": "P1 only"
+  },
+  "caution": {
+   "$type": "color",
+   "$value": "#FBB636",
+   "$description": "P2 only"
+  },
+  "nominal": {
+   "$type": "color",
+   "$value": "#44B782",
+   "$description": "Explicit confirmation on detail levels only; never on overviews"
+  },
+  "data": {
+   "cividis": {
+    "0": {
+     "$type": "color",
+     "$value": "#163770",
+     "$description": "Cividis stop, magnitudes only"
+    },
+    "1": {
+     "$type": "color",
+     "$value": "#47516C",
+     "$description": "Cividis stop, magnitudes only"
+    },
+    "2": {
+     "$type": "color",
+     "$value": "#696B71",
+     "$description": "Cividis stop, magnitudes only"
+    },
+    "3": {
+     "$type": "color",
+     "$value": "#8B8778",
+     "$description": "Cividis stop, magnitudes only"
+    },
+    "4": {
+     "$type": "color",
+     "$value": "#AFA471",
+     "$description": "Cividis stop, magnitudes only"
+    },
+    "5": {
+     "$type": "color",
+     "$value": "#D7C45C",
+     "$description": "Cividis stop, magnitudes only"
+    },
+    "6": {
+     "$type": "color",
+     "$value": "#FEE838",
+     "$description": "Cividis stop, magnitudes only"
+    }
+   }
+  },
+  "3d": {
+   "face-1": {
+    "$type": "color",
+    "$value": "#141517",
+    "$description": "Box side face, darkest; floor details"
+   },
+   "face-2": {
+    "$type": "color",
+    "$value": "#18191C",
+    "$description": "Box side face, middle"
+   },
+   "face-3": {
+    "$type": "color",
+    "$value": "#1A1B1E",
+    "$description": "Box top face, lightest"
+   },
+   "base": {
+    "$type": "color",
+    "$value": "#1C1D20",
+    "$description": "Robot base fill"
+   },
+   "element": {
+    "$type": "color",
+    "$value": "#202125",
+    "$description": "Work element (wall panel) top"
+   },
+   "link": {
+    "$type": "color",
+    "$value": "#2A2B2F",
+    "$description": "Robot link body"
+   },
+   "joint": {
+    "$type": "color",
+    "$value": "#3A3B40",
+    "$description": "Robot joint fill"
+   },
+   "edge": {
+    "$type": "color",
+    "$value": "#55575C",
+    "$description": "Box edges, rails, safety fence (dashed)"
+   },
+   "detail": {
+    "$type": "color",
+    "$value": "#6B6D72",
+    "$description": "Robot base outline, tool"
+   },
+   "link-line": {
+    "$type": "color",
+    "$value": "#8F9196",
+    "$description": "Robot link centre line"
+   },
+   "joint-line": {
+    "$type": "color",
+    "$value": "#A0A2A7",
+    "$description": "Robot joint outline"
+   }
+  }
+ },
+ "font": {
+  "family": {
+   "sans": {
+    "$type": "fontFamily",
+    "$value": [
+     "IBM Plex Sans",
+     "sans-serif"
+    ]
+   },
+   "mono": {
+    "$type": "fontFamily",
+    "$value": [
+     "IBM Plex Mono",
+     "monospace"
+    ]
+   }
+  },
+  "weight": {
+   "regular": {
+    "$type": "fontWeight",
+    "$value": 400
+   },
+   "medium": {
+    "$type": "fontWeight",
+    "$value": 500
+   }
+  }
+ },
+ "type": {
+  "display": {
+   "desktop": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 64,
+      "unit": "px"
+     },
+     "lineHeight": 1.0,
+     "letterSpacing": {
+      "value": -0.02,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 64,
+      "caps": false
+     }
+    }
+   },
+   "tablet": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 72,
+      "unit": "px"
+     },
+     "lineHeight": 1.0,
+     "letterSpacing": {
+      "value": -0.02,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 72,
+      "caps": false
+     }
+    }
+   },
+   "phone": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 40,
+      "unit": "px"
+     },
+     "lineHeight": 1.1,
+     "letterSpacing": {
+      "value": -0.02,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 44,
+      "caps": false
+     }
+    }
+   },
+   "wall": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 320,
+      "unit": "px"
+     },
+     "lineHeight": 1.0,
+     "letterSpacing": {
+      "value": -0.02,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 320,
+      "caps": false
+     }
+    }
+   }
+  },
+  "value-l": {
+   "desktop": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 36,
+      "unit": "px"
+     },
+     "lineHeight": 1.1111111111111112,
+     "letterSpacing": {
+      "value": -0.01,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 40,
+      "caps": false
+     }
+    }
+   },
+   "tablet": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 40,
+      "unit": "px"
+     },
+     "lineHeight": 1.2,
+     "letterSpacing": {
+      "value": -0.01,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 48,
+      "caps": false
+     }
+    }
+   },
+   "phone": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 28,
+      "unit": "px"
+     },
+     "lineHeight": 1.1428571428571428,
+     "letterSpacing": {
+      "value": -0.01,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 32,
+      "caps": false
+     }
+    }
+   },
+   "wall": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 176,
+      "unit": "px"
+     },
+     "lineHeight": 1.0909090909090908,
+     "letterSpacing": {
+      "value": -0.01,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 192,
+      "caps": false
+     }
+    }
+   }
+  },
+  "value-m": {
+   "desktop": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 22,
+      "unit": "px"
+     },
+     "lineHeight": 1.2727272727272727,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 28,
+      "caps": false
+     }
+    }
+   },
+   "tablet": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 24,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 32,
+      "caps": false
+     }
+    }
+   },
+   "phone": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 22,
+      "unit": "px"
+     },
+     "lineHeight": 1.2727272727272727,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 28,
+      "caps": false
+     }
+    }
+   },
+   "wall": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 112,
+      "unit": "px"
+     },
+     "lineHeight": 1.2142857142857142,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 136,
+      "caps": false
+     }
+    }
+   }
+  },
+  "h1": {
+   "desktop": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 22,
+      "unit": "px"
+     },
+     "lineHeight": 1.2727272727272727,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 28,
+      "caps": false
+     }
+    }
+   },
+   "tablet": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 24,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 32,
+      "caps": false
+     }
+    }
+   },
+   "phone": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 18,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 24,
+      "caps": false
+     }
+    }
+   },
+   "wall": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 112,
+      "unit": "px"
+     },
+     "lineHeight": 1.2142857142857142,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 136,
+      "caps": false
+     }
+    }
+   }
+  },
+  "title": {
+   "desktop": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 18,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 24,
+      "caps": false
+     }
+    }
+   },
+   "tablet": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 20,
+      "unit": "px"
+     },
+     "lineHeight": 1.4,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 28,
+      "caps": false
+     }
+    }
+   },
+   "phone": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 18,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 24,
+      "caps": false
+     }
+    }
+   },
+   "wall": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 88,
+      "unit": "px"
+     },
+     "lineHeight": 1.2727272727272727,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 112,
+      "caps": false
+     }
+    }
+   }
+  },
+  "body": {
+   "desktop": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 15,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 20,
+      "caps": false
+     }
+    }
+   },
+   "tablet": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 16,
+      "unit": "px"
+     },
+     "lineHeight": 1.5,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 24,
+      "caps": false
+     }
+    }
+   },
+   "phone": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 15,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 20,
+      "caps": false
+     }
+    }
+   },
+   "wall": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.sans}",
+     "fontWeight": "{font.weight.regular}",
+     "fontSize": {
+      "value": 72,
+      "unit": "px"
+     },
+     "lineHeight": 1.2777777777777777,
+     "letterSpacing": {
+      "value": 0.0,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "text",
+      "lineHeightPx": 92,
+      "caps": false
+     }
+    }
+   }
+  },
+  "label": {
+   "desktop": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 12,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.08,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 16,
+      "caps": true
+     }
+    }
+   },
+   "tablet": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 13,
+      "unit": "px"
+     },
+     "lineHeight": 1.2307692307692308,
+     "letterSpacing": {
+      "value": 0.08,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 16,
+      "caps": true
+     }
+    }
+   },
+   "phone": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 12,
+      "unit": "px"
+     },
+     "lineHeight": 1.3333333333333333,
+     "letterSpacing": {
+      "value": 0.08,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 16,
+      "caps": true
+     }
+    }
+   },
+   "wall": {
+    "$type": "typography",
+    "$value": {
+     "fontFamily": "{font.family.mono}",
+     "fontWeight": "{font.weight.medium}",
+     "fontSize": {
+      "value": 56,
+      "unit": "px"
+     },
+     "lineHeight": 1.1428571428571428,
+     "letterSpacing": {
+      "value": 0.08,
+      "unit": "em"
+     }
+    },
+    "$extensions": {
+     "andura": {
+      "color": "muted",
+      "lineHeightPx": 64,
+      "caps": true
+     }
+    }
+   },
+   "tracking": {
+    "$type": "dimension",
+    "$value": {
+     "value": 0.08,
+     "unit": "em"
+    },
+    "$description": "Label letter-spacing (CAPS)"
+   }
+  }
+ },
+ "space": {
+  "4": {
+   "$type": "dimension",
+   "$value": {
+    "value": 4,
+    "unit": "px"
+   }
+  },
+  "8": {
+   "$type": "dimension",
+   "$value": {
+    "value": 8,
+    "unit": "px"
+   }
+  },
+  "16": {
+   "$type": "dimension",
+   "$value": {
+    "value": 16,
+    "unit": "px"
+   }
+  },
+  "24": {
+   "$type": "dimension",
+   "$value": {
+    "value": 24,
+    "unit": "px"
+   }
+  },
+  "32": {
+   "$type": "dimension",
+   "$value": {
+    "value": 32,
+    "unit": "px"
+   }
+  },
+  "48": {
+   "$type": "dimension",
+   "$value": {
+    "value": 48,
+    "unit": "px"
+   }
+  }
+ },
+ "size": {
+  "touch-min": {
+   "$type": "dimension",
+   "$value": {
+    "value": 56,
+    "unit": "px"
+   },
+   "$description": "Minimum touch target, tablet and phone"
+  },
+  "touch-gap": {
+   "$type": "dimension",
+   "$value": {
+    "value": 8,
+    "unit": "px"
+   }
+  },
+  "button-mouse": {
+   "$type": "dimension",
+   "$value": {
+    "value": 32,
+    "unit": "px"
+   }
+  },
+  "text-min": {
+   "$type": "dimension",
+   "$value": {
+    "value": 12,
+    "unit": "px"
+   }
+  },
+  "focus-ring": {
+   "$type": "dimension",
+   "$value": {
+    "value": 2,
+    "unit": "px"
+   }
+  },
+  "focus-gap": {
+   "$type": "dimension",
+   "$value": {
+    "value": 2,
+    "unit": "px"
+   }
+  },
+  "stroke-accent": {
+   "$type": "dimension",
+   "$value": {
+    "value": 2,
+    "unit": "px"
+   }
+  },
+  "stroke-commanded": {
+   "$type": "dimension",
+   "$value": {
+    "value": 3,
+    "unit": "px"
+   }
+  },
+  "outline-select-3d": {
+   "$type": "dimension",
+   "$value": {
+    "value": 2.5,
+    "unit": "px"
+   }
+  },
+  "row": {
+   "desktop": {
+    "$type": "dimension",
+    "$value": {
+     "value": 32,
+     "unit": "px"
+    }
+   },
+   "tablet": {
+    "$type": "dimension",
+    "$value": {
+     "value": 56,
+     "unit": "px"
+    }
+   },
+   "phone": {
+    "$type": "dimension",
+    "$value": {
+     "value": 64,
+     "unit": "px"
+    }
+   }
+  },
+  "header": {
+   "$description": "Header (top line) height: mark, cell name, then data age, status and clock. ≥ 56 on touch classes; 8 px grid",
+   "desktop": {
+    "$type": "dimension",
+    "$value": {
+     "value": 72,
+     "unit": "px"
+    }
+   },
+   "tablet": {
+    "$type": "dimension",
+    "$value": {
+     "value": 72,
+     "unit": "px"
+    }
+   },
+   "phone": {
+    "$type": "dimension",
+    "$value": {
+     "value": 64,
+     "unit": "px"
+    }
+   }
+  },
+  "logo": {
+   "$type": "dimension",
+   "$value": {
+    "value": 32,
+    "unit": "px"
+   },
+   "$description": "ANDURA mark and client logo height in the header (client logo max width 4 × this)"
+  },
+  "alarm-row": {
+   "desktop": {
+    "$type": "dimension",
+    "$value": {
+     "value": 48,
+     "unit": "px"
+    }
+   },
+   "tablet": {
+    "$type": "dimension",
+    "$value": {
+     "value": 56,
+     "unit": "px"
+    }
+   },
+   "phone": {
+    "$type": "dimension",
+    "$value": {
+     "value": 64,
+     "unit": "px"
+    }
+   }
+  },
+  "alarm-rows-max": {
+   "desktop": {
+    "$type": "number",
+    "$value": 2
+   },
+   "tablet": {
+    "$type": "number",
+    "$value": 2
+   },
+   "phone": {
+    "$type": "number",
+    "$value": 1
+   }
+  },
+  "footer": {
+   "desktop": {
+    "$type": "dimension",
+    "$value": {
+     "value": 72,
+     "unit": "px"
+    }
+   },
+   "tablet": {
+    "$type": "dimension",
+    "$value": {
+     "value": 72,
+     "unit": "px"
+    }
+   },
+   "phone": {
+    "$type": "dimension",
+    "$value": {
+     "value": 64,
+     "unit": "px"
+    },
+    "$description": "Tab bar, plus 16 home zone"
+   }
+  },
+  "footer-slot": {
+   "desktop": {
+    "$type": "dimension",
+    "$value": {
+     "value": 176,
+     "unit": "px"
+    }
+   },
+   "tablet": {
+    "$type": "dimension",
+    "$value": {
+     "value": 168,
+     "unit": "px"
+    }
+   }
+  },
+  "margin": {
+   "desktop": {
+    "$type": "dimension",
+    "$value": {
+     "value": 32,
+     "unit": "px"
+    }
+   },
+   "tablet": {
+    "$type": "dimension",
+    "$value": {
+     "value": 24,
+     "unit": "px"
+    }
+   },
+   "phone": {
+    "$type": "dimension",
+    "$value": {
+     "value": 16,
+     "unit": "px"
+    }
+   },
+   "wall": {
+    "$type": "dimension",
+    "$value": {
+     "value": 64,
+     "unit": "px"
+    }
+   }
+  },
+  "button-band": {
+   "$type": "dimension",
+   "$value": {
+    "value": 40,
+    "unit": "px"
+   },
+   "$description": "Buttons inside the desktop alarm band"
+  },
+  "home-zone": {
+   "$type": "dimension",
+   "$value": {
+    "value": 16,
+    "unit": "px"
+   },
+   "$description": "Phone: space below the tab bar"
+  },
+  "thumb-3d-phone": {
+   "$type": "dimension",
+   "$value": {
+    "value": 176,
+    "unit": "px"
+   },
+   "$description": "Phone: height of the 3D thumbnail; tap opens full-screen 3D"
+  },
+  "glyph": {
+   "$type": "dimension",
+   "$value": {
+    "value": 16,
+    "unit": "px"
+   },
+   "$description": "Status glyph box"
+  },
+  "spark-h": {
+   "$type": "dimension",
+   "$value": {
+    "value": 32,
+    "unit": "px"
+   },
+   "$description": "Sparkline height"
+  },
+  "column": {
+   "$description": "Answer column width",
+   "desktop": {
+    "$type": "dimension",
+    "$value": {
+     "value": 400,
+     "unit": "px"
+    }
+   },
+   "tablet": {
+    "$type": "dimension",
+    "$value": {
+     "value": 444,
+     "unit": "px"
+    }
+   }
+  },
+  "stroke-rim": {
+   "$type": "dimension",
+   "$value": {
+    "value": 2.5,
+    "unit": "px"
+   },
+   "$description": "Status rim on a 3D object in Emergency or Caution"
+  },
+  "content-top": {
+   "$type": "dimension",
+   "$value": {
+    "value": 192,
+    "unit": "px"
+   },
+   "$description": "Answer column content starts at this y (desktop and tablet, no alarm band)"
+  },
+  "chart-h": {
+   "$type": "dimension",
+   "$value": {
+    "value": 120,
+    "unit": "px"
+   },
+   "$description": "Trend plot height at 100 % (charts.md)"
+  },
+  "gantt-bar": {
+   "$type": "dimension",
+   "$value": {
+    "value": 12,
+    "unit": "px"
+   },
+   "$description": "Gantt / fabrication-progress bar height (charts.md)"
+  }
+ },
+ "breakpoint": {
+  "phone": {
+   "$type": "dimension",
+   "$value": {
+    "value": 0,
+    "unit": "px"
+   },
+   "$extensions": {
+    "andura": {
+     "canvas": [
+      390,
+      844
+     ]
+    }
+   }
+  },
+  "tablet": {
+   "$type": "dimension",
+   "$value": {
+    "value": 600,
+    "unit": "px"
+   },
+   "$extensions": {
+    "andura": {
+     "canvas": [
+      1180,
+      820
+     ]
+    }
+   }
+  },
+  "desktop": {
+   "$type": "dimension",
+   "$value": {
+    "value": 1280,
+    "unit": "px"
+   },
+   "$extensions": {
+    "andura": {
+     "canvas": [
+      1600,
+      1000
+     ]
+    }
+   }
+  },
+  "wall": {
+   "$type": "dimension",
+   "$value": {
+    "value": 2560,
+    "unit": "px"
+   },
+   "$extensions": {
+    "andura": {
+     "canvas": [
+      3840,
+      2160
+     ]
+    }
+   },
+   "$description": "and viewing distance >= 3 m"
+  }
+ },
+ "motion": {
+  "duration": {
+   "instant": {
+    "$type": "duration",
+    "$value": {
+     "value": 0,
+     "unit": "ms"
+    },
+    "$description": "Reduced motion, keyboard navigation, camera cut"
+   },
+   "fast": {
+    "$type": "duration",
+    "$value": {
+     "value": 120,
+     "unit": "ms"
+    },
+    "$description": "Peek in"
+   },
+   "fast-out": {
+    "$type": "duration",
+    "$value": {
+     "value": 80,
+     "unit": "ms"
+    },
+    "$description": "Peek out, hold reset"
+   },
+   "base": {
+    "$type": "duration",
+    "$value": {
+     "value": 200,
+     "unit": "ms"
+    },
+    "$description": "State change, cross-fade, toast in/out"
+   },
+   "slow": {
+    "$type": "duration",
+    "$value": {
+     "value": 400,
+     "unit": "ms"
+    },
+    "$description": "Live to stale"
+   },
+   "camera": {
+    "$type": "duration",
+    "$value": {
+     "value": 300,
+     "unit": "ms"
+    },
+    "$description": "Home, fit, standard views"
+   },
+   "hold": {
+    "$type": "duration",
+    "$value": {
+     "value": 1500,
+     "unit": "ms"
+    },
+    "$description": "Press-and-hold confirm"
+   },
+   "toast": {
+    "$type": "duration",
+    "$value": {
+     "value": 4000,
+     "unit": "ms"
+    },
+    "$description": "Toast dwell"
+   },
+   "pulse": {
+    "$type": "duration",
+    "$value": {
+     "value": 1000,
+     "unit": "ms"
+    },
+    "$description": "P1 pulse period"
+   },
+   "peek-delay": {
+    "$type": "duration",
+    "$value": {
+     "value": 300,
+     "unit": "ms"
+    },
+    "$description": "Hover before peek"
+   },
+   "long-press": {
+    "$type": "duration",
+    "$value": {
+     "value": 500,
+     "unit": "ms"
+    },
+    "$description": "Touch peek"
+   }
+  },
+  "easing": {
+   "out": {
+    "$type": "cubicBezier",
+    "$value": [
+     0.2,
+     0,
+     0,
+     1
+    ]
+   },
+   "camera": {
+    "$type": "cubicBezier",
+    "$value": [
+     0.4,
+     0,
+     0.2,
+     1
+    ]
+   },
+   "linear": {
+    "$type": "cubicBezier",
+    "$value": [
+     0,
+     0,
+     1,
+     1
+    ]
+   }
+  },
+  "pulse-min-opacity": {
+   "$type": "number",
+   "$value": 0.35
+  },
+  "flash-max-per-s": {
+   "$type": "number",
+   "$value": 3
+  }
+ },
+ "text-scale": {
+  "$description": "OS text-size steps (WCAG 1.4.4). Type sizes, line heights and text-bearing chrome (top line, alarm rows, footer, list rows) multiply by the step; margins, grid and strokes do not.",
+  "100": {
+   "$type": "number",
+   "$value": 1
+  },
+  "125": {
+   "$type": "number",
+   "$value": 1.25
+  },
+  "150": {
+   "$type": "number",
+   "$value": 1.5
+  },
+  "200": {
+   "$type": "number",
+   "$value": 2
+  }
+ },
+ "opacity": {
+  "$description": "Opacity steps",
+  "dim": {
+   "$type": "number",
+   "$value": 0.55,
+   "$description": "Routine values while an alarm is active (rule 12)"
+  },
+  "scrim": {
+   "$type": "number",
+   "$value": 0.6,
+   "$description": "Void scrim behind a modal dialog"
+  }
+ }
+}
