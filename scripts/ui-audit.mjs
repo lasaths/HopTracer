@@ -323,47 +323,41 @@ async function captureLiveApp(browser, fixtures) {
   }, fixtures.live);
   await shot(page, '09-index-live-example-path', 'index', `pathOld=${EXAMPLE_GH}`, 'Start page with real example path');
 
-  // Git modal states via API stubs when possible
+  // Git modal states (force-open + inject matrix states)
+  await page.evaluate((t) => {
+    window.__auditToken = t;
+  }, token);
+
   const gitBtn = page.locator('.git-btn');
   if (await gitBtn.count()) {
     await gitBtn.first().click();
     await sleep(400);
-    await shot(page, '10-git-modal-open', 'index/git', 'Click git button', 'Git modal open');
   } else {
     await page.evaluate(() => {
       const m = document.getElementById('gitModal');
       if (m) {
         m.style.display = 'flex';
         m.hidden = false;
+        m.setAttribute('aria-hidden', 'false');
       }
     });
-    await shot(page, '10-git-modal-open', 'index/git', 'Force-show git modal', 'Git modal open (forced)');
   }
+  await shot(page, '10-git-modal-open', 'index/git', 'Open git modal', 'Git modal open');
 
-  // Load commits for the live example if in a git repo
-  try {
-    await page.evaluate(async (pathVal) => {
-      const list = document.getElementById('commitList');
-      if (list) list.innerHTML = '<div style="padding:20px">Loading commits…</div>';
-      const res = await fetch('/git/commits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-HopTracer-Session': window.__auditToken || '' },
-        body: JSON.stringify({ path: pathVal }),
-      });
-      return res.status;
-    }, fixtures.live);
-  } catch {
-    /* ignore */
-  }
-
-  // Inject token into page for subsequent fetches
-  await page.evaluate((t) => {
-    window.__auditToken = t;
-  }, token);
+  await page.evaluate(() => {
+    const list = document.getElementById('commitList');
+    const status = document.getElementById('gitStatus');
+    if (list) {
+      list.setAttribute('aria-busy', 'true');
+      list.innerHTML = '<div class="commit-loading" style="padding:40px;opacity:.7">Loading commits…</div>';
+    }
+    if (status) status.textContent = 'Loading history…';
+  });
+  await shot(page, '10b-git-modal-loading', 'index/git', 'Inject loading state', 'Git modal loading');
 
   await page.evaluate(async (pathVal) => {
     const list = document.getElementById('commitList');
-    const status = document.getElementById('gitStatusText') || document.getElementById('gitStatus');
+    const status = document.getElementById('gitStatus');
     try {
       const res = await fetch('/git/commits', {
         method: 'POST',
@@ -375,9 +369,7 @@ async function captureLiveApp(browser, fixtures) {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        if (list) {
-          list.innerHTML = `<div style="padding:40px;color:#ff6b6b">Error: ${data.error || res.status}</div>`;
-        }
+        if (list) list.innerHTML = `<div style="padding:40px;color:#ff6b6b">Error: ${data.error || res.status}</div>`;
         if (status) status.textContent = data.error || 'Failed';
         return;
       }
@@ -387,11 +379,12 @@ async function captureLiveApp(browser, fixtures) {
         return;
       }
       if (list) {
+        list.setAttribute('aria-busy', 'false');
         list.innerHTML = commits
           .slice(0, 12)
           .map(
-            (c) =>
-              `<div class="commit-row" style="padding:10px;border-bottom:1px solid #333;cursor:pointer"><div style="font-weight:600">${c.message || ''}</div><div style="font-size:11px;opacity:.7">${c.hash} · ${c.author} · ${c.date}</div></div>`
+            (c, i) =>
+              `<div class="commit-row${i === 0 ? ' selected' : ''}" data-hash="${c.hash || ''}" style="padding:10px;border-bottom:1px solid #333;cursor:pointer"><div style="font-weight:600">${c.message || ''}</div><div style="font-size:11px;opacity:.7">${c.hash} · ${c.author} · ${c.date}</div></div>`
           )
           .join('');
       }
@@ -402,6 +395,35 @@ async function captureLiveApp(browser, fixtures) {
   }, fixtures.live);
   await sleep(500);
   await shot(page, '11-git-modal-commits', 'index/git', 'POST /git/commits for example .gh', 'Commit list for LCRL_SCREW_Axis.gh');
+
+  await page.evaluate(() => {
+    const rows = document.querySelectorAll('#commitList .commit-row');
+    rows.forEach((r) => r.classList.remove('selected', 'selected-old', 'selected-new'));
+    if (rows[0]) rows[0].classList.add('selected', 'selected-old');
+    const status = document.getElementById('gitStatus');
+    if (status) status.textContent = 'OLD ← selected commit';
+  });
+  await shot(page, '11b-git-modal-old-selected', 'index/git', 'Mark first commit as OLD', 'Git modal OLD commit selected');
+
+  await page.evaluate(() => {
+    const rows = document.querySelectorAll('#commitList .commit-row');
+    if (rows[0]) rows[0].classList.add('selected', 'selected-old');
+    if (rows[1]) rows[1].classList.add('selected', 'selected-new');
+    const status = document.getElementById('gitStatus');
+    if (status) status.textContent = 'OLD + NEW commits selected';
+  });
+  await shot(page, '11c-git-modal-both-commits', 'index/git', 'Mark two commits OLD+NEW', 'Git modal both commits selected');
+
+  await page.evaluate(() => {
+    const list = document.getElementById('commitList');
+    const status = document.getElementById('gitStatus');
+    if (list) {
+      list.innerHTML =
+        '<div style="padding:40px;opacity:.8">Downloading selected versions…<br><progress value="42" max="100" style="width:80%;margin-top:12px"></progress></div>';
+    }
+    if (status) status.textContent = 'Downloading…';
+  });
+  await shot(page, '11d-git-modal-downloading', 'index/git', 'Inject downloading state', 'Git modal downloading');
 
   await page.evaluate(() => {
     const list = document.getElementById('commitList');
@@ -480,6 +502,37 @@ async function captureLiveApp(browser, fixtures) {
     usedRealCompare = false;
   }
 
+  // Empty diff chrome (template with no payload) before populated overview
+  {
+    const emptyHtml = readFileSync(join(wwwroot, 'diff_viewer.html'), 'utf8').replace(
+      '{json_data}',
+      JSON.stringify({ nodes: [], wires: [], groups: [], meta: { old: 'empty-old.gh', new: 'empty-new.gh' } })
+    );
+    await page.unroute('**/__audit_empty.html').catch(() => {});
+    await page.route('**/__audit_empty.html', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: Buffer.from(emptyHtml, 'utf8'),
+      });
+    });
+    await page.goto(`${WEB_URL}/__audit_empty.html`, { waitUntil: 'domcontentloaded' });
+    await sleep(1200);
+    await shot(page, '13b-diff-empty', 'diff', 'diff_viewer with empty HOP_DATA', 'Empty diff workspace');
+    // Restore populated compare
+    await page.unroute('**/__audit_diff.html').catch(() => {});
+    await page.route('**/__audit_diff.html', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: Buffer.from(diffHtml, 'utf8'),
+      });
+    });
+    await page.goto(`${WEB_URL}/__audit_diff.html`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.locator('#change-list, #graph-canvas, .top').first().waitFor({ state: 'attached', timeout: 60000 }).catch(() => {});
+    await sleep(usedRealCompare ? 3000 : 1500);
+  }
+
   await shot(
     page,
     '14-diff-overview',
@@ -488,7 +541,10 @@ async function captureLiveApp(browser, fixtures) {
     'Diff overview with graph + queue'
   );
 
-  // Empty-ish: filter to see empty queue messaging if possible
+  await shot(page, '14b-inspector-no-selection', 'diff/inspector', 'Initial load, no queue selection', 'Inspector summary / empty selection');
+  await shot(page, '14c-top-new-comparison', 'diff/top', 'Top bar New Comparison link visible', 'New Comparison control in top bar');
+
+  // Footer filters + empty queue state
   const filterBtns = page.locator('[data-filter]');
   const filterCount = await filterBtns.count();
   for (let i = 0; i < filterCount; i++) {
@@ -498,6 +554,25 @@ async function captureLiveApp(browser, fixtures) {
     await sleep(300);
     await shot(page, `15-filter-${key}`, 'diff/footer', `Click filter ${key}`, `Footer filter: ${key}`);
   }
+  // Prefer a filter that yields an empty list (REMOVED is often 0 on LCRL fixtures)
+  const removedFilter = page.locator('[data-filter="removed"]');
+  if (await removedFilter.count()) {
+    await removedFilter.click();
+    await sleep(300);
+  }
+  const queueKids = await page.locator('#change-list .qrow, #change-list button, #change-list [data-id]').count();
+  if (queueKids === 0) {
+    await shot(page, '15b-queue-empty', 'diff/queue', 'Filter with zero matches', 'Empty change queue');
+  } else {
+    await page.evaluate(() => {
+      const list = document.getElementById('change-list');
+      if (list) list.innerHTML = '<div class="queue-empty" style="padding:24px;opacity:.6">No matching changes</div>';
+    });
+    await shot(page, '15b-queue-empty', 'diff/queue', 'Force empty #change-list', 'Empty change queue');
+  }
+  const allFilter = page.locator('[data-filter="all"]');
+  if (await allFilter.count()) await allFilter.click();
+  await sleep(200);
 
   // Queue sort menu
   const sortBtn = page.locator('#queue-sort-btn');
@@ -517,23 +592,40 @@ async function captureLiveApp(browser, fixtures) {
   }
 
   // Select first change row
-  const row = page.locator('#change-list [data-id], #change-list .change-row, #change-list button, #change-list > div').first();
+  const row = page.locator('#change-list .qrow, #change-list [data-id], #change-list .change-row, #change-list button').first();
   if (await row.count()) {
     await row.click({ timeout: 2000 }).catch(() => {});
     await sleep(400);
     await shot(page, '18-queue-row-selected', 'diff/queue', 'Click first change row', 'Node selected + inspector');
   }
 
-  // Alarm band if visible
+  // Alarm band on / off + Inspect / View script diff
   const band = page.locator('#alarm-band');
   if (await band.isVisible().catch(() => false)) {
     await shot(page, '19-alarm-band', 'diff/alarm', 'High-risk band visible', 'Alarm band shown');
+    const viewDiff = page.locator('#btn-band-diff');
+    if (await viewDiff.isVisible().catch(() => false)) {
+      await viewDiff.click();
+      await sleep(400);
+      await shot(page, '19b-alarm-view-script-diff', 'diff/alarm', 'Click View script diff', 'Alarm View script diff action');
+      await page.keyboard.press('Escape');
+      await sleep(200);
+    }
     const inspect = page.locator('#btn-band-inspect');
     if (await inspect.isVisible().catch(() => false)) {
       await inspect.click();
       await sleep(400);
       await shot(page, '20-alarm-inspect', 'diff/alarm', 'Click Inspect', 'Alarm inspect action');
     }
+    await page.evaluate(() => {
+      const b = document.getElementById('alarm-band');
+      if (b) b.hidden = true;
+    });
+    await shot(page, '20b-alarm-band-off', 'diff/alarm', 'Hide #alarm-band', 'Alarm band hidden');
+    await page.evaluate(() => {
+      const b = document.getElementById('alarm-band');
+      if (b) b.hidden = false;
+    });
   } else {
     record('19-alarm-band', 'diff/alarm', 'n/a', 'Band hidden for this fixture', 'skipped');
   }
@@ -750,9 +842,39 @@ async function captureLiveApp(browser, fixtures) {
     await page.goto(`${WEB_URL}/diff_viewer.html`, { waitUntil: 'networkidle' });
     await sleep(2000);
     await shot(page, '45-cluster-fixture-overview', 'diff/cluster', 'Inject cluster mock fixture', 'Cluster interaction fixture overview');
+    // Prefer C# / script-bearing row for inspector script tab
+    const csharpRow = page.locator('#change-list .qrow, #change-list button').filter({ hasText: /C#|Python|script/i }).first();
+    if (await csharpRow.count()) {
+      await csharpRow.click({ timeout: 3000 }).catch(() => {});
+    } else {
+      const clusterRow = page.locator('#change-list .qrow, #change-list button').first();
+      if (await clusterRow.count()) await clusterRow.click({ timeout: 3000 }).catch(() => {});
+    }
+    await sleep(500);
+    const scriptTab = page.locator('#details-tab-script');
+    if (await scriptTab.isVisible().catch(() => false)) {
+      await scriptTab.click();
+      await sleep(300);
+      await shot(page, '45b-cluster-script-tab', 'diff/cluster', 'Open Script tab on cluster fixture', 'Cluster fixture script inspector');
+      const expand = page.locator('[data-script-expand], button:has-text("Expand"), #data-script-expand');
+      if (await expand.count()) {
+        await expand.first().click();
+        await sleep(400);
+        await shot(page, '45c-cluster-script-modal', 'diff/cluster', 'Expand script on cluster fixture', 'Cluster fixture script modal');
+        await page.keyboard.press('Escape');
+      }
+    } else {
+      record('45b-cluster-script-tab', 'diff/cluster', 'n/a', 'Script tab not visible on cluster fixture selection', 'skipped');
+    }
     await page.keyboard.press('Enter');
     await sleep(500);
     await shot(page, '46-cluster-after-enter', 'diff/cluster', 'Press Enter on selection', 'Possible cluster tab open');
+    const tabs = page.locator('#graph-tabs .graph-tab-btn, #graph-tabs button');
+    if ((await tabs.count()) > 1) {
+      await tabs.nth(1).click();
+      await sleep(400);
+      await shot(page, '46b-cluster-secondary-tab', 'diff/cluster', 'Click second graph tab', 'Cluster secondary graph tab');
+    }
   } catch (err) {
     record('45-cluster-fixture-overview', 'diff/cluster', 'error', String(err.message || err), 'failed');
   }
