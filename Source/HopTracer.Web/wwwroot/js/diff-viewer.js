@@ -213,8 +213,33 @@
             'cursorposition', 'caretposition', 'selectionstart', 'selectionlength',
             'showtypehints', 'typehintid', 'allowtreeaccess',
             'scriptcomponentversion', 'scriptparameterversion',
-            'usingscriptinputparam', 'usingscriptoutputparam'
+            'usingscriptinputparam', 'usingscriptoutputparam',
+            'additionalsourcemodified', 'scriptsourcemodified', 'usingsourcemodified',
+            'sourcemodified', 'codemodified'
         ]);
+        const INSPECTOR_NOISE_KEYS = new Set([
+            'guid', 'instanceguid', 'typehintid', 'editorposition', 'editorlocation',
+            'editorbounds', 'cursorposition', 'caretposition', 'selectionstart',
+            'selectionlength', 'simplifydata', 'customusing', 'inputcount', 'outputcount',
+            'showtypehints', 'allowtreeaccess', 'scriptparamaccess',
+            'scriptcomponentversion', 'scriptparameterversion',
+            'usingscriptinputparam', 'usingscriptoutputparam',
+            'additionalsourcemodified', 'scriptsourcemodified', 'usingsourcemodified'
+        ]);
+        const PROPERTY_LABELS = {
+            scriptsource: 'Script source',
+            usingsource: 'Using directives',
+            additionalsource: 'Additional source',
+            sourcecode: 'Source code',
+            code: 'Code',
+            script: 'Script',
+            pythonscript: 'Python script',
+            pythoncode: 'Python code',
+            csharpcode: 'C# code',
+            vbcode: 'VB code',
+            expression: 'Expression',
+            usertext: 'User text'
+        };
         const SCRIPT_KEY_PATTERN = /(script|code|python|ghpython|csharp|c#|vb\.?net|expression)/i;
         const SCRIPT_COMPONENT_PATTERN = /(python|ghpython|c#|csharp|vb|script)/i;
 
@@ -254,7 +279,7 @@
         }
 
         function getStatusFilterTabs() {
-            return Array.from(document.querySelectorAll('footer [role="tablist"] [role="tab"]'));
+            return Array.from(document.querySelectorAll('.filter-band [role="tab"], [role="tablist"].filter-band [role="tab"]'));
         }
 
         function syncStatusFilterButtons() {
@@ -3803,7 +3828,7 @@
                     setStatusFilter(key);
                 });
             });
-            const filterTablist = document.querySelector('footer [role="tablist"]');
+            const filterTablist = document.querySelector('.filter-band');
             if (filterTablist) {
                 filterTablist.addEventListener('keydown', (e) => {
                     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -5566,9 +5591,15 @@
                     return;
                 }
 
-                // Node Body - ANDURA dark fill with status-colored hairline
+                // Node body: surface + light status wash so changes read when zoomed out
+                const statusKey = String(n.status || 'same');
+                const statusColor = CONFIG.colors[statusKey] || CONFIG.colors.line;
                 ctx.fillStyle = CONFIG.colors.surface;
-                ctx.strokeStyle = CONFIG.colors[n.status] || CONFIG.colors.line;
+                if (statusKey === 'same') {
+                    ctx.strokeStyle = CONFIG.colors.edgeSame;
+                } else {
+                    ctx.strokeStyle = statusColor;
+                }
 
                 if (state.selected === n.id) {
                     ctx.strokeStyle = CONFIG.colors.selection;
@@ -5585,6 +5616,14 @@
 
                 roundRect(ctx, n.x, n.y, n.w, n.h, CONFIG.node.radius);
                 ctx.fill();
+                if (statusKey === 'added' || statusKey === 'removed' || statusKey === 'modified') {
+                    ctx.save();
+                    ctx.globalAlpha = 0.18;
+                    ctx.fillStyle = statusColor;
+                    roundRect(ctx, n.x, n.y, n.w, n.h, CONFIG.node.radius);
+                    ctx.fill();
+                    ctx.restore();
+                }
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
@@ -6737,7 +6776,26 @@
         }
 
         function isScriptNoiseKey(key) {
-            return SCRIPT_NOISE_KEYS.has(normalizeScriptKey(key));
+            const normalized = normalizeScriptKey(key);
+            if (SCRIPT_NOISE_KEYS.has(normalized)) return true;
+            // Boolean *Modified companion flags are not script bodies.
+            return /modified$/.test(normalized) && !SCRIPT_PROPERTY_KEYS.has(normalized);
+        }
+
+        function isInspectorNoiseKey(key) {
+            const normalized = normalizeScriptKey(key);
+            return INSPECTOR_NOISE_KEYS.has(normalized) || isScriptNoiseKey(key);
+        }
+
+        function formatPropertyLabel(key) {
+            const normalized = normalizeScriptKey(key);
+            if (PROPERTY_LABELS[normalized]) return PROPERTY_LABELS[normalized];
+            const spaced = String(key || '')
+                .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+                .replace(/[_-]+/g, ' ')
+                .trim();
+            if (!spaced) return String(key || '');
+            return spaced.charAt(0).toUpperCase() + spaced.slice(1);
         }
 
         function isPrimaryScriptEntryKey(key) {
@@ -8003,6 +8061,7 @@
                 if (isUserInputPropertyKey(key)) continue;
                 // Panel UserText is rendered in a dedicated section above.
                 if (isPanel && panelValue.hasAny && isPanelValuePropertyKey(key)) continue;
+                if (isInspectorNoiseKey(key)) continue;
 
                 // Check if this property changed (has old value)
                 const oldLookup = getPropertyValueIgnoreCase(node.propertiesOld || {}, key);
@@ -8013,28 +8072,29 @@
                 const valueRemoved = hasOldValue && oldValue.length > 0 && newValue.length === 0;
                 const valueChanged = hasOldValue && oldValue !== newValue;
                 const hasValueDelta = valueChanged || valueAdded || valueRemoved;
+                const label = formatPropertyLabel(key);
 
                 // Check if it's a script/code property
-                const isScript = isLikelyScriptPropertyKey(key);
+                const isScript = isLikelyScriptPropertyKey(key) && isPrimaryScriptEntryKey(key);
 
                 if (isScript) {
                     const scriptChanged = hasOldValue
                         ? normalizeScriptForCompare(oldValue) !== normalizeScriptForCompare(newValue)
                         : newValue.length > 0;
                     if (showOnlyChangedValues && !scriptChanged) continue;
-                    rows += kvPlain(key, scriptChanged ? 'Modified' : 'Unchanged');
+                    rows += kvPlain(label, scriptChanged ? 'Modified' : 'Unchanged');
                     rows += `<button type="button" class="script-diff-open" data-script-key="${encodeURIComponent(key)}"><svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-file-code"></use></svg>${scriptChanged ? 'Open Script Diff' : 'Open Script'}</button>`;
                 } else if (hasValueDelta) {
                     if (valueAdded) {
-                        rows += kvPlain(key, newValue);
+                        rows += kvPlain(label, newValue);
                     } else if (valueRemoved) {
-                        rows += kvRow(key, `<span class="kv-old">${escapeHtml(oldValue)}</span>`);
+                        rows += kvRow(label, `<span class="kv-old">${escapeHtml(oldValue)}</span>`);
                     } else {
-                        rows += kvDelta(key, oldValue, newValue);
+                        rows += kvDelta(label, oldValue, newValue);
                     }
                 } else {
                     if (showOnlyChangedValues) continue;
-                    rows += kvPlain(key, newValue);
+                    rows += kvPlain(label, newValue);
                 }
             }
 
@@ -8054,7 +8114,6 @@
                 const optionText = renderPortOptionText(p.options ?? p.Options);
                 const optionDiffText = renderPortOptionDiffText(p.optionsOld ?? p.OptionsOld, p.optionsNew ?? p.OptionsNew);
                 const portName = escapeHtml(p.nickname || p.name || p.id || '');
-                const portId = escapeHtml(String(p.id || ''));
                 const portStatus = escapeHtml(String(p.status || 'same'));
                 const wireDisplayLine = isInput
                     ? `<div class="port-value">Wire: ${wireDisplayModeLabel(p.wireDisplay ?? p.WireDisplay)}</div>`
@@ -8073,9 +8132,8 @@
                             ${valueLine || ''}
                             ${optionLine || ''}
                             ${wireDisplayLine}
-                            <div class="port-value" style="opacity:0.7;">${portId}</div>
                         </div>
-                        <span class="port-status" style="background:${statusColor}; color:white;">${portStatus}</span>
+                        <span class="port-status" style="background:${statusColor};">${portStatus}</span>
                     </div>
                 `;
             }).join('');

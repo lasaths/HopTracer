@@ -263,6 +263,173 @@ h1 {
 .git-modal-cancel {
     background: transparent;
     border: 1px solid var(--andura-color-line);
+    color: var(--andura-color-text);
+}
+
+.drop-zone.selected,
+.drop-zone.busy {
+    border-color: var(--andura-color-ultramarine);
+}
+
+.drop-zone.selected {
+    background: var(--andura-color-surface-hover);
+}
+
+.git-btn {
+    margin-top: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 8px;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.git-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+
+.git-modal-backdrop:not([hidden]) {
+    display: flex;
+}
+
+.git-file-name {
+    font-family: var(--andura-font-family-mono);
+    color: var(--andura-color-ultramarine-text);
+    margin-right: 10px;
+}
+
+.git-file-meta {
+    font-size: 12px;
+    color: var(--andura-color-muted);
+}
+
+.git-status {
+    padding: 10px 20px;
+    color: var(--andura-color-muted);
+    font-size: 13px;
+    min-height: 18px;
+}
+
+.git-select-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px 16px;
+    border-bottom: 1px solid var(--andura-color-line);
+    background: var(--andura-color-surface);
+}
+
+.git-select-side {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.git-select-label {
+    font-size: 12px;
+    font-family: var(--andura-font-family-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--andura-color-muted);
+}
+
+.git-pill {
+    font-family: var(--andura-font-family-mono);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--andura-color-line);
+}
+
+.git-pill-old {
+    color: var(--andura-color-ultramarine-text);
+    background: rgba(58, 60, 255, 0.12);
+    border-color: var(--andura-color-ultramarine);
+}
+
+.git-pill-new {
+    color: var(--andura-color-nominal);
+    background: rgba(68, 183, 130, 0.12);
+    border-color: var(--andura-color-nominal);
+}
+
+.commit-list-flush {
+    border: none;
+    border-radius: 0;
+    margin: 0;
+}
+
+.loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay:not([hidden]) {
+    display: flex;
+}
+
+.loading-title {
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    font-family: var(--andura-font-family-sans);
+    color: var(--andura-color-text);
+}
+
+.loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--andura-color-line);
+    border-top-color: var(--andura-color-ultramarine);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-percent {
+    margin-top: 12px;
+    font-size: 28px;
+    font-weight: 500;
+    font-family: var(--andura-font-family-mono);
+    color: var(--andura-color-text);
+}
+
+.loading-track {
+    width: min(360px, calc(100vw - 48px));
+    height: 10px;
+    background: var(--andura-color-surface-lift);
+    border: 1px solid var(--andura-color-line);
+    border-radius: 999px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.loading-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--andura-color-ultramarine);
+    transition: width 220ms ease;
+}
+
+.loading-subtitle {
+    margin-top: 16px;
+    color: var(--andura-color-muted);
+    font-size: 14px;
 }
 
 .commit-list {

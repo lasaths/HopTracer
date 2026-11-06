@@ -42,6 +42,29 @@
         <a href="/" class="btn">New Comparison</a>
     </div>
 
+    <div class="filter-band" role="tablist" aria-label="Filter">
+        <button type="button" class="filter-btn tab label" data-filter="all" role="tab" aria-selected="true" aria-current="true" tabindex="0">
+            <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-list"></use></svg>
+            <span class="w">All <span id="stat-all">0</span></span>
+        </button>
+        <button type="button" class="filter-btn tab label" data-filter="added" role="tab" aria-selected="false" tabindex="-1">
+            <svg class="ico ad" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-plus-circle"></use></svg>
+            <span class="w">Added <span id="stat-added">0</span></span>
+        </button>
+        <button type="button" class="filter-btn tab label" data-filter="removed" role="tab" aria-selected="false" tabindex="-1">
+            <svg class="ico em" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-minus-circle"></use></svg>
+            <span class="w">Removed <span id="stat-removed">0</span></span>
+        </button>
+        <button type="button" class="filter-btn tab label" data-filter="modified" role="tab" aria-selected="false" tabindex="-1">
+            <svg class="ico ca" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-pencil-simple-line"></use></svg>
+            <span class="w">Modified <span id="stat-modified">0</span></span>
+        </button>
+        <button type="button" class="filter-btn tab label" data-filter="same" role="tab" aria-selected="false" tabindex="-1">
+            <svg class="ico muted" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-circle-dashed"></use></svg>
+            <span class="w">Unchanged <span id="stat-same">0</span></span>
+        </button>
+    </div>
+
     <section id="alarm-band" class="band" role="alert" hidden>
         <span class="edge" aria-hidden="true"></span>
         <span class="st" id="alarm-band-status">
@@ -223,15 +246,6 @@
             </div>
             <aside class="col" id="details-summary" aria-label="Summary" hidden style="display:none">
                 <section>
-                    <div class="label">Review</div>
-                    <div class="row summary-hero">
-                        <span class="display" id="summary-changes-count">0</span>
-                        <span class="title muted" style="font-weight:400">changes to review</span>
-                    </div>
-                    <div class="rbar" role="img" aria-label="Risk split" id="summary-risk-bar"></div>
-                    <div class="row summary-risk-counts" id="summary-risk-counts"></div>
-                </section>
-                <section>
                     <div class="row">
                         <span class="label">Top risks</span>
                         <span class="label" style="margin-left:auto">Risk</span>
@@ -250,27 +264,13 @@
     </main>
 
     <footer>
-        <div role="tablist" aria-label="Filter">
-            <button type="button" class="filter-btn tab label" data-filter="all" role="tab" aria-selected="true" aria-current="true" tabindex="0">
-                <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-list"></use></svg>
-                <span class="w">All <span id="stat-all">0</span></span>
-            </button>
-            <button type="button" class="filter-btn tab label" data-filter="added" role="tab" aria-selected="false" tabindex="-1">
-                <svg class="ico ad" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-plus-circle"></use></svg>
-                <span class="w">Added <span id="stat-added">0</span></span>
-            </button>
-            <button type="button" class="filter-btn tab label" data-filter="removed" role="tab" aria-selected="false" tabindex="-1">
-                <svg class="ico em" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-minus-circle"></use></svg>
-                <span class="w">Removed <span id="stat-removed">0</span></span>
-            </button>
-            <button type="button" class="filter-btn tab label" data-filter="modified" role="tab" aria-selected="false" tabindex="-1">
-                <svg class="ico ca" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-pencil-simple-line"></use></svg>
-                <span class="w">Modified <span id="stat-modified">0</span></span>
-            </button>
-            <button type="button" class="filter-btn tab label" data-filter="same" role="tab" aria-selected="false" tabindex="-1">
-                <svg class="ico muted" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-circle-dashed"></use></svg>
-                <span class="w">Unchanged <span id="stat-same">0</span></span>
-            </button>
+        <div class="footer-risk" aria-label="Risk summary">
+            <div class="row summary-hero footer-risk-hero">
+                <span class="vl" id="summary-changes-count">0</span>
+                <span class="label">changes to review</span>
+            </div>
+            <div class="rbar footer-risk-bar" role="img" aria-label="Risk split" id="summary-risk-bar"></div>
+            <div class="row summary-risk-counts" id="summary-risk-counts"></div>
         </div>
         <div class="right">
             <button type="button" id="btn-check-baseline" class="btn ghost" title="Compare current file against a saved baseline">

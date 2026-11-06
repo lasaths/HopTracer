@@ -98,13 +98,17 @@ section.band .trunc b{font-weight:500;color:var(--c-text)}
 section.band #alarm-band-risk{flex:none;font-variant-numeric:tabular-nums}
 section.band .acts{margin-left:auto;display:flex;gap:var(--s8);align-items:center;flex:none}
 main{flex:1;display:flex;min-height:0}
-footer{height:var(--foot);flex:none;display:flex;align-items:stretch;padding:0 var(--m);background:var(--c-void);z-index:12}
-footer [role="tablist"]{display:flex;align-items:stretch;min-width:0}
-footer .tab{width:var(--filter-tab);min-width:var(--filter-tab);padding-right:var(--s16);display:flex;align-items:center;gap:var(--s8);color:var(--c-muted);white-space:nowrap;overflow:hidden}
-footer .tab:hover{color:var(--c-text)}
-footer .tab span.w{border-bottom:var(--accent) solid transparent;padding:2px 0}
-footer .tab[aria-current] {color:var(--c-text)} footer .tab[aria-current] span.w{border-bottom-color:var(--c-text)}
-footer .right{margin-left:auto;display:flex;align-items:center;gap:var(--s8)}
+.filter-band{height:var(--foot);flex:none;display:flex;align-items:stretch;padding:0 var(--m);background:var(--c-void);border-bottom:1px solid var(--c-line);z-index:12;min-width:0;overflow-x:auto}
+.filter-band .tab{width:var(--filter-tab);min-width:var(--filter-tab);padding-right:var(--s16);display:flex;align-items:center;gap:var(--s8);color:var(--c-muted);white-space:nowrap;overflow:hidden}
+.filter-band .tab:hover{color:var(--c-text)}
+.filter-band .tab span.w{border-bottom:var(--accent) solid transparent;padding:2px 0}
+.filter-band .tab[aria-current]{color:var(--c-text)} .filter-band .tab[aria-current] span.w{border-bottom-color:var(--c-text)}
+footer{height:var(--foot);flex:none;display:flex;align-items:center;gap:var(--s16);padding:0 var(--m);background:var(--c-void);border-top:1px solid var(--c-line);z-index:12;min-width:0}
+footer .footer-risk{display:flex;align-items:center;gap:var(--s16);min-width:0;flex:1 1 auto;overflow:hidden}
+footer .footer-risk-hero{gap:var(--s8);flex:none}
+footer .footer-risk-bar{width:min(180px,20vw);height:8px;flex:none}
+footer .summary-risk-counts{gap:var(--s16);flex:none;flex-wrap:nowrap}
+footer .right{margin-left:auto;display:flex;align-items:center;gap:var(--s8);flex:none}
 footer .btn.ghost:hover{color:var(--c-text)}
 .canvas-tags{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2;clip-path:inset(var(--tag-clip-top) 0 0 0)}
 .breadcrumb{display:flex;align-items:center;gap:var(--s8);color:var(--c-text)}
