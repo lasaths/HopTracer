@@ -6,49 +6,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HopTracer</title>
     <link rel="icon" type="image/png" href="/images/HopTrace_Logo.png">
+    <base href="/">
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/diff-viewer.css">
     <link rel="stylesheet" href="/andura/hoptracer-index.css">
 </head>
 
 <body class="dark no-glow">
-    <main class="container" id="mainContent" aria-labelledby="app-title">
-        <header class="hero">
-            <img src="images/HopTrace_Logo.png" alt="HopTracer" class="hero-logo">
-            <h1 class="hero-title" id="app-title">HopTracer</h1>
-            <p class="hero-subtitle">
-                Visualize and compare changes in Grasshopper definitions.
-            </p>
-        </header>
+    <div class="top" id="start-top">
+        <div class="brand">
+            <div class="brand-logo" aria-hidden="true"></div>
+            <b>HopTracer</b>
+        </div>
+        <div class="grow"></div>
+        <span class="label">Compare Grasshopper definitions</span>
+    </div>
 
-        <form action="/compare" method="post" enctype="multipart/form-data" id="compareForm">
-            <!-- Hidden inputs for local paths -->
+    <main class="start-main" id="mainContent" aria-labelledby="app-title">
+        <form class="start-form" action="/compare" method="post" enctype="multipart/form-data" id="compareForm">
+            <header class="start-lead">
+                <h1 class="title" id="app-title">New comparison</h1>
+                <p class="muted small">Drop or pick two definitions. Use git history when the file lives in a repo.</p>
+            </header>
+
             <input type="hidden" name="path_old" id="pathOld">
             <input type="hidden" name="path_new" id="pathNew">
             <input type="file" name="file_old" id="fileOld" accept=".ghx,.gh" class="hidden-file-input">
             <input type="file" name="file_new" id="fileNew" accept=".ghx,.gh" class="hidden-file-input">
 
             <div class="drop-zone-container">
-                <button type="button" class="drop-zone" id="dropOld" aria-label="Select OLD file">
-                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                        </path>
-                    </svg>
-                    <div class="label" id="labelOld">Click to select OLD file</div>
-                    <div class="filename" id="nameOld"></div>
-                </button>
+                <div class="drop-col">
+                    <div class="drop-col-head">
+                        <span class="label">Old</span>
+                        <span class="muted small" id="hintOld">Baseline</span>
+                    </div>
+                    <button type="button" class="drop-zone" id="dropOld" aria-label="Select OLD file">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        <div class="label zone-status" id="labelOld">Click or drop file</div>
+                        <div class="filename" id="nameOld"></div>
+                    </button>
+                </div>
 
-                <button type="button" class="drop-zone" id="dropNew" aria-label="Select NEW file">
-                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                        </path>
-                    </svg>
-                    <div class="label" id="labelNew">Click to select NEW file</div>
-                    <div class="filename" id="nameNew"></div>
-                </button>
+                <div class="drop-col">
+                    <div class="drop-col-head">
+                        <span class="label">New</span>
+                        <span class="muted small" id="hintNew">Candidate</span>
+                    </div>
+                    <button type="button" class="drop-zone" id="dropNew" aria-label="Select NEW file">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        <div class="label zone-status" id="labelNew">Click or drop file</div>
+                        <div class="filename" id="nameNew"></div>
+                    </button>
+                </div>
             </div>
-
-            <button type="submit" class="btn" id="compareBtn" disabled title="Select both files to continue">Compare Files</button>
         </form>
 
         <!-- Git History Modal -->
@@ -86,11 +104,18 @@
                 <div id="commitList" class="commit-list commit-list-flush" aria-label="Git history commits"></div>
                 <div class="git-modal-footer">
                     <button type="button" class="btn git-modal-cancel" id="gitModalCancel" onclick="closeGitModal()">Cancel</button>
-                    <button type="button" class="btn" id="loadCommitBtn" disabled>Load Selected Version</button>
+                    <button type="button" class="btn pri" id="loadCommitBtn" disabled>Load Selected Version</button>
                 </div>
             </div>
         </div>
     </main>
+
+    <footer class="start-foot">
+        <span class="muted small" id="compareHint">Select an OLD definition</span>
+        <div class="right">
+            <button type="submit" form="compareForm" class="btn pri" id="compareBtn" disabled title="Select both files to continue">Compare Files</button>
+        </div>
+    </footer>
 
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" hidden>
@@ -431,6 +456,14 @@
             const ready = hasSelection('old') && hasSelection('new');
             compareBtn.disabled = !ready;
             compareBtn.title = ready ? 'Compare selected files' : 'Select both files to continue';
+            const hint = document.getElementById('compareHint');
+            if (hint) {
+                hint.textContent = ready
+                    ? 'Ready to compare'
+                    : !hasSelection('old')
+                        ? 'Select an OLD definition'
+                        : 'Select a NEW definition';
+            }
         }
 
         async function checkDependencyHealth() {
@@ -553,7 +586,7 @@
             zone.pathInput.value = path;
             zone.fileInput.value = '';
             updateZoneFileSize(type, path);
-            zone.label.textContent = "Selected";
+            zone.label.textContent = "Ready";
             zone.zone.classList.add('selected'); zone.zone.style.borderColor = '';
             zone.zone.classList.add('selected');
 
@@ -691,19 +724,11 @@
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'btn git-btn';
-            btn.style.marginTop = '10px';
-            btn.style.fontSize = '12px';
-            btn.style.padding = '6px 12px';
-            btn.style.position = 'relative';
-            btn.style.zIndex = '10';
-            btn.innerText = 'Select from Git History';
-
-            // Stop propagation so clicking this doesn't trigger the file picker again
+            btn.textContent = 'Git history';
             btn.onclick = (e) => {
                 e.stopPropagation();
                 openGitModal();
             };
-
             dropZones.old.zone.appendChild(btn);
         }
 
@@ -832,7 +857,8 @@
 
                 const hash = document.createElement('div');
                 hash.className = 'commit-hash';
-                hash.textContent = c.hash;
+                hash.textContent = String(c.hash || '').slice(0, 7);
+                hash.title = c.hash || '';
 
                 const message = document.createElement('div');
                 message.className = 'commit-msg';

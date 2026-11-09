@@ -35,10 +35,9 @@
         </button>
         <div class="facts">
             <span class="label" id="meta-time-diff">-</span>
+            <button type="button" id="btn-history" class="btn" title="Browse past versions of this file (Time Machine)">History</button>
+            <button type="button" id="btn-blame" class="btn" hidden disabled title="Shift+click for full git history. Click to toggle author colors.">Blame…</button>
         </div>
-        <button type="button" id="btn-history" class="btn icon" title="History">
-            <svg class="ico" width="16" height="16"><use href="/vendor/phosphor/icons.svg#ph-clock"></use></svg>
-        </button>
         <a href="/" class="btn">New Comparison</a>
     </div>
 
@@ -64,25 +63,6 @@
             <span class="w">Unchanged <span id="stat-same">0</span></span>
         </button>
     </div>
-
-    <section id="alarm-band" class="band" role="alert" hidden>
-        <span class="edge" aria-hidden="true"></span>
-        <span class="st" id="alarm-band-status">
-            <svg class="ico em" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-warning-octagon"></use></svg>
-            High risk
-        </span>
-        <span class="band-copy">
-            <span class="trunc" id="alarm-band-message">
-                <b id="alarm-band-name"></b>
-                <span class="muted" id="alarm-band-reason"></span>
-            </span>
-            <span class="label" id="alarm-band-risk">RISK 0</span>
-        </span>
-        <div class="acts">
-            <button type="button" class="btn band" id="btn-band-diff">View script diff</button>
-            <button type="button" class="btn band pri" id="btn-band-inspect">Inspect</button>
-        </div>
-    </section>
 
     <main id="main-container" aria-label="Comparison workspace">
         <!-- Left Panel: Risk-Ordered Change List -->
@@ -119,18 +99,6 @@
                     <div id="change-list" class="change-list">
                         <div class="component-results-empty">No changes to review.</div>
                     </div>
-                    <div class="queue-foot">
-                        <div class="queue-foot-left"></div>
-                        <div class="queue-foot-right">
-                            <kbd class="keycap">J</kbd>
-                            <kbd class="keycap">K</kbd>
-                            <span class="keycap-label">STEP</span>
-                            <kbd class="keycap">F</kbd>
-                            <span class="keycap-label">FIT</span>
-                            <kbd class="keycap">T</kbd>
-                            <span class="keycap-label">TAGS</span>
-                        </div>
-                    </div>
                 </div>
 
             </div>
@@ -154,67 +122,6 @@
 
             <div id="minimap-container" hidden>
                 <canvas id="minimap-canvas"></canvas>
-            </div>
-
-            <div class="strip" role="group" aria-label="View controls">
-                <div class="sld" data-sld="wires" style="--sld-val:0">
-                    <div class="s-hd">
-                        <span class="label" id="wire-slider-name">Wires</span>
-                        <span class="label s-v" id="wire-label" aria-hidden="true">All</span>
-                    </div>
-                    <div class="s-tr">
-                        <i class="s-tk" data-at="0"></i>
-                        <i class="s-tk" data-at="25"></i>
-                        <i class="s-tk" data-at="50"></i>
-                        <i class="s-tk" data-at="75"></i>
-                        <i class="s-tk" data-at="100"></i>
-                        <i class="s-th"></i>
-                        <input type="range" id="wire-slider" min="0" max="100" step="1" value="0"
-                            aria-labelledby="wire-slider-name" aria-valuetext="All" aria-orientation="horizontal">
-                    </div>
-                    <div class="s-tl" aria-hidden="true">
-                        <span class="label on" data-at="0">All</span>
-                        <span class="label" data-at="100">None</span>
-                    </div>
-                </div>
-                <div class="sld" data-sld="show" style="--sld-val:50">
-                    <div class="s-hd">
-                        <span class="label" id="version-slider-name">Show</span>
-                        <span class="label s-v" id="version-label" aria-hidden="true">Both</span>
-                    </div>
-                    <div class="s-tr">
-                        <i class="s-tk" data-at="0"></i>
-                        <i class="s-tk" data-at="50"></i>
-                        <i class="s-tk" data-at="100"></i>
-                        <i class="s-th"></i>
-                        <input type="range" id="version-slider" min="0" max="100" step="1" value="50"
-                            aria-labelledby="version-slider-name" aria-valuetext="Both" aria-orientation="horizontal">
-                    </div>
-                    <div class="s-tl" aria-hidden="true">
-                        <span class="label" data-at="0">Old</span>
-                        <span class="label on" data-at="50">Both</span>
-                        <span class="label" data-at="100">New</span>
-                    </div>
-                </div>
-                <div class="sld" data-sld="tags" style="--sld-val:0">
-                    <div class="s-hd">
-                        <span class="label" id="tag-slider-name">Tags</span>
-                        <span class="label s-v" id="tag-label" aria-hidden="true">All</span>
-                    </div>
-                    <div class="s-tr">
-                        <i class="s-tk" data-at="0"></i>
-                        <i class="s-tk" data-at="50"></i>
-                        <i class="s-tk" data-at="100"></i>
-                        <i class="s-th"></i>
-                        <input type="range" id="tag-slider" min="0" max="100" step="50" value="0"
-                            aria-labelledby="tag-slider-name" aria-valuetext="All" aria-orientation="horizontal">
-                    </div>
-                    <div class="s-tl" aria-hidden="true">
-                        <span class="label on" data-at="0">All</span>
-                        <span class="label" data-at="50">Selected</span>
-                        <span class="label" data-at="100">Off</span>
-                    </div>
-                </div>
             </div>
 
             <div class="overlay-controls">
@@ -263,25 +170,88 @@
         </div>
     </main>
 
+    <div class="view-controls-row" role="group" aria-label="View controls">
+        <div class="strip">
+            <div class="sld" data-sld="wires" style="--sld-val:0">
+                <div class="s-hd">
+                    <span class="label" id="wire-slider-name">Wires</span>
+                    <span class="label s-v" id="wire-label" aria-hidden="true">All</span>
+                </div>
+                <div class="s-tr">
+                    <i class="s-tk" data-at="0"></i>
+                    <i class="s-tk" data-at="25"></i>
+                    <i class="s-tk" data-at="50"></i>
+                    <i class="s-tk" data-at="75"></i>
+                    <i class="s-tk" data-at="100"></i>
+                    <i class="s-th"></i>
+                    <input type="range" id="wire-slider" min="0" max="100" step="1" value="0"
+                        aria-labelledby="wire-slider-name" aria-valuetext="All" aria-orientation="horizontal">
+                </div>
+                <div class="s-tl" aria-hidden="true">
+                    <span class="label on" data-at="0">All</span>
+                    <span class="label" data-at="100">None</span>
+                </div>
+            </div>
+            <div class="sld" data-sld="show" style="--sld-val:50">
+                <div class="s-hd">
+                    <span class="label" id="version-slider-name">Show</span>
+                    <span class="label s-v" id="version-label" aria-hidden="true">Both</span>
+                </div>
+                <div class="s-tr">
+                    <i class="s-tk" data-at="0"></i>
+                    <i class="s-tk" data-at="50"></i>
+                    <i class="s-tk" data-at="100"></i>
+                    <i class="s-th"></i>
+                    <input type="range" id="version-slider" min="0" max="100" step="1" value="50"
+                        aria-labelledby="version-slider-name" aria-valuetext="Both" aria-orientation="horizontal">
+                </div>
+                <div class="s-tl" aria-hidden="true">
+                    <span class="label" data-at="0">Old</span>
+                    <span class="label on" data-at="50">Both</span>
+                    <span class="label" data-at="100">New</span>
+                </div>
+            </div>
+            <div class="sld" data-sld="tags" style="--sld-val:0">
+                <div class="s-hd">
+                    <span class="label" id="tag-slider-name">Tags</span>
+                    <span class="label s-v" id="tag-label" aria-hidden="true">All</span>
+                </div>
+                <div class="s-tr">
+                    <i class="s-tk" data-at="0"></i>
+                    <i class="s-tk" data-at="50"></i>
+                    <i class="s-tk" data-at="100"></i>
+                    <i class="s-th"></i>
+                    <input type="range" id="tag-slider" min="0" max="100" step="50" value="0"
+                        aria-labelledby="tag-slider-name" aria-valuetext="All" aria-orientation="horizontal">
+                </div>
+                <div class="s-tl" aria-hidden="true">
+                    <span class="label on" data-at="0">All</span>
+                    <span class="label" data-at="50">Selected</span>
+                    <span class="label" data-at="100">Off</span>
+                </div>
+            </div>
+        </div>
+        <div class="view-shortcuts" aria-label="Keyboard shortcuts">
+            <kbd class="keycap">J</kbd>
+            <kbd class="keycap">K</kbd>
+            <span class="keycap-label">Step</span>
+            <kbd class="keycap">F</kbd>
+            <span class="keycap-label">Fit</span>
+            <kbd class="keycap">T</kbd>
+            <span class="keycap-label">Tags</span>
+        </div>
+    </div>
+
     <footer>
         <div class="footer-risk" aria-label="Risk summary">
             <div class="row summary-hero footer-risk-hero">
                 <span class="vl" id="summary-changes-count">0</span>
                 <span class="label">changes to review</span>
             </div>
-            <div class="rbar footer-risk-bar" role="img" aria-label="Risk split" id="summary-risk-bar"></div>
-            <div class="row summary-risk-counts" id="summary-risk-counts"></div>
+            <div class="footer-risk-split" id="summary-risk-split" role="img" aria-label="Risk split"></div>
         </div>
         <div class="right">
-            <button type="button" id="btn-check-baseline" class="btn ghost" title="Compare current file against a saved baseline">
-                <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-check"></use></svg>
-                Check Baseline
-            </button>
-            <button type="button" id="btn-save-baseline" class="btn ghost" title="Save current file as a known-good baseline">
-                <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-floppy-disk"></use></svg>
-                Save Baseline
-            </button>
-            <button type="button" id="btn-export-forensic" class="btn ghost" title="Download forensic JSON and HTML report">
+            <button type="button" id="btn-export-forensic" class="btn ghost" title="Choose a folder, then save JSON + HTML forensic report there">
                 <svg class="ico" width="16" height="16" fill="currentColor" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-download-simple"></use></svg>
                 Export Report
             </button>
@@ -298,46 +268,56 @@
         <div id="loadingSubtitle">This may take a few moments for large files.</div>
     </div>
 
-    <!-- Source Modal -->
+    <!-- Source / History Modal -->
     <div id="source-modal" class="source-modal-backdrop">
-        <div class="source-modal">
+        <div class="source-modal" role="dialog" aria-modal="true" aria-labelledby="source-modal-title">
             <div class="source-modal-header">
-                <div class="source-modal-title" id="source-modal-title">Change Source</div>
+                <div class="source-modal-heading">
+                    <div class="source-modal-title" id="source-modal-title">Change Source</div>
+                    <div class="source-modal-subtitle" id="source-modal-subtitle" hidden></div>
+                </div>
                 <button type="button" id="btn-source-modal-close" class="panel-icon-btn" title="Close" aria-label="Close dialog">
-                    <svg class="ico" width="20" height="20"><use href="/vendor/phosphor/icons.svg#ph-x"></use></svg>
+                    <svg class="ico" width="20" height="20" aria-hidden="true"><use href="/vendor/phosphor/icons.svg#ph-x"></use></svg>
                 </button>
             </div>
-            <div class="source-modal-body">
-                <div class="source-mode-row">
-                    <button type="button" id="source-mode-file" class="source-mode-btn active">File</button>
-                    <button type="button" id="source-mode-commit" class="source-mode-btn">Git Commit</button>
-                </div>
 
+            <div class="source-mode-row" id="source-mode-row">
+                <button type="button" id="source-mode-file" class="source-mode-btn active">File</button>
+                <button type="button" id="source-mode-commit" class="source-mode-btn">Git Commit</button>
+            </div>
+
+            <div class="source-modal-body">
                 <div id="source-pane-file" class="source-pane">
                     <div class="source-field-label">Selected File</div>
                     <div id="source-file-path" class="source-path">No file selected</div>
                     <div id="source-file-meta" class="source-path-meta"></div>
                     <div class="source-actions">
-                        <button type="button" id="btn-source-pick-file" class="filter-btn">Choose File</button>
+                        <button type="button" id="btn-source-pick-file" class="source-btn">Choose File</button>
                     </div>
                 </div>
 
-                <div id="source-pane-commit" class="source-pane" style="display:none;">
-                    <div class="source-field-label">Repository File</div>
-                    <div id="source-commit-path" class="source-path">No file selected</div>
-                    <div id="source-commit-meta" class="source-path-meta"></div>
-                    <div class="source-actions">
-                        <button type="button" id="btn-source-pick-commit-file" class="filter-btn">Choose File</button>
-                        <button type="button" id="btn-source-load-commits" class="filter-btn">Load Commits</button>
+                <div id="source-pane-commit" class="source-pane source-pane-commit" hidden>
+                    <div class="ht-filebar">
+                        <div class="ht-filebar-text">
+                            <div class="source-field-label" id="source-commit-file-label">Repository file</div>
+                            <div id="source-commit-path" class="ht-filebar-path" title="">No file selected</div>
+                            <div id="source-commit-meta" class="ht-filebar-meta"></div>
+                        </div>
+                        <div class="source-actions" id="source-commit-actions">
+                            <button type="button" id="btn-source-pick-commit-file" class="source-btn">Choose File</button>
+                            <button type="button" id="btn-source-load-commits" class="source-btn">Load Commits</button>
+                        </div>
                     </div>
-                    <div id="source-commit-list" class="source-commit-list"></div>
+                    <div id="source-commit-list" class="ht-commit-list" role="listbox" aria-label="Past versions"></div>
                 </div>
-
-                <div id="source-modal-status" class="source-modal-status" role="status" aria-live="polite" aria-atomic="true"></div>
             </div>
+
             <div class="source-modal-footer">
-                <button type="button" id="btn-source-cancel" class="filter-btn">Cancel</button>
-                <button type="button" id="btn-source-apply" class="filter-btn active">Apply</button>
+                <div id="source-modal-status" class="source-modal-status" role="status" aria-live="polite" aria-atomic="true"></div>
+                <div class="source-modal-footer-acts">
+                    <button type="button" id="btn-source-cancel" class="source-btn">Cancel</button>
+                    <button type="button" id="btn-source-apply" class="source-btn source-btn-primary">Apply</button>
+                </div>
             </div>
         </div>
     </div>

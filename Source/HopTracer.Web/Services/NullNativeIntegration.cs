@@ -9,4 +9,5 @@ namespace HopTracer.Web.Services;
 public class NullNativeIntegration : INativeIntegration
 {
     public Task<string?> PickFileAsync(string title) => Task.FromResult<string?>(null);
+    public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
 }

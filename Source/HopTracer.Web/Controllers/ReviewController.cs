@@ -1,9 +1,7 @@
 using HopTracer.Core.Models;
 using HopTracer.Core.Services;
-using HopTracer.Web.Serialization;
 using HopTracer.Web.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace HopTracer.Web.Controllers;
 
@@ -158,9 +156,16 @@ public class ReviewController : ControllerBase
                 FileNew = request.FileNew ?? "New Version",
                 NodeCount = request.NodeCount,
                 EdgeCount = request.EdgeCount,
+                AddedNodeCount = request.AddedNodeCount,
+                RemovedNodeCount = request.RemovedNodeCount,
+                ModifiedNodeCount = request.ModifiedNodeCount,
+                AddedEdgeCount = request.AddedEdgeCount,
+                RemovedEdgeCount = request.RemovedEdgeCount,
                 RiskSummary = request.RiskSummary ?? new DiffRiskSummary(),
                 TopRisks = request.TopRisks ?? new List<NodeRiskFinding>(),
-                Diagnostics = request.Diagnostics ?? new List<DiffDiagnostic>()
+                Diagnostics = request.Diagnostics ?? new List<DiffDiagnostic>(),
+                ChangedNodes = request.ChangedNodes ?? new List<ForensicNodeChange>(),
+                ChangedEdges = request.ChangedEdges ?? new List<ForensicEdgeChange>()
             };
 
             if (!string.IsNullOrWhiteSpace(request.BaselineName))
@@ -173,15 +178,13 @@ public class ReviewController : ControllerBase
                 }
             }
 
-            var reportJson = JsonSerializer.Serialize(report);
-            report.Signature = ComputeSha256(reportJson);
-            reportJson = JsonSerializer.Serialize(report, AppJsonContext.Default.Options);
+            var bundle = _review.BuildForensicReportFromArtifact(report);
 
             return Ok(new
             {
-                report_json = reportJson,
-                report_html = BuildReportHtml(report),
-                signature = report.Signature
+                report_json = bundle.ReportJson,
+                report_html = bundle.ReportHtml,
+                signature = bundle.Signature
             });
         }
         catch (Exception ex)
@@ -191,45 +194,40 @@ public class ReviewController : ControllerBase
         }
     }
 
+    [HttpPost("report/write")]
+    public IActionResult WriteForensicReport([FromBody] ForensicReportWriteRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Folder) || !Directory.Exists(request.Folder))
+        {
+            return BadRequest(new { error = "A valid destination folder is required." });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ReportJson) || string.IsNullOrWhiteSpace(request.ReportHtml))
+        {
+            return BadRequest(new { error = "Report content is required." });
+        }
+
+        try
+        {
+            var stem = SanitizeFileName(string.IsNullOrWhiteSpace(request.Stem) ? $"hoptracer_forensic_{DateTime.Now:yyyyMMdd_HHmmss}" : request.Stem);
+            var jsonPath = Path.Combine(request.Folder, $"{stem}.json");
+            var htmlPath = Path.Combine(request.Folder, $"{stem}.html");
+            System.IO.File.WriteAllText(jsonPath, request.ReportJson);
+            System.IO.File.WriteAllText(htmlPath, request.ReportHtml);
+            return Ok(new { ok = true, json = jsonPath, html = htmlPath });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to write forensic report to {Folder}", request.Folder);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
     private static string SanitizeFileName(string raw)
     {
         var chars = raw.Where(c => char.IsLetterOrDigit(c) || c is '-' or '_').ToArray();
         var sanitized = new string(chars);
         return string.IsNullOrWhiteSpace(sanitized) ? "baseline" : sanitized;
-    }
-
-    private static string ComputeSha256(string text)
-    {
-        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text));
-        return Convert.ToHexString(bytes);
-    }
-
-    private static string BuildReportHtml(ForensicReportArtifact report)
-    {
-        var diagnostics = string.Join("", report.Diagnostics.Select(d =>
-            $"<li><strong>{System.Net.WebUtility.HtmlEncode(d.Severity.ToUpperInvariant())}</strong> [{System.Net.WebUtility.HtmlEncode(d.Code)}] {System.Net.WebUtility.HtmlEncode(d.Message)}</li>"));
-
-        var risks = string.Join("", report.TopRisks.Select(r =>
-            $"<li>{System.Net.WebUtility.HtmlEncode(r.NodeName)} ({System.Net.WebUtility.HtmlEncode(r.NodeStatus)}) - score {r.RiskScore}</li>"));
-
-        return $"""
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>HopTracer Forensic Report</title></head>
-<body style="font-family:Segoe UI,Arial,sans-serif; padding:24px;">
-<h1>HopTracer Forensic Report</h1>
-<p><strong>Generated:</strong> {report.GeneratedAt:O}</p>
-<p><strong>Files:</strong> {System.Net.WebUtility.HtmlEncode(report.FileOld)} → {System.Net.WebUtility.HtmlEncode(report.FileNew)}</p>
-<p><strong>Nodes:</strong> {report.NodeCount} | <strong>Edges:</strong> {report.EdgeCount}</p>
-<p><strong>Risk:</strong> Critical {report.RiskSummary.CriticalCount}, High {report.RiskSummary.HighCount}, Medium {report.RiskSummary.MediumCount}, Low {report.RiskSummary.LowCount}</p>
-<h2>Diagnostics</h2>
-<ul>{diagnostics}</ul>
-<h2>Top Risks</h2>
-<ul>{risks}</ul>
-<p><strong>Signature:</strong> <code>{report.Signature}</code></p>
-</body>
-</html>
-""";
     }
 }
 
@@ -252,14 +250,29 @@ public class ForensicReportRequest
     public string? BaselineName { get; set; }
 }
 
+public class ForensicReportWriteRequest
+{
+    public string Folder { get; set; } = string.Empty;
+    public string? Stem { get; set; }
+    public string ReportJson { get; set; } = string.Empty;
+    public string ReportHtml { get; set; } = string.Empty;
+}
+
 public class ForensicReportFromDiffRequest
 {
     public string? FileOld { get; set; }
     public string? FileNew { get; set; }
     public int NodeCount { get; set; }
     public int EdgeCount { get; set; }
+    public int AddedNodeCount { get; set; }
+    public int RemovedNodeCount { get; set; }
+    public int ModifiedNodeCount { get; set; }
+    public int AddedEdgeCount { get; set; }
+    public int RemovedEdgeCount { get; set; }
     public DiffRiskSummary? RiskSummary { get; set; }
     public List<NodeRiskFinding>? TopRisks { get; set; }
     public List<DiffDiagnostic>? Diagnostics { get; set; }
+    public List<ForensicNodeChange>? ChangedNodes { get; set; }
+    public List<ForensicEdgeChange>? ChangedEdges { get; set; }
     public string? BaselineName { get; set; }
 }

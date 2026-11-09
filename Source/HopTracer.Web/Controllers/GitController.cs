@@ -102,6 +102,87 @@ public partial class GitController : ControllerBase
         }
     }
 
+    [HttpPost("blame")]
+    public async Task<IActionResult> Blame([FromBody] BlameRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Path))
+        {
+            return BadRequest(new { error = "File path is required" });
+        }
+
+        if (!_fileValidator.TryValidateExistingPath(request.Path, out var validationError, out var normalizedPath))
+        {
+            return BadRequest(new { error = validationError });
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Commit) && !ValidateGitHash(request.Commit))
+        {
+            return BadRequest(new { error = "Invalid commit hash format" });
+        }
+
+        // Desktop default stays modest; FullHistory walks every commit (limit 0).
+        var fullHistory = request.FullHistory == true;
+        var limit = fullHistory
+            ? 0
+            : (request.Limit is > 0 and <= 100 ? request.Limit.Value : 40);
+        var dirPath = Path.GetDirectoryName(normalizedPath) ?? normalizedPath;
+
+        try
+        {
+            var wrapper = new GitWrapper(dirPath, _loggerFactory.CreateLogger<GitWrapper>());
+            if (!wrapper.IsGitRepo())
+            {
+                return Ok(new
+                {
+                    schema = "hoptracer.blame/1",
+                    skipped = true,
+                    reason = "not_git_repository",
+                    components = Array.Empty<object>()
+                });
+            }
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(fullHistory ? 180 : 60));
+
+            var atCommit = string.IsNullOrWhiteSpace(request.Commit) ? null : request.Commit.Trim();
+            var result = await Task.Run(
+                () => new ComponentBlameService(_parser, _converter)
+                    .Blame(wrapper, normalizedPath, limit, atCommit, timeoutCts.Token),
+                timeoutCts.Token);
+
+            return Ok(new
+            {
+                schema = "hoptracer.blame/1",
+                skipped = false,
+                file = result.File,
+                atCommit = result.AtCommit,
+                limit = result.Limit,
+                commitsScanned = result.CommitsScanned,
+                truncated = result.Truncated,
+                components = result.Components.Select(c => new
+                {
+                    id = c.Id,
+                    name = c.Name,
+                    nickname = c.Nickname,
+                    commit = c.Commit,
+                    author = c.Author,
+                    date = c.Date,
+                    message = c.Message,
+                    origin = c.Origin
+                })
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(StatusCodes.Status504GatewayTimeout, new { error = "Blame timed out" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to blame {Path}", normalizedPath);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
     [HttpPost("compare")]
     public async Task<IActionResult> Compare([FromBody] GitCompareRequest request)
     {
@@ -441,6 +522,14 @@ public partial class GitController : ControllerBase
 public class PathRequest
 {
     public string Path { get; set; } = string.Empty;
+}
+
+public class BlameRequest
+{
+    public string Path { get; set; } = string.Empty;
+    public string? Commit { get; set; }
+    public int? Limit { get; set; }
+    public bool? FullHistory { get; set; }
 }
 
 public class GitCompareRequest

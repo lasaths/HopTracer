@@ -3,6 +3,10 @@ using HopTracer.Core.Services;
 
 namespace HopTracer.Web.Services;
 
+/// <summary>
+/// Windows-only host used when HopTracer.Web runs under WinForms/WebView on Windows.
+/// Cross-platform desktop pickers live in MauiNativeIntegration; keep this class Windows-scoped.
+/// </summary>
 public class WindowsNativeIntegration : INativeIntegration
 {
     public Task<string?> PickFileAsync(string title)
@@ -51,6 +55,46 @@ public class WindowsNativeIntegration : INativeIntegration
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
 
+        return tcs.Task;
+    }
+
+    public Task<string?> PickFolderAsync(string title)
+    {
+        var tcs = new TaskCompletionSource<string?>();
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var owner = new Form
+                {
+                    TopMost = true,
+                    Opacity = 0,
+                    ShowInTaskbar = false,
+                    StartPosition = FormStartPosition.CenterScreen,
+                    WindowState = FormWindowState.Minimized
+                };
+                owner.Show();
+
+                using var dialog = new FolderBrowserDialog
+                {
+                    Description = title,
+                    UseDescriptionForTitle = true,
+                    ShowNewFolderButton = true
+                };
+
+                tcs.SetResult(dialog.ShowDialog(owner) == DialogResult.OK
+                    ? dialog.SelectedPath
+                    : null);
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
         return tcs.Task;
     }
 }

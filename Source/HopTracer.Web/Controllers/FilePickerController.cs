@@ -86,4 +86,25 @@ public class FilePickerController : ControllerBase
             return StatusCode(500, new { error = ex.Message });
         }
     }
+
+    [HttpGet("pick-native-folder")]
+    public async Task<IActionResult> PickNativeFolder([FromServices] INativeIntegration nativeIntegration)
+    {
+        try
+        {
+            _logger.LogInformation("Native folder picker requested");
+            var path = await nativeIntegration.PickFolderAsync("Choose folder to save report");
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                return NotFound(new { error = "No folder selected or folder picker unavailable." });
+            }
+
+            return Ok(new { path });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error picking folder");
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
 }

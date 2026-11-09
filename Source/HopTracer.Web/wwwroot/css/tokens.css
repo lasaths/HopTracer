@@ -67,10 +67,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .grow{flex:1;min-width:0}
 /* status: glyph + word, colour on the glyph only */
 .st{display:inline-flex;align-items:center;gap:var(--s4);font-family:var(--f-mono);font-weight:500;font-size:var(--t-label);letter-spacing:var(--t-track);text-transform:uppercase;color:var(--c-text);white-space:nowrap}
-/* buttons */
+/* buttons — sans UI chrome (mono stays for metrics/labels only) */
 .btn{height:var(--btn);padding:0 var(--s16);display:inline-flex;align-items:center;gap:var(--s8);border:1px solid var(--c-line);color:var(--c-text);
-  font-family:var(--f-mono);font-weight:500;font-size:var(--t-label);letter-spacing:var(--t-track);text-transform:uppercase;white-space:nowrap;background:none}
+  font-family:var(--f-sans);font-weight:500;font-size:var(--t-small);letter-spacing:.02em;text-transform:none;white-space:nowrap;background:none}
 .btn.pri{background:var(--c-ultra);border-color:var(--c-ultra);color:var(--c-on-ultra)}
+.btn.active{background:var(--c-surface-hover);border-color:var(--c-text);color:var(--c-text)}
 .btn.band{height:var(--btn-band)}
 #btn-band-diff[hidden]{display:none!important}
 .btn.ghost{border-color:transparent;padding:0 var(--s16);color:var(--c-muted)}
@@ -98,16 +99,20 @@ section.band .trunc b{font-weight:500;color:var(--c-text)}
 section.band #alarm-band-risk{flex:none;font-variant-numeric:tabular-nums}
 section.band .acts{margin-left:auto;display:flex;gap:var(--s8);align-items:center;flex:none}
 main{flex:1;display:flex;min-height:0}
-.filter-band{height:var(--foot);flex:none;display:flex;align-items:stretch;padding:0 var(--m);background:var(--c-void);border-bottom:1px solid var(--c-line);z-index:12;min-width:0;overflow-x:auto}
-.filter-band .tab{width:var(--filter-tab);min-width:var(--filter-tab);padding-right:var(--s16);display:flex;align-items:center;gap:var(--s8);color:var(--c-muted);white-space:nowrap;overflow:hidden}
+.filter-band{height:var(--foot);flex:none;display:flex;align-items:stretch;gap:var(--s8);padding:0 var(--m);background:var(--c-void);border-bottom:1px solid var(--c-line);z-index:12;min-width:0;overflow-x:auto}
+.filter-band .tab{width:auto;min-width:var(--filter-tab);padding:0 var(--s16);display:flex;align-items:center;gap:var(--s8);color:var(--c-muted);white-space:nowrap;overflow:hidden}
 .filter-band .tab:hover{color:var(--c-text)}
 .filter-band .tab span.w{border-bottom:var(--accent) solid transparent;padding:2px 0}
 .filter-band .tab[aria-current]{color:var(--c-text)} .filter-band .tab[aria-current] span.w{border-bottom-color:var(--c-text)}
-footer{height:var(--foot);flex:none;display:flex;align-items:center;gap:var(--s16);padding:0 var(--m);background:var(--c-void);border-top:1px solid var(--c-line);z-index:12;min-width:0}
-footer .footer-risk{display:flex;align-items:center;gap:var(--s16);min-width:0;flex:1 1 auto;overflow:hidden}
-footer .footer-risk-hero{gap:var(--s8);flex:none}
-footer .footer-risk-bar{width:min(180px,20vw);height:8px;flex:none}
-footer .summary-risk-counts{gap:var(--s16);flex:none;flex-wrap:nowrap}
+footer{min-height:var(--foot);height:auto;flex:none;display:flex;align-items:center;gap:var(--s16);padding:14px var(--m) 18px;background:var(--c-void);border-top:1px solid var(--c-line);z-index:12;min-width:0}
+footer .footer-risk{display:flex;align-items:center;gap:var(--s24);min-width:0;flex:1 1 auto;overflow:hidden}
+footer .footer-risk-hero{gap:var(--s8);flex:none;padding-bottom:4px;align-items:baseline}
+footer .footer-risk-hero .vl{line-height:1;padding-bottom:2px}
+footer .footer-risk-hero .label{padding-bottom:2px}
+footer .footer-risk-split{display:flex;align-items:stretch;gap:8px;flex:0 1 auto;min-width:0;max-width:560px}
+footer .risk-band{display:flex;flex-direction:column;gap:6px;min-width:max-content;flex-shrink:0}
+footer .risk-band .st{white-space:nowrap;line-height:16px}
+footer .risk-band i{display:block;height:8px;width:100%;min-width:24px;flex:none}
 footer .right{margin-left:auto;display:flex;align-items:center;gap:var(--s8);flex:none}
 footer .btn.ghost:hover{color:var(--c-text)}
 .canvas-tags{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2;clip-path:inset(var(--tag-clip-top) 0 0 0)}

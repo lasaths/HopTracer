@@ -12,6 +12,8 @@ namespace HopTracer.Web.Serialization;
 [JsonSerializable(typeof(DiffRiskSummary))]
 [JsonSerializable(typeof(DiffStageTiming))]
 [JsonSerializable(typeof(ForensicReportArtifact))]
+[JsonSerializable(typeof(ForensicNodeChange))]
+[JsonSerializable(typeof(ForensicEdgeChange))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

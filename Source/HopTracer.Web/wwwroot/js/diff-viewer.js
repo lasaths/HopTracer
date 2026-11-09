@@ -75,11 +75,21 @@
             sourceModal: {
                 side: 'old',
                 mode: 'file',
+                variant: 'source', // source | history
+                heading: null,
                 filePath: '',
                 commitPath: '',
                 commits: [],
                 selectedCommit: null,
                 commitAvailable: null
+            },
+            blame: {
+                status: 'idle', // idle | loading | ready | skipped | error
+                show: false,
+                byId: {},
+                authorColors: {},
+                truncated: false,
+                error: null
             }
         };
 
@@ -110,12 +120,15 @@
         const btnDetailsCollapse = document.getElementById('btn-details-collapse');
         const btnDetailsExpand = document.getElementById('btn-details-expand');
         const sourceModal = document.getElementById('source-modal');
+        const sourceModalPanel = sourceModal ? sourceModal.querySelector('.source-modal') : null;
         const scriptModal = document.getElementById('script-modal');
         const sourceModalTitle = document.getElementById('source-modal-title');
+        const sourceModalSubtitle = document.getElementById('source-modal-subtitle');
         const sourceModalStatus = document.getElementById('source-modal-status');
         const scriptModalTitle = document.getElementById('script-modal-title');
         const scriptModalSubtitle = document.getElementById('script-modal-subtitle');
         const scriptModalBody = document.getElementById('script-modal-body');
+        const sourceModeRow = document.getElementById('source-mode-row');
         const sourceModeFileBtn = document.getElementById('source-mode-file');
         const sourceModeCommitBtn = document.getElementById('source-mode-commit');
         const sourcePaneFile = document.getElementById('source-pane-file');
@@ -124,6 +137,8 @@
         const sourceFileMeta = document.getElementById('source-file-meta');
         const sourceCommitPath = document.getElementById('source-commit-path');
         const sourceCommitMeta = document.getElementById('source-commit-meta');
+        const sourceCommitFileLabel = document.getElementById('source-commit-file-label');
+        const sourceCommitActions = document.getElementById('source-commit-actions');
         const sourceCommitList = document.getElementById('source-commit-list');
         const btnSourcePickFile = document.getElementById('btn-source-pick-file');
         const btnSourcePickCommitFile = document.getElementById('btn-source-pick-commit-file');
@@ -197,6 +212,8 @@
                 updateMetadata();
                 renderComponentResultsList();
                 requestAnimationFrame(loop);
+                // Diff first; blame walks history and can take a while.
+                scheduleBackgroundBlame();
             } catch (err) {
                 console.error('HopTracer viewer initialization failed:', err);
                 showPerf(`Viewer initialization failed: ${err && err.message ? err.message : err}`);
@@ -763,7 +780,7 @@
             spotlightReturnFocus = validFocus || searchLauncher;
             state.spotlightOpen = true;
             if (mainContainer) mainContainer.setAttribute('inert', '');
-            if (sourceModal && sourceModal.classList.contains('open')) sourceModal.setAttribute('inert', '');
+            if (sourceModal && sourceModal.classList.contains('visible')) sourceModal.setAttribute('inert', '');
             spotlightBackdrop.classList.add('open');
             spotlightBackdrop.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
@@ -1128,6 +1145,10 @@
                 riskValue.className = 'mono';
                 riskValue.textContent = String(roundedRisk);
                 riskCol.appendChild(riskValue);
+                const reasonBits = Array.isArray(node.riskReasons) ? node.riskReasons.filter(Boolean) : [];
+                riskCol.title = reasonBits.length
+                    ? `Risk ${roundedRisk}/100 — ${reasonBits.join('; ')}`
+                    : `Risk ${roundedRisk}/100 — disruption score (see footer)`;
 
                 item.appendChild(glyphCol);
                 item.appendChild(content);
@@ -1240,35 +1261,7 @@
         }
 
         function renderAlarmBand() {
-            const band = document.getElementById('alarm-band');
-            if (!band || alarmBandSettled) return;
-
-            const node = getHighestRiskChange();
-            if (!node) {
-                band.hidden = true;
-                alarmBandSettled = true;
-                return;
-            }
-
-            const nameEl = document.getElementById('alarm-band-name');
-            const reasonEl = document.getElementById('alarm-band-reason');
-            const riskEl = document.getElementById('alarm-band-risk');
-            const diffBtn = document.getElementById('btn-band-diff');
-            const displayName = String(node.nickname || node.name || 'Unnamed Component');
-            const reason = getRiskReason(node) || 'No changes detected';
-            const score = getNodeRiskScore(node);
-
-            band.dataset.nodeId = String(node.id);
-            if (nameEl) nameEl.textContent = displayName;
-            if (reasonEl) reasonEl.textContent = reason ? ` · ${reason}` : '';
-            if (riskEl) riskEl.textContent = `RISK ${score}`;
-            if (diffBtn) diffBtn.hidden = !isScriptComponent(node);
-
-            band.hidden = false;
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => band.classList.add('is-in'));
-            });
-            resize();
+            // High-risk banner removed — risk lives in the change queue + footer.
             alarmBandSettled = true;
         }
 
@@ -1470,6 +1463,7 @@
         }
 
         function setScriptTabVisibility(visible, count = 0) {
+            detailsTabScript.hidden = !visible;
             detailsTabScript.style.display = visible ? '' : 'none';
             detailsTabScript.textContent = count > 1 ? `Script (${count})` : 'Script';
 
@@ -1743,13 +1737,232 @@
             };
         }
 
+        function resolveBlameTarget() {
+            // Blame the graph the canvas shows: prefer new side, then old.
+            // When that side is a commit snapshot, pass its hash so blame does not use a dirty/newer working tree.
+            const preferNew = !!(state.source.new.path);
+            const side = preferNew ? state.source.new : state.source.old;
+            if (!side || !side.path) return null;
+            const commit = side.type === 'commit' && side.hash ? String(side.hash) : null;
+            return { path: side.path, commit };
+        }
+
+        function authorColor(author) {
+            const key = String(author || 'unknown');
+            if (state.blame.authorColors[key]) return state.blame.authorColors[key];
+            let hash = 0;
+            for (let i = 0; i < key.length; i++) hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
+            const hue = Math.abs(hash) % 360;
+            const color = `hsl(${hue} 55% 55%)`;
+            state.blame.authorColors[key] = color;
+            return color;
+        }
+
+        function getBlameForNode(node) {
+            if (!node || !state.blame.byId) return null;
+            const id = String(node.id || '');
+            return state.blame.byId[id] || state.blame.byId[id.toLowerCase()] || null;
+        }
+
+        function updateBlameButton() {
+            const btn = document.getElementById('btn-blame');
+            if (!btn) return;
+            const b = state.blame;
+            if (b.status === 'idle' || b.status === 'skipped') {
+                btn.hidden = true;
+                btn.disabled = true;
+                btn.classList.remove('active');
+                return;
+            }
+            btn.hidden = false;
+            if (b.status === 'loading') {
+                btn.disabled = true;
+                btn.textContent = 'Blame…';
+                btn.title = 'Loading component blame in the background';
+                btn.classList.remove('active');
+                return;
+            }
+            if (b.status === 'error') {
+                btn.disabled = true;
+                btn.textContent = 'Blame failed';
+                btn.title = b.error || 'Blame failed';
+                btn.classList.remove('active');
+                return;
+            }
+            const authors = new Set(Object.values(b.byId).map(c => c.author).filter(Boolean));
+            btn.disabled = false;
+            btn.textContent = `Blame · ${authors.size}`;
+            btn.title = b.truncated
+                ? 'Toggle author colors (history truncated — raise limit in CLI for deeper blame)'
+                : 'Toggle author colors on the canvas';
+            btn.classList.toggle('active', !!b.show);
+        }
+
+        function scheduleBackgroundBlame() {
+            const target = resolveBlameTarget();
+            if (!target) {
+                state.blame.status = 'skipped';
+                updateBlameButton();
+                return;
+            }
+
+            state.blame.status = 'loading';
+            updateBlameButton();
+
+            // Yield to the first paint / interaction frame before starting the network walk.
+            window.setTimeout(() => {
+                void loadBackgroundBlame({ ...target, fullHistory: false });
+            }, 0);
+        }
+
+        async function loadBackgroundBlame(target) {
+            const path = target.path;
+            const commit = target.commit || null;
+            const controller = typeof AbortController === 'function' ? new AbortController() : null;
+            const timeoutMs = target.fullHistory ? 180000 : 60000;
+            const timer = controller
+                ? window.setTimeout(() => controller.abort(), timeoutMs)
+                : null;
+
+            try {
+                const checkRes = await authFetch('/git/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path }),
+                    signal: controller ? controller.signal : undefined
+                });
+                if (!checkRes.ok) {
+                    state.blame.status = 'skipped';
+                    updateBlameButton();
+                    return;
+                }
+                const check = await checkRes.json().catch(() => ({}));
+                if (!check.is_repo) {
+                    state.blame.status = 'skipped';
+                    updateBlameButton();
+                    return;
+                }
+
+                const body = {
+                    path,
+                    limit: target.fullHistory ? 0 : 40,
+                    fullHistory: !!target.fullHistory
+                };
+                if (commit) body.commit = commit;
+
+                const res = await authFetch('/git/blame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    signal: controller ? controller.signal : undefined
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    state.blame.status = 'error';
+                    state.blame.error = err.error || (res.status === 504 ? 'Blame timed out' : `Blame failed (${res.status})`);
+                    updateBlameButton();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (data.skipped) {
+                    state.blame.status = 'skipped';
+                    updateBlameButton();
+                    return;
+                }
+
+                const byId = {};
+                const components = Array.isArray(data.components) ? data.components : [];
+                components.forEach(c => {
+                    if (!c || !c.id) return;
+                    byId[String(c.id)] = c;
+                    authorColor(c.author);
+                });
+
+                state.blame.byId = byId;
+                state.blame.truncated = !!data.truncated;
+                state.blame.status = 'ready';
+                state.blame.show = false; // colours off until the user toggles Blame
+                updateBlameButton();
+                scheduleDraw();
+
+                if (state.selected) {
+                    const selectedNode = state.nodes.find(n => n.id === state.selected);
+                    if (selectedNode) updateDetailsPanel(selectedNode);
+                }
+            } catch (err) {
+                const aborted = err && (err.name === 'AbortError' || /aborted/i.test(String(err.message || '')));
+                state.blame.status = 'error';
+                state.blame.error = aborted ? 'Blame timed out' : (err && err.message ? err.message : 'Blame failed');
+                updateBlameButton();
+            } finally {
+                if (timer) window.clearTimeout(timer);
+            }
+        }
+
+        async function pickNativeFolderPath() {
+            try {
+                const response = await authFetch('/api/filepicker/pick-native-folder');
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    return { path: null, error: data.error || response.statusText };
+                }
+                const data = await response.json().catch(() => ({}));
+                return { path: data.path || null, error: null };
+            } catch (err) {
+                return { path: null, error: err && err.message ? err.message : String(err) };
+            }
+        }
+
+        function fileBaseName(path) {
+            const value = String(path || '');
+            const idx = Math.max(value.lastIndexOf('\\'), value.lastIndexOf('/'));
+            return idx >= 0 ? value.slice(idx + 1) : value;
+        }
+
+        function openTimeMachine() {
+            const path = state.source.new.path || state.source.old.path;
+            if (!path) {
+                alert('History needs a file on disk (Browse / git path). Dropped-only files have no git history.');
+                return;
+            }
+            // Past commit becomes OLD; keep current file as NEW.
+            if (state.source.new.path) {
+                state.source.new = { type: 'file', path: state.source.new.path, hash: null };
+            }
+            openSourceModal('old', {
+                mode: 'commit',
+                commitPath: path,
+                variant: 'history',
+                heading: 'History'
+            });
+            void (async () => {
+                const { commits, error } = await fetchCommitsForPath(path);
+                if (!sourceModal || !sourceModal.classList.contains('visible')) return;
+                state.sourceModal.mode = 'commit';
+                state.sourceModal.variant = 'history';
+                state.sourceModal.heading = 'History';
+                state.sourceModal.commitPath = path;
+                state.sourceModal.commits = commits;
+                state.sourceModal.commitAvailable = commits.length > 0;
+                state.sourceModal.selectedCommit = commits.length ? (commits[0].hash || commits[0].Hash) : null;
+                renderSourceModal();
+                setSourceModalStatus(
+                    error || (commits.length
+                        ? `${commits.length} versions · pick one to compare against current`
+                        : 'No git history for this file.'),
+                    error ? 'error' : (commits.length ? 'info' : 'warn')
+                );
+            })();
+        }
+
         function setSourceModalStatus(message = '', tone = 'muted') {
             if (!sourceModalStatus) return;
             const colors = {
-                muted: 'var(--text-secondary)',
-                info: 'var(--accent-color)',
-                warn: '#ffb74d',
-                error: '#ff6b6b'
+                muted: 'var(--c-muted, #8A8C91)',
+                info: 'var(--c-text, #DADADD)',
+                warn: '#F0963A',
+                error: '#FF5A5A'
             };
             sourceModalStatus.textContent = message;
             sourceModalStatus.style.color = colors[tone] || colors.muted;
@@ -1762,54 +1975,72 @@
 
             if (!commits.length) {
                 const emptyNode = document.createElement('div');
-                emptyNode.style.padding = '12px';
-                emptyNode.style.color = 'var(--text-secondary)';
-                emptyNode.style.fontSize = '11px';
-                emptyNode.textContent = 'No commits loaded.';
-                sourceCommitList.replaceChildren(emptyNode);
+                emptyNode.className = 'ht-commit-empty';
+                if (state.sourceModal.commitAvailable === false) {
+                    emptyNode.textContent = 'No git history for this file.';
+                } else if (state.sourceModal.variant === 'history') {
+                    emptyNode.textContent = 'Loading versions…';
+                } else {
+                    emptyNode.textContent = 'No commits loaded.';
+                }
+                sourceCommitList.appendChild(emptyNode);
                 return;
             }
 
             const fragment = document.createDocumentFragment();
             commits.forEach(c => {
-                const hash = String(c.hash || '');
+                const hash = String(c.hash || c.Hash || '');
+                const shortHash = hash.substring(0, 7) || '-------';
                 const author = String(c.author || c.Author || 'Unknown');
                 const age = String(c.date || c.Date || 'Unknown age');
                 const sizeBytes = c.fileSizeBytes ?? c.FileSizeBytes ?? 0;
                 const sizeLabel = formatBytes(sizeBytes);
+                const message = String(c.message || c.Message || '(no message)');
+                const selected = state.sourceModal.selectedCommit === hash;
+
                 const row = document.createElement('button');
                 row.type = 'button';
-                row.className = 'source-commit-row';
+                row.className = 'ht-commit-row' + (selected ? ' is-selected' : '');
                 row.dataset.commitHash = hash;
-                row.setAttribute('aria-pressed', state.sourceModal.selectedCommit === hash ? 'true' : 'false');
-                if (state.sourceModal.selectedCommit === hash) {
-                    row.classList.add('selected');
-                }
-                row.title = `Blame: ${author} | Age: ${age} | Size: ${sizeLabel}`;
+                row.setAttribute('role', 'option');
+                row.setAttribute('aria-selected', selected ? 'true' : 'false');
+                row.title = `${shortHash} · ${author} · ${age} · ${sizeLabel}`;
 
-                const hashNode = document.createElement('div');
-                hashNode.className = 'source-commit-hash';
-                hashNode.textContent = hash.substring(0, 7);
+                const hashNode = document.createElement('span');
+                hashNode.className = 'ht-commit-hash';
+                hashNode.textContent = shortHash;
 
-                const mainNode = document.createElement('div');
-                mainNode.className = 'source-commit-main';
+                const body = document.createElement('span');
+                body.className = 'ht-commit-body';
 
-                const messageNode = document.createElement('div');
-                messageNode.className = 'source-commit-msg';
-                messageNode.textContent = c.message || '(no message)';
-                messageNode.title = c.message || '(no message)';
+                const messageNode = document.createElement('span');
+                messageNode.className = 'ht-commit-msg';
+                messageNode.textContent = message;
+                messageNode.title = message;
 
-                const metaNode = document.createElement('div');
-                metaNode.className = 'source-commit-meta';
-                metaNode.textContent = `Blame: ${author} · Age: ${age} · Size: ${sizeLabel}`;
-                metaNode.title = `Blame: ${author} | Age: ${age} | Size: ${sizeLabel}`;
+                const meta = document.createElement('span');
+                meta.className = 'ht-commit-meta';
 
-                mainNode.append(messageNode, metaNode);
-                row.append(hashNode, mainNode);
+                const authorChip = document.createElement('span');
+                authorChip.className = 'ht-commit-chip';
+                authorChip.textContent = author;
+                authorChip.title = author;
+
+                const ageChip = document.createElement('span');
+                ageChip.className = 'ht-commit-chip';
+                ageChip.textContent = age;
+
+                const sizeChip = document.createElement('span');
+                sizeChip.className = 'ht-commit-chip';
+                sizeChip.textContent = sizeLabel;
+
+                meta.append(authorChip, ageChip, sizeChip);
+                body.append(messageNode, meta);
+                row.append(hashNode, body);
                 row.addEventListener('click', () => {
                     state.sourceModal.selectedCommit = hash;
                     renderSourceCommitList();
-                    setSourceModalStatus(`Selected commit ${hash.substring(0, 7)}`, 'info');
+                    setSourceModalStatus(`Selected ${shortHash}`, 'info');
                 });
                 fragment.appendChild(row);
             });
@@ -1818,59 +2049,101 @@
 
         function renderSourceModal() {
             const m = state.sourceModal;
+            const isHistory = m.variant === 'history';
             const canUseCommit = m.commitAvailable !== false;
-            if (!canUseCommit && m.mode === 'commit') {
+            if (!canUseCommit && m.mode === 'commit' && !isHistory) {
                 m.mode = 'file';
             }
-            const isCommit = m.mode === 'commit';
+            const isCommit = m.mode === 'commit' || isHistory;
             const isOld = m.side === 'old';
 
+            if (sourceModalPanel) {
+                sourceModalPanel.classList.toggle('is-history', isHistory);
+            }
+
             if (sourceModalTitle) {
-                sourceModalTitle.textContent = isOld ? 'Change Left Source' : 'Change Right Source';
+                sourceModalTitle.textContent = m.heading
+                    || (isOld ? 'Change Left Source' : 'Change Right Source');
+            }
+
+            if (sourceModalSubtitle) {
+                if (isHistory && m.commitPath) {
+                    sourceModalSubtitle.hidden = false;
+                    sourceModalSubtitle.textContent = fileBaseName(m.commitPath);
+                    sourceModalSubtitle.title = m.commitPath;
+                } else {
+                    sourceModalSubtitle.hidden = true;
+                    sourceModalSubtitle.textContent = '';
+                }
+            }
+
+            if (sourceModeRow) {
+                sourceModeRow.hidden = isHistory;
             }
 
             if (sourceModeFileBtn) sourceModeFileBtn.classList.toggle('active', !isCommit);
             if (sourceModeCommitBtn) {
-                sourceModeCommitBtn.style.display = canUseCommit ? '' : 'none';
+                sourceModeCommitBtn.hidden = !canUseCommit;
                 sourceModeCommitBtn.classList.toggle('active', isCommit);
                 sourceModeCommitBtn.disabled = !isOld;
             }
 
-            if (sourcePaneFile) sourcePaneFile.style.display = isCommit ? 'none' : '';
-            if (sourcePaneCommit) sourcePaneCommit.style.display = isCommit ? '' : 'none';
+            if (sourcePaneFile) sourcePaneFile.hidden = isCommit;
+            if (sourcePaneCommit) sourcePaneCommit.hidden = !isCommit;
+
+            if (sourceCommitFileLabel) {
+                sourceCommitFileLabel.textContent = isHistory ? 'Comparing against current' : 'Repository file';
+            }
+
+            if (sourceCommitActions) {
+                sourceCommitActions.hidden = isHistory;
+            }
+
+            if (btnSourceApply) {
+                btnSourceApply.textContent = isHistory ? 'Compare' : 'Apply';
+            }
 
             if (sourceFilePath) sourceFilePath.textContent = m.filePath || 'No file selected';
-            if (sourceCommitPath) sourceCommitPath.textContent = m.commitPath || 'No file selected';
+            if (sourceCommitPath) {
+                const path = m.commitPath || '';
+                sourceCommitPath.textContent = path || 'No file selected';
+                sourceCommitPath.title = path;
+            }
             updateSourcePathMeta(sourceFileMeta, m.filePath);
             updateSourcePathMeta(sourceCommitMeta, m.commitPath);
 
             renderSourceCommitList();
         }
 
-        function openSourceModal(side) {
+        function openSourceModal(side, opts = {}) {
+            const forceMode = opts.mode === 'commit' || opts.mode === 'file' ? opts.mode : null;
             state.sourceModal.side = side;
-            state.sourceModal.mode = state.source[side].type === 'commit' ? 'commit' : 'file';
+            state.sourceModal.mode = forceMode || (state.source[side].type === 'commit' ? 'commit' : 'file');
+            state.sourceModal.variant = opts.variant === 'history' ? 'history' : 'source';
+            state.sourceModal.heading = opts.heading || null;
             state.sourceModal.filePath = state.source[side].path || '';
-            state.sourceModal.commitPath = state.source[side].path || state.source.old.path || state.source.new.path || '';
+            state.sourceModal.commitPath = opts.commitPath || state.source[side].path || state.source.old.path || state.source.new.path || '';
             state.sourceModal.commits = [];
             state.sourceModal.selectedCommit = state.source[side].hash || null;
             state.sourceModal.commitAvailable = null;
 
             renderSourceModal();
             setSourceModalStatus('', 'muted');
-            if (sourceModal) sourceModal.classList.add('open');
+            if (sourceModal) sourceModal.classList.add('visible');
 
             if (state.sourceModal.commitPath) {
                 (async () => {
                     const { commits } = await fetchCommitsForPath(state.sourceModal.commitPath, { silent: true });
-                    if (!sourceModal || !sourceModal.classList.contains('open') || state.sourceModal.side !== side) return;
+                    if (!sourceModal || !sourceModal.classList.contains('visible') || state.sourceModal.side !== side) return;
                     state.sourceModal.commitAvailable = commits.length > 0;
                     if (!state.sourceModal.commitAvailable) {
-                        state.sourceModal.mode = 'file';
+                        if (!forceMode && state.sourceModal.variant !== 'history') state.sourceModal.mode = 'file';
                         setSourceModalStatus('No commit history found for this file.', 'warn');
-                    } else if (state.sourceModal.mode === 'commit' && !state.sourceModal.selectedCommit && commits.length) {
+                    } else if (state.sourceModal.mode === 'commit' && commits.length) {
                         state.sourceModal.commits = commits;
-                        state.sourceModal.selectedCommit = commits[0].hash;
+                        if (!state.sourceModal.selectedCommit) {
+                            state.sourceModal.selectedCommit = commits[0].hash || commits[0].Hash;
+                        }
                     }
                     renderSourceModal();
                 })();
@@ -1878,7 +2151,7 @@
         }
 
         function closeSourceModal() {
-            if (sourceModal) sourceModal.classList.remove('open');
+            if (sourceModal) sourceModal.classList.remove('visible');
         }
 
         async function loadSourceModalCommits() {
@@ -2443,18 +2716,85 @@
             }
         }
 
-        async function exportForensicReport() {
+        function buildForensicExportPayload() {
             const meta = GRAPH_DATA.meta || {};
-            const payload = {
+            const labelOf = (node) => String(node?.nickname || node?.name || node?.id || 'Unknown');
+            const nodeById = new Map(state.nodes.map(n => [n.id, n]));
+
+            const upstream = new Map();
+            const downstream = new Map();
+            const addNeighbor = (map, id, neighbor, edgeStatus) => {
+                if (!map.has(id)) map.set(id, new Set());
+                const label = edgeStatus === 'same' ? neighbor : `${neighbor} [${edgeStatus}]`;
+                map.get(id).add(label);
+            };
+
+            for (const edge of state.edges) {
+                const sourceLabel = labelOf(edge.sourceNode || nodeById.get(edge.source));
+                const targetLabel = labelOf(edge.targetNode || nodeById.get(edge.target));
+                const status = String(edge.status || 'same').toLowerCase();
+                addNeighbor(downstream, edge.source, targetLabel, status);
+                addNeighbor(upstream, edge.target, sourceLabel, status);
+            }
+
+            const changedNodes = state.nodes
+                .filter(n => n.status && n.status !== 'same')
+                .sort((a, b) => (Number(b.riskScore || 0) - Number(a.riskScore || 0))
+                    || String(a.status).localeCompare(String(b.status))
+                    || String(a.id).localeCompare(String(b.id)))
+                .slice(0, 150)
+                .map(n => ({
+                    nodeId: n.id,
+                    label: labelOf(n),
+                    componentName: n.name || '',
+                    status: n.status,
+                    riskScore: Number(n.riskScore || 0),
+                    reasons: Array.isArray(n.riskReasons) ? n.riskReasons : [],
+                    inAdded: Number(n.inAdded || 0),
+                    inRemoved: Number(n.inRemoved || 0),
+                    outAdded: Number(n.outAdded || 0),
+                    outRemoved: Number(n.outRemoved || 0),
+                    upstream: [...(upstream.get(n.id) || [])].sort(),
+                    downstream: [...(downstream.get(n.id) || [])].sort()
+                }));
+
+            const changedEdges = state.edges
+                .filter(e => e.status && e.status !== 'same')
+                .sort((a, b) => String(a.status).localeCompare(String(b.status))
+                    || String(a.source).localeCompare(String(b.source))
+                    || String(a.target).localeCompare(String(b.target)))
+                .slice(0, 200)
+                .map(e => ({
+                    status: e.status,
+                    source: e.source,
+                    sourcePort: e.sourcePort || e.source_port || '',
+                    sourceLabel: labelOf(e.sourceNode || nodeById.get(e.source)),
+                    target: e.target,
+                    targetPort: e.targetPort || e.target_port || '',
+                    targetLabel: labelOf(e.targetNode || nodeById.get(e.target))
+                }));
+
+            return {
                 fileOld: meta.fileOld || meta.FileOld || null,
                 fileNew: meta.fileNew || meta.FileNew || null,
                 nodeCount: state.nodes.length,
                 edgeCount: state.edges.length,
+                addedNodeCount: state.nodes.filter(n => n.status === 'added').length,
+                removedNodeCount: state.nodes.filter(n => n.status === 'removed').length,
+                modifiedNodeCount: state.nodes.filter(n => n.status === 'modified').length,
+                addedEdgeCount: state.edges.filter(e => e.status === 'added').length,
+                removedEdgeCount: state.edges.filter(e => e.status === 'removed').length,
                 diagnostics: meta.diagnostics || meta.Diagnostics || [],
                 topRisks: meta.topRisks || meta.TopRisks || [],
                 riskSummary: meta.riskSummary || meta.RiskSummary || null,
+                changedNodes,
+                changedEdges,
                 baselineName: meta.baselineName || meta.BaselineName || null
             };
+        }
+
+        async function exportForensicReport() {
+            const payload = buildForensicExportPayload();
 
             try {
                 const res = await authFetch('/review/report/from_diff', {
@@ -2470,8 +2810,33 @@
                 }
 
                 const stemBase = `hoptracer_forensic_${Date.now()}`;
-                downloadTextFile(`${stemBase}.json`, data.report_json || '{}', 'application/json;charset=utf-8');
-                downloadTextFile(`${stemBase}.html`, data.report_html || '<html><body>Empty report</body></html>', 'text/html;charset=utf-8');
+                const reportJson = data.report_json || '{}';
+                const reportHtml = data.report_html || '<html><body>Empty report</body></html>';
+
+                // Prefer a native folder (desktop). If unavailable (browser / future host), fall back to downloads.
+                const folderPick = await pickNativeFolderPath();
+                if (folderPick.path) {
+                    const writeRes = await authFetch('/review/report/write', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            folder: folderPick.path,
+                            stem: stemBase,
+                            reportJson,
+                            reportHtml
+                        })
+                    });
+                    const writeData = await writeRes.json().catch(() => ({}));
+                    if (!writeRes.ok) {
+                        alert(`Could not save report: ${writeData.error || writeRes.statusText}`);
+                        return;
+                    }
+                    alert(`Report saved:\n${writeData.html}\n${writeData.json}`);
+                    return;
+                }
+
+                downloadTextFile(`${stemBase}.json`, reportJson, 'application/json;charset=utf-8');
+                downloadTextFile(`${stemBase}.html`, reportHtml, 'text/html;charset=utf-8');
             } catch (err) {
                 alert(`Forensic export failed: ${err}`);
             }
@@ -3639,6 +4004,29 @@
         }
 
         function setupEventListeners() {
+            const blameBtn = document.getElementById('btn-blame');
+            if (blameBtn) {
+                blameBtn.addEventListener('click', (e) => {
+                    if (e.shiftKey) {
+                        const target = resolveBlameTarget();
+                        if (!target) return;
+                        state.blame.status = 'loading';
+                        updateBlameButton();
+                        void loadBackgroundBlame({ ...target, fullHistory: true });
+                        return;
+                    }
+                    if (state.blame.status !== 'ready') return;
+                    state.blame.show = !state.blame.show;
+                    updateBlameButton();
+                    scheduleDraw();
+                });
+            }
+
+            const historyBtn = document.getElementById('btn-history');
+            if (historyBtn) {
+                historyBtn.addEventListener('click', () => openTimeMachine());
+            }
+
             window.addEventListener('resize', () => {
                 if (enforceResponsivePanelState()) {
                     applyPanelVisibility();
@@ -3742,8 +4130,10 @@
                             hideViewerToast({ restoreFocus: true });
                             break;
                         }
-                        if (state.selected) {
+                        if (state.selected || state.filterStatus !== 'all') {
+                            e.preventDefault();
                             state.selected = null;
+                            setStatusFilter('all');
                             updateDetailsPanel(null);
                             renderComponentResultsList();
                             syncTagModeLabel();
@@ -3865,14 +4255,6 @@
                     if (tab) tab.focus();
                 });
             }
-            const btnBandInspect = document.getElementById('btn-band-inspect');
-            const btnBandDiff = document.getElementById('btn-band-diff');
-            if (btnBandInspect) {
-                btnBandInspect.addEventListener('click', () => inspectAlarmBandNode());
-            }
-            if (btnBandDiff) {
-                btnBandDiff.addEventListener('click', () => openAlarmBandScriptDiff());
-            }
             syncStatusFilterButtons();
             renderComponentResultsList();
 
@@ -3993,12 +4375,6 @@
             const exportBtn = document.getElementById('btn-export-forensic');
             if (exportBtn) exportBtn.addEventListener('click', exportForensicReport);
 
-            const saveBaselineBtn = document.getElementById('btn-save-baseline');
-            if (saveBaselineBtn) saveBaselineBtn.addEventListener('click', saveBaselinePrompt);
-
-            const checkBaselineBtn = document.getElementById('btn-check-baseline');
-            if (checkBaselineBtn) checkBaselineBtn.addEventListener('click', checkBaselinePrompt);
-
             document.getElementById('btn-fit').addEventListener('click', fitView);
             document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
             document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
@@ -4009,10 +4385,12 @@
                     const show = miniContainer.hidden;
                     miniContainer.hidden = !show;
                     btnMinimap.setAttribute('aria-pressed', show ? 'true' : 'false');
+                    if (show) resizeMinimapBitmap();
                     refreshCanvasTagOverlayRects();
                     scheduleDraw();
                 });
             }
+            window.addEventListener('mouseup', () => { state.minimapDragging = false; });
 
             if (btnSidebarCollapse) btnSidebarCollapse.addEventListener('click', toggleSidebar);
             if (btnSidebarExpand) btnSidebarExpand.addEventListener('click', toggleSidebar);
@@ -4353,9 +4731,7 @@
             canvas.style.width = clientWidth + 'px';
             canvas.style.height = clientHeight + 'px';
 
-            const miniContainer = document.getElementById('minimap-container');
-            minimap.width = miniContainer.clientWidth;
-            minimap.height = miniContainer.clientHeight;
+            resizeMinimapBitmap();
 
             refreshCanvasTagOverlayRects();
             if (state.activeGraphTabId && state.activeGraphTabId !== ROOT_GRAPH_TAB_ID) {
@@ -4363,6 +4739,16 @@
             } else {
                 scheduleDraw();
             }
+        }
+
+        function resizeMinimapBitmap() {
+            // Fixed CSS size — never read clientWidth while the minimap is [hidden] (that was 0×0).
+            const cssW = 200;
+            const cssH = 128;
+            if (minimap.width !== cssW) minimap.width = cssW;
+            if (minimap.height !== cssH) minimap.height = cssH;
+            minimap.style.width = cssW + 'px';
+            minimap.style.height = cssH + 'px';
         }
 
         function getFitOverlayInsets(canvasW, canvasH) {
@@ -4376,14 +4762,11 @@
             for (let i = 0; i < canvasTagOverlayRects.length; i++) {
                 const r = canvasTagOverlayRects[i];
                 if (!r || r.w <= 0 || r.h <= 0) continue;
-                // Lift / drop the whole graph so nodes and their tags sit in the
-                // clear band between the top chrome and the minimap / zoom stack.
-                // Do not also consume the minimap width as a left inset — that
-                // shrinks fit scale and hides tags.
-                if (r.kind === 'strip' || r.kind === 'graph-tabs') {
+                // Clear band under graph tabs (top) and above bottom chrome (sliders / zoom / minimap).
+                if (r.kind === 'graph-tabs') {
                     top = Math.max(top, r.y + r.h + tagRoom);
                 }
-                if (r.kind === 'zoom' || r.kind === 'minimap') {
+                if (r.kind === 'strip' || r.kind === 'zoom' || r.kind === 'minimap') {
                     right = Math.max(right, canvasW - r.x + edge);
                     bottom = Math.max(bottom, canvasH - r.y + tagRoom);
                 }
@@ -4628,7 +5011,7 @@
                 });
             };
             const main = document.getElementById('main-view');
-            add(main && main.querySelector('.strip'), 'strip');
+            add(document.querySelector('.view-controls-row'), 'strip');
             add(graphTabsBar, 'graph-tabs', true);
             add(main && main.querySelector('.overlay-controls'), 'zoom');
             const mini = document.getElementById('minimap-container');
@@ -4641,7 +5024,8 @@
             let top = 0;
             for (let i = 0; i < canvasTagOverlayRects.length; i++) {
                 const r = canvasTagOverlayRects[i];
-                if (r.kind === 'strip' || r.kind === 'graph-tabs') {
+                // Strip lives at the bottom now — only graph tabs clip tags from above.
+                if (r.kind === 'graph-tabs') {
                     const bottom = r.y + r.h;
                     if (bottom > top) top = bottom;
                 }
@@ -5491,14 +5875,10 @@
                 ctx.lineWidth = (baseWidth * widthMultiplier / state.view.scale) * wireStyle.widthFactor;
                 ctx.globalAlpha = wireAlpha;
 
-                // Dash pattern for removed wires (screen px, so divide by scale)
-                if (effectiveStatus === 'removed') {
-                    ctx.setLineDash([6 / state.view.scale, 4 / state.view.scale]);
-                    ctx.lineCap = 'butt';
-                } else {
-                    ctx.setLineDash([]);
-                    ctx.lineCap = 'round';
-                }
+                // Removed = red solid (alpha already fades when SHOW→New hides them).
+                // Dash was easy to read as "hidden"; color+fade carry the meaning.
+                ctx.setLineDash([]);
+                ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
 
                 ctx.beginPath();
@@ -5618,7 +5998,7 @@
                 ctx.fill();
                 if (statusKey === 'added' || statusKey === 'removed' || statusKey === 'modified') {
                     ctx.save();
-                    ctx.globalAlpha = 0.18;
+                    ctx.globalAlpha = 0.1;
                     ctx.fillStyle = statusColor;
                     roundRect(ctx, n.x, n.y, n.w, n.h, CONFIG.node.radius);
                     ctx.fill();
@@ -5627,8 +6007,23 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
+                if (state.blame.show) {
+                    const blame = getBlameForNode(n);
+                    if (blame) {
+                        const barH = Math.max(2 / state.view.scale, n.h * 0.08);
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(n.x, n.y, n.w, barH);
+                        ctx.clip();
+                        ctx.fillStyle = authorColor(blame.author);
+                        ctx.globalAlpha = Math.min(1, drawAlpha);
+                        roundRect(ctx, n.x, n.y, n.w, n.h, CONFIG.node.radius);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+
                 const isCluster = isClusterLikeNode(n);
-                const clusterLayout = isCluster ? clusterGlyphLayout(n, state.view.scale) : null;
 
                 // Text label - always show node nickname or name
                 // Hide labels below zoom 0.5 (11px would be too large in world space)
@@ -5642,28 +6037,8 @@
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
 
-                    let maxWidth, tx;
-                    let hideGlyph = false;
-                    if (clusterLayout) {
-                        const fullLabelW = ctx.measureText(label).width;
-                        const availableWithGlyph = clusterLayout.labelW;
-                        const availableNoGlyph = clusterLayout.fullW - 16;
-                        if (fullLabelW <= availableWithGlyph) {
-                            maxWidth = availableWithGlyph;
-                            tx = clusterLayout.labelCx;
-                        } else if (fullLabelW <= availableNoGlyph) {
-                            hideGlyph = true;
-                            maxWidth = availableNoGlyph;
-                            tx = n.x + n.w / 2;
-                        } else {
-                            maxWidth = availableWithGlyph;
-                            tx = clusterLayout.labelCx;
-                        }
-                        clusterLayout.hideGlyph = hideGlyph;
-                    } else {
-                        maxWidth = n.w - 16;
-                        tx = n.x + n.w / 2;
-                    }
+                    const maxWidth = n.w - 16;
+                    const tx = n.x + n.w / 2;
                     const ty = n.y + n.h / 2;
 
                     let displayLabel = label;
@@ -5675,44 +6050,34 @@
                     }
 
                     ctx.fillText(displayLabel, tx, ty);
-                    if (clusterLayout) {
-                        clusterLayout.displayLabel = displayLabel;
-                        clusterLayout.labelTextW = ctx.measureText(displayLabel).width;
-                        clusterLayout.labelRight = tx + clusterLayout.labelTextW / 2;
-                    }
                 }
 
                 // Draw port sockets only (no labels yet)
                 drawNodePortSockets(n, false, null);
 
-                // Cluster indicator: dashed inner outline + stacked-squares glyph
-                if (clusterLayout && !clusterLayout.hideGlyph) {
-                    const outlinePad = 2;
-                    const dashRight = clusterLayout.gx - clusterLayout.gap;
-                    const dashW = Math.max(0, dashRight - (n.x + outlinePad));
+                // Cluster: solid double inset — follows node height as ports grow
+                if (isCluster && n.w > 16 && n.h > 16) {
                     ctx.save();
-                    ctx.strokeStyle = '#b388ff';
-                    ctx.lineWidth = 1.5 / state.view.scale;
-                    ctx.setLineDash([4 / state.view.scale, 3 / state.view.scale]);
-                    if (dashW > 4) {
-                        roundRect(ctx, n.x + outlinePad, n.y + outlinePad, dashW, n.h - outlinePad * 2, Math.max(0, CONFIG.node.radius - 1));
+                    ctx.strokeStyle = '#8B7EC8';
+                    ctx.lineWidth = 1 / state.view.scale;
+                    ctx.setLineDash([]);
+                    const p1 = 3;
+                    const p2 = 6;
+                    roundRect(ctx, n.x + p1, n.y + p1, n.w - p1 * 2, n.h - p1 * 2, Math.max(0, CONFIG.node.radius - 1));
+                    ctx.stroke();
+                    if (n.w > 24 && n.h > 24) {
+                        roundRect(ctx, n.x + p2, n.y + p2, n.w - p2 * 2, n.h - p2 * 2, Math.max(0, CONFIG.node.radius - 2));
                         ctx.stroke();
                     }
-                    ctx.setLineDash([]);
                     ctx.restore();
-
-                    ctx.strokeStyle = '#b388ff';
-                    ctx.lineWidth = 1 / state.view.scale;
-                    ctx.strokeRect(clusterLayout.gx, clusterLayout.gy, clusterLayout.boxW, clusterLayout.boxH);
-                    ctx.strokeRect(
-                        clusterLayout.gx + clusterLayout.stack,
-                        clusterLayout.gy + clusterLayout.stack,
-                        clusterLayout.boxW,
-                        clusterLayout.boxH
-                    );
-                }
-                if (clusterLayout) {
-                    recordClusterGlyphDebug(n, clusterLayout);
+                    if (!window.__clusterGlyphs) window.__clusterGlyphs = [];
+                    window.__clusterGlyphs.push({
+                        id: n.id,
+                        name: n.nickname || n.name || '',
+                        label: n.nickname || n.name || '',
+                        zoom: state.view.scale,
+                        gap: 0
+                    });
                 }
 
                 ctx.globalAlpha = 1.0;
@@ -5962,15 +6327,11 @@
                 const color = { r: 20, g: 21, b: 23 };
 
                 ctx.save();
-                ctx.globalAlpha = Math.max(0.05, groupAlpha * alphaFactor);
+                const baseAlpha = Math.max(0.05, groupAlpha * alphaFactor);
                 ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 1.0)`;
-                ctx.strokeStyle = CONFIG.colors[group.status] || CONFIG.colors.same;
-                ctx.lineWidth = (isSelectedGroup ? 2.0 : 1.2) / state.view.scale;
-                ctx.setLineDash([8 / state.view.scale, 6 / state.view.scale]);
                 roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 12);
+                ctx.globalAlpha = baseAlpha;
                 ctx.fill();
-                ctx.stroke();
-                ctx.setLineDash([]);
 
                 // Draw group label above the rectangle to avoid overlap
                 const groupLabel = String(group.name || '').trim();
@@ -6125,7 +6486,11 @@
                 tooltip.style.display = 'block';
                 tooltip.style.left = (e.clientX + 10) + 'px';
                 tooltip.style.top = (e.clientY + 10) + 'px';
-                tooltip.innerHTML = `<strong>${escapeHtml(hovered.nickname || hovered.name || '')}</strong><br><span style="color:var(--text-secondary)">${escapeHtml(hovered.name || '')}</span>`;
+                const blame = getBlameForNode(hovered);
+                const blameLine = blame
+                    ? `<br><span style="color:var(--text-secondary)">${escapeHtml(blame.author || 'unknown')} · ${escapeHtml(String(blame.commit || '').slice(0, 7))} · ${escapeHtml(blame.date || '')}</span>`
+                    : '';
+                tooltip.innerHTML = `<strong>${escapeHtml(hovered.nickname || hovered.name || '')}</strong><br><span style="color:var(--text-secondary)">${escapeHtml(hovered.name || '')}</span>${blameLine}`;
                 setCanvasCursor('pointer');
             } else {
                 hideCanvasTooltip();
@@ -6245,65 +6610,50 @@
             );
             const changeCount = changedNodes.length;
             
-            // Risk bands
-            const highRisk = changedNodes.filter(n => (n.riskScore || 0) >= 70);
-            const mediumRisk = changedNodes.filter(n => (n.riskScore || 0) >= 40 && (n.riskScore || 0) < 70);
-            const lowRisk = changedNodes.filter(n => (n.riskScore || 0) < 40);
+            // Risk bands match Differ: 80+ critical, 60–79 high, 30–59 medium, 1–29 low
+            const criticalRisk = changedNodes.filter(n => (n.riskScore || 0) >= 80);
+            const highRisk = changedNodes.filter(n => (n.riskScore || 0) >= 60 && (n.riskScore || 0) < 80);
+            const mediumRisk = changedNodes.filter(n => (n.riskScore || 0) >= 30 && (n.riskScore || 0) < 60);
+            const lowRisk = changedNodes.filter(n => (n.riskScore || 0) > 0 && (n.riskScore || 0) < 30);
             
             // Update count
             const countElem = document.getElementById('summary-changes-count');
             if (countElem) countElem.textContent = changeCount.toLocaleString();
             
-            // Update risk bar
-            const riskBar = document.getElementById('summary-risk-bar');
-            if (riskBar) {
-                riskBar.innerHTML = '';
-                if (highRisk.length > 0) {
-                    const segment = document.createElement('i');
-                    segment.style.flex = highRisk.length;
-                    segment.style.background = 'var(--c-emergency)';
-                    riskBar.appendChild(segment);
-                }
-                if (mediumRisk.length > 0) {
-                    const segment = document.createElement('i');
-                    segment.style.flex = mediumRisk.length;
-                    segment.style.background = 'var(--c-caution)';
-                    riskBar.appendChild(segment);
-                }
-                if (lowRisk.length > 0) {
-                    const segment = document.createElement('i');
-                    segment.style.flex = lowRisk.length;
-                    segment.style.background = 'var(--c-line)';
-                    riskBar.appendChild(segment);
-                }
-                riskBar.setAttribute('aria-label', `Risk split: ${highRisk.length} high, ${mediumRisk.length} medium, ${lowRisk.length} low`);
-            }
-            
-            // Update risk counts
-            const riskCounts = document.getElementById('summary-risk-counts');
-            if (riskCounts) {
-                riskCounts.innerHTML = '';
-                
-                if (highRisk.length > 0) {
-                    const span = document.createElement('span');
-                    span.className = 'st';
-                    span.innerHTML = '<svg class="ico em" viewBox="0 0 16 16"><use href="/vendor/phosphor/icons.svg#ph-warning-octagon"></use></svg>High ' + highRisk.length;
-                    riskCounts.appendChild(span);
-                }
-                
-                if (mediumRisk.length > 0) {
-                    const span = document.createElement('span');
-                    span.className = 'st';
-                    span.innerHTML = '<svg class="ico ca" viewBox="0 0 16 16"><use href="/vendor/phosphor/icons.svg#ph-warning"></use></svg>Medium ' + mediumRisk.length;
-                    riskCounts.appendChild(span);
-                }
-                
-                if (lowRisk.length > 0) {
-                    const span = document.createElement('span');
-                    span.className = 'st muted';
-                    span.textContent = 'Low ' + lowRisk.length;
-                    riskCounts.appendChild(span);
-                }
+            // Risk split: label sits on the same flex share as its bar segment
+            const riskSplit = document.getElementById('summary-risk-split');
+            if (riskSplit) {
+                riskSplit.innerHTML = '';
+                const bands = [
+                    { label: 'Critical', count: criticalRisk.length, color: 'var(--c-emergency)', icon: 'ph-warning-octagon', tone: 'em' },
+                    { label: 'High', count: highRisk.length, color: '#F0963A', icon: 'ph-warning', tone: 'ca' },
+                    { label: 'Medium', count: mediumRisk.length, color: 'var(--c-caution)', icon: 'ph-warning', tone: 'ca' },
+                    { label: 'Low', count: lowRisk.length, color: 'var(--c-line)', icon: null, tone: 'muted' }
+                ];
+                bands.forEach(band => {
+                    if (band.count <= 0) return;
+                    const col = document.createElement('div');
+                    col.className = 'risk-band';
+                    col.style.flex = `${band.count} 0 auto`;
+                    col.title = '0–100 · 80+ critical · 60–79 high · 30–59 medium · 1–29 low';
+
+                    const label = document.createElement('span');
+                    label.className = band.tone === 'muted' ? 'st muted' : 'st';
+                    if (band.icon) {
+                        label.innerHTML = `<svg class="ico ${band.tone}" viewBox="0 0 16 16"><use href="/vendor/phosphor/icons.svg#${band.icon}"></use></svg>${band.label} ${band.count}`;
+                    } else {
+                        label.textContent = `${band.label} ${band.count}`;
+                    }
+
+                    const seg = document.createElement('i');
+                    seg.style.background = band.color;
+
+                    col.appendChild(label);
+                    col.appendChild(seg);
+                    riskSplit.appendChild(col);
+                });
+                riskSplit.setAttribute('aria-label',
+                    `Risk split: ${criticalRisk.length} critical, ${highRisk.length} high, ${mediumRisk.length} medium, ${lowRisk.length} low`);
             }
             
             // Top 3 risks
@@ -6582,10 +6932,20 @@
                 canvasBody += kvPlain('Risk', `${riskScore}${riskReasonText}`);
             }
 
+            const blame = getBlameForNode(node);
+            let blameBody = '';
+            if (blame) {
+                blameBody = kvPlain('Author', blame.author || 'unknown') +
+                    kvPlain('Commit', String(blame.commit || '').slice(0, 7)) +
+                    kvPlain('When', blame.date || '') +
+                    kvPlain('Message', blame.message || '');
+            } else if (state.blame.status === 'loading') {
+                blameBody = '<div class="muted">Loading blame…</div>';
+            }
+
             const html = `
-                <button type="button" class="insp-back" id="insp-summary">‹ SUMMARY <kbd class="keycap">ESC</kbd></button>
+                <button type="button" class="insp-back" id="insp-summary">‹ Summary <kbd class="keycap">ESC</kbd></button>
                 <header class="insp-head">
-                    <i class="sel-glyph" aria-hidden="true"></i>
                     <div class="insp-head-copy">
                         <div class="title">${escapeHtml(node.nickname || node.name || 'Unnamed')}</div>
                         <div class="insp-sub muted">${escapeHtml(node.name || '')}</div>
@@ -6596,6 +6956,7 @@
                 ${inspSection(isScriptComponent(node) ? 'Script' : (isClusterLikeNode(node) ? 'Cluster' : (isPanelLikeNode(node) ? 'Panel' : 'Component')), typeBody)}
                 ${inspSection('Connections', connBody)}
                 ${inspSection('Canvas', canvasBody)}
+                ${blameBody ? inspSection('Blame', blameBody) : ''}
             `;
 
             detailsPaneInspector.innerHTML = html;
@@ -7039,67 +7400,6 @@
             if (isScriptModalOpen()) {
                 renderExpandedScriptDiff(node, selectedEntry);
             }
-        }
-
-        function clusterGlyphLayout(node, scale) {
-            const s = Math.max(Number(scale) || 1, 0.01);
-            const boxW = 8;
-            const boxH = 6;
-            const stack = 2;
-            const glyphW = boxW + stack;
-            const glyphH = boxH + stack;
-            const gap = Math.max(4, 4 / s);
-            const inset = Math.max(4, 4 / s);
-            const gutter = glyphW + gap + inset;
-            const labelW = Math.max(4, node.w - gutter);
-            return {
-                boxW,
-                boxH,
-                stack,
-                glyphW,
-                glyphH,
-                gap,
-                inset,
-                gutter,
-                labelW,
-                gx: node.x + node.w - inset - glyphW,
-                gy: node.y + (node.h - glyphH) / 2,
-                labelCx: node.x + labelW / 2,
-                fullW: node.w
-            };
-        }
-
-        function recordClusterGlyphDebug(node, layout) {
-            if (!window.__clusterGlyphs) window.__clusterGlyphs = [];
-            const scale = state.view.scale;
-            const toScreen = (x, y, w, h) => ({
-                x: x * scale + state.view.x,
-                y: y * scale + state.view.y,
-                w: w * scale,
-                h: h * scale
-            });
-            const labelRight = layout.labelRight != null ? layout.labelRight : (layout.labelCx + layout.labelW / 2);
-            const labelBox = toScreen(
-                layout.labelCx - (layout.labelTextW || layout.labelW) / 2,
-                node.y,
-                layout.labelTextW || layout.labelW,
-                node.h
-            );
-            const glyphBox = toScreen(layout.gx, layout.gy, layout.glyphW, layout.glyphH);
-            window.__clusterGlyphs.push({
-                id: node.id,
-                name: node.nickname || node.name || '',
-                zoom: scale,
-                dpr: window.devicePixelRatio || 1,
-                label: layout.displayLabel || '',
-                labelRight: labelRight * scale + state.view.x,
-                glyphLeft: glyphBox.x,
-                gap: glyphBox.x - (labelRight * scale + state.view.x),
-                insetRight: (node.x + node.w - (layout.gx + layout.glyphW)) * scale,
-                labelBox,
-                glyphBox,
-                nodeBox: toScreen(node.x, node.y, node.w, node.h)
-            });
         }
 
         function isClusterLikeNode(node) {

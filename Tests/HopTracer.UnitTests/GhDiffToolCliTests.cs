@@ -35,6 +35,16 @@ public class GhDiffToolCliTests
         var code = CliRunner.Run(["help"], stdout);
         Assert.Equal(0, code);
         Assert.Contains("hoptracer compare", stdout.ToString());
+        Assert.Contains("hoptracer blame", stdout.ToString());
+    }
+
+    [Fact]
+    public void Blame_MissingFile_ReturnsUsageError()
+    {
+        var stderr = new StringWriter();
+        var code = CliRunner.Run(["blame"], stderr: stderr);
+        Assert.Equal(2, code);
+        Assert.Contains("Usage: hoptracer blame", stderr.ToString());
     }
 
     [Fact]

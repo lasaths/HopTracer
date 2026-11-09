@@ -48,6 +48,7 @@ public static class CliRunner
             {
                 "compare" => RunCompare(positional, flags, stdout, stderr),
                 "git" => RunGit(positional, flags, stdout, stderr),
+                "blame" => RunBlame(positional, flags, stdout, stderr),
                 "doctor" => RunDoctor(stdout, stderr),
                 "baseline" => RunBaseline(positional, flags, stdout, stderr),
                 "report" => RunReport(positional, flags, stdout, stderr),
@@ -331,6 +332,105 @@ public static class CliRunner
         }
     }
 
+    private static int RunBlame(string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
+    {
+        if (positional.Length < 1)
+        {
+            return Fail(stderr, flags.Format, "usage_error", "blame requires a file path",
+                "Usage: hoptracer blame <file> [--limit <n>] [options]");
+        }
+
+        var filePath = Path.GetFullPath(positional[0]);
+        if (!File.Exists(filePath))
+        {
+            return Fail(stderr, flags.Format, "file_not_found", $"File not found: {filePath}", $"File not found: {filePath}", filePath);
+        }
+
+        var dir = Path.GetDirectoryName(filePath) ?? ".";
+        var git = new GitWrapper(dir, NullLogger<GitWrapper>.Instance);
+        if (!git.IsGitRepo())
+        {
+            return Fail(stderr, flags.Format, "not_git_repository", $"Not a git repository: {dir}", $"Not a git repository: {dir}");
+        }
+
+        var limit = flags.Limit ?? 50;
+        if (limit <= 0)
+        {
+            return Fail(stderr, flags.Format, "invalid_limit", "limit must be > 0", "Error: --limit must be > 0");
+        }
+
+        var atCommit = string.IsNullOrWhiteSpace(flags.Commit) ? null : flags.Commit.Trim();
+        var result = new ComponentBlameService().Blame(git, filePath, limit, atCommit);
+        return WriteBlameOutput(result, flags, stdout);
+    }
+
+    private static int WriteBlameOutput(ComponentBlameResult result, CliFlags flags, TextWriter stdout)
+    {
+        string text;
+        if (flags.Format is DiffOutputFormat.Json or DiffOutputFormat.Agent or DiffOutputFormat.AgentV1)
+        {
+            var payload = new Dictionary<string, object?>
+            {
+                ["schema"] = "hoptracer.blame/1",
+                ["file"] = flags.RelativePaths ? MakeRelativeForBlame(result.File) : result.File,
+                ["limit"] = result.Limit,
+                ["commitsScanned"] = result.CommitsScanned,
+                ["truncated"] = result.Truncated,
+                ["components"] = result.Components.Select(c => new Dictionary<string, object?>
+                {
+                    ["id"] = c.Id,
+                    ["name"] = c.Name,
+                    ["nickname"] = c.Nickname,
+                    ["commit"] = c.Commit,
+                    ["author"] = c.Author,
+                    ["date"] = c.Date,
+                    ["message"] = c.Message,
+                    ["origin"] = c.Origin
+                }).ToList()
+            };
+            text = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            }) + Environment.NewLine;
+        }
+        else
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Blame: {result.File} ({result.Components.Count} components, {result.CommitsScanned} commits scanned{(result.Truncated ? ", truncated" : "")})");
+            foreach (var c in result.Components)
+            {
+                var nick = string.IsNullOrWhiteSpace(c.Nickname) ? "" : $" ({c.Nickname})";
+                sb.AppendLine($"{c.Id}  {c.Name}{nick}  {c.Commit}  {c.Author}  {c.Date}  {c.Message}");
+            }
+            text = sb.ToString();
+        }
+
+        if (!string.IsNullOrWhiteSpace(flags.OutputPath))
+        {
+            File.WriteAllText(flags.OutputPath, text);
+        }
+        else
+        {
+            stdout.Write(text);
+        }
+
+        return 0;
+    }
+
+    private static string MakeRelativeForBlame(string path)
+    {
+        try
+        {
+            return Path.GetRelativePath(Directory.GetCurrentDirectory(), path);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
     private static DiffComputation ComputeDiff(string oldPath, string newPath)
     {
         var parser = new GhxParser(NullLogger<GhxParser>.Instance);
@@ -527,6 +627,9 @@ public static class CliRunner
                 case "--max-edges":
                     flags.MaxEdges = int.Parse(NextArg(args, ref i, arg));
                     break;
+                case "--limit":
+                    flags.Limit = int.Parse(NextArg(args, ref i, arg));
+                    break;
                 case "--fail-on-risk":
                     flags.FailOnRisk = 60; // Default: high/critical
                     break;
@@ -637,6 +740,14 @@ public static class CliRunner
             PrintOptions(stdout);
             return;
         }
+        if (command is "blame")
+        {
+            stdout.WriteLine("hoptracer blame <file> [--commit <hash>] [--limit <n>] [-f text|json|agent]");
+            stdout.WriteLine("  Attribute each component to the newest commit that added or changed it.");
+            stdout.WriteLine("  --commit anchors blame to a snapshot (not the working tree).");
+            stdout.WriteLine("  --limit defaults to 50 (history window).");
+            return;
+        }
 
         stdout.WriteLine($"""
 {GetVersion()} - Compare Grasshopper definition files (.gh / .ghx)
@@ -644,6 +755,7 @@ public static class CliRunner
 Usage:
   hoptracer compare <oldFile> <newFile> [options]
   hoptracer git <file> [--commit <hash>] [options]
+  hoptracer blame <file> [--commit <hash>] [--limit <n>] [options]
   hoptracer baseline <save|list|compare> ...
   hoptracer report <oldFile> <newFile> [-o <dir>] [--baseline <name>]
   hoptracer doctor
@@ -660,6 +772,7 @@ Options:
   -f, --format <text|md|json|html|agent|agent-v1>   Output format (default: text, agent=v2)
   -o, --output <file>                Write to file or output directory
   --commit <hash>                    Git commit to compare against (git command)
+  --limit <n>                        Max commits to scan (blame; default: 50)
   --name <baselineName>              Baseline name (baseline save/compare)
   --baseline <name>                  Attach baseline metadata to forensic report
   --compact                          Compact output
