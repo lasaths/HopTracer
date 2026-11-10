@@ -12,7 +12,7 @@ npx skills add lasaths/HopTracer@hoptracer -g -y
 
 Download, unzip, and run `hoptracer.exe`:
 
-https://github.com/lasaths/HopTracer/releases/download/v1.3.1/hoptracer-win-x64.zip
+https://github.com/lasaths/HopTracer/releases/download/v1.4.0/hoptracer-win-x64.zip
 
 - **WinGet**: `winget install lasaths.HopTracer.CLI` once the official `wingetcreate` manifest is merged. The Store app can be older.
 

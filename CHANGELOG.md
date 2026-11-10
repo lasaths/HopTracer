@@ -5,6 +5,34 @@ All notable changes to HopTracer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.4.0] - 2026-11-10
+
+### Added
+
+- **Component git blame**: CLI `blame` plus desktop blame that loads in the background after the first paint (author colors off by default).
+- **History (Time Machine)**: Pick a past commit as OLD and compare against the current file; dedicated History dialog with readable commit rows.
+- **Export report folder picker**: Choose a destination folder for forensic JSON + HTML reports (native picker with download fallback).
+- **View controls row**: Wires / Show / Tags sit under the canvas; keyboard hints live on that row; sidebars are resizable.
+
+### Changed
+
+- Risk footer shows proportional Critical / High / Medium bands with full labels; removed golden baseline buttons and the high-risk alarm banner.
+- Inspector and Script tabs share one underline style; removed the empty blue selection glyph.
+- ANDURA chrome uses sans for buttons/search; mono stays for metrics and labels.
+
+### Fixed
+
+- History modal layout (unstyled/overlapping commit list, wrong side/title when opened from History).
+- Footer risk-band label clipping and unclear risk copy.
+
+## [1.3.1] - 2026-09-24
+
+### Fixed
+
+- Release packaging and distribution updates for portable + CLI zips.
+
 ## [1.3.0] - 2026-07-06
 
 ### Added
@@ -19,44 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Git history modal now shows OLD/NEW commit labels at the top for clarity.
 - Status messages guide users through the selection process step-by-step.
-
-## [Unreleased]
-
-### Added
-
-- **Apple-inspired design system**: Comprehensive redesign following Apple pro app principles (Xcode, Final Cut, Logic dark mode)
-  - True dark mode: Pure black (#000) base with subtle elevated surfaces
-  - System font stack with precise typography scale
-  - Spring-based, interruptible motion with `prefers-reduced-motion` support
-  - Single source of truth for all colors (no hard-coded values)
-- **Enhanced agent diff output** (`--format agent`):
-  - Component category classification (Params, Maths, Script, etc.) for better semantic context
-  - Group context: detects group nodes and includes member count and color
-  - Position and movement: absolute (X, Y) coordinates and movement deltas (Dx, Dy)
-  - Connection change details: per-node in/out connection add/remove counts
-  - Enhanced topology: includes both changed wires and existing unchanged connections for full upstream/downstream neighbor view
-  - Deterministic ordering: nodes consistently sorted by risk score (descending), then status, then label
-  - Improved summary: structured, token-efficient summary highlighting risk levels, script changes, wire changes, and geometry updates
-- **Updated JSON schema**: `skills/hoptracer/references/agent-schema.json` reflects new agent output fields
-- **Comprehensive documentation**: Updated `skills/hoptracer/references/output-formats.md` with detailed field descriptions and changelog
-
-### Changed
-
-- **Comprehensive UI redesign**:
-  - Complete redesign of all HTML pages (`diff_viewer.html`, `index.html`, `selection.html`, `error.html`)
-  - New design system: `hoptracer-design-system.css` with Apple pro app aesthetic
-  - Status colors: Added=#30d158 (green), Modified=#ffd60a (yellow), Removed=#ff453a (red), Unchanged=#636366 (grey)
-  - Fixed hard-coded colors in JavaScript - now reads from CSS custom properties
-  - Start page (`index.html`) completely redesigned with spring animations, drop zones, and feature cards
-  - System font stack (-apple-system, etc.) for native feel
-  - Subtle shadows and elevation for depth
-  - MAUI Colors.xaml updated to match web design system
-- **Agent formatter improvements**: Better neighbor resolution includes both changed and unchanged connections for complete topology context
-- **Motion system**: Spring easings, interruptible transitions, respects `prefers-reduced-motion`
-
-### Fixed
-
-- Agent output now includes all necessary context for LLM agents to understand graph topology, change location, and risk assessment
 
 ## [1.2.1] - 2026-07-10
 
