@@ -110,6 +110,30 @@ hoptracer git current.gh --format markdown -o changes.md
 hoptracer git current.gh --commit HEAD~1 --fail-on-risk
 ```
 
+### blame
+
+Attribute each component to the newest commit that added or changed it.
+
+#### Syntax
+```bash
+hoptracer blame <file> [--commit <hash>] [--limit <n>] [options]
+```
+
+#### Arguments
+- `file` (required): Path to the Grasshopper file (.gh or .ghx)
+
+#### Options
+- `--commit <hash>`: Blame against that commit snapshot instead of the working tree
+- `--limit <n>`: Max commits to scan (default: 50)
+- `-f, --format <format>`: `text`, `json`, or `agent` (default: text)
+- `-o, --output <file>`: Write output to file instead of stdout
+
+#### Examples
+```bash
+hoptracer blame current.gh
+hoptracer blame current.gh --commit HEAD~1 --limit 100 --format agent -o blame.json
+```
+
 ### doctor
 
 Check CLI environment and Grasshopper conversion dependencies.
@@ -166,18 +190,23 @@ hoptracer --version
 # Help for specific command
 hoptracer help compare
 hoptracer help git
+hoptracer help blame
 ```
 
 ## Common Options Summary
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--format` | `-f` | Output format | text |
+| `--format` | `-f` | Output format (`text\|md\|json\|html\|agent\|agent-v1`) | text |
 | `--output` | `-o` | Output file path | stdout |
+| `--commit` | | Git commit (git/blame) | latest / working tree |
+| `--limit` | | Blame history window | 50 |
 | `--max-nodes` | | Max nodes to show | 20 |
 | `--max-edges` | | Max edges to show | 10 |
 | `--show-edges` | | Show edge changes | false |
 | `--compact` | | Compact format | false |
+| `--no-timestamp` | | Deterministic output (no timestamp) | false |
+| `--absolute-paths` | | Absolute paths in output | false (relative) |
 | `--verbose` | `-v` | Detailed output | false |
 | `--fail-on-risk` | | Fail on critical/high risks | false |
 | `--no-stats` | | Exclude statistics | false |

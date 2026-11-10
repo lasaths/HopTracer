@@ -1,7 +1,7 @@
 ---
 name: hoptracer
 description: |
-  Compare Grasshopper definition files (.gh/.ghx) with the hoptracer CLI — diff reports, git history, baselines, forensic export, and agent-oriented JSON. Key trigger phrases: "diff grasshopper files", "compare gh files", "hoptracer", "ghx diff", ".gh diff", "grasshopper version diff", "forensic report", "baseline compare". Use when comparing Grasshopper definitions, running CI diff gates, or analyzing change risk.
+  Compare Grasshopper definition files (.gh/.ghx) with the hoptracer CLI — diff reports, git history, component blame, baselines, forensic export, and agent-oriented JSON. Key trigger phrases: "diff grasshopper files", "compare gh files", "hoptracer", "ghx diff", ".gh diff", "grasshopper version diff", "component blame", "forensic report", "baseline compare". Use when comparing Grasshopper definitions, running CI diff gates, blaming who changed a component, or analyzing change risk.
 ---
 
 # HopTracer CLI Skill
@@ -48,6 +48,15 @@ Use when comparing a file with its previous version in Git history:
 ```bash
 hoptracer git <currentFile>
 hoptracer git <currentFile> --commit <hash>
+```
+
+### Component Blame
+
+Attribute each component to the newest commit that added or changed it:
+
+```bash
+hoptracer blame <file>
+hoptracer blame <file> --commit <hash> --limit 50 --format agent
 ```
 
 ### Environment Check

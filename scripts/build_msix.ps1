@@ -25,6 +25,30 @@ $msixOutputDir = Join-Path $releaseDir "MSIX"
 $shellExtensionProject = Join-Path $sourceDir "HopTracer.ShellExtension\HopTracer.ShellExtension.vcxproj"
 $shellExtensionDll = Join-Path $sourceDir "HopTracer.ShellExtension\bin\$Configuration\x64\HopTracer.ShellExtension.dll"
 
+function Resolve-VcPlatformToolset {
+    # Prefer VS2022 (v143) for CI; fall back to newer Build Tools (v180 on VS 18).
+    $preferred = @("v143", "v145", "v180")
+    $vcRoots = @(
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022",
+        "${env:ProgramFiles}\Microsoft Visual Studio\18",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18"
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) }
+
+    foreach ($toolset in $preferred) {
+        foreach ($root in $vcRoots) {
+            $hits = Get-ChildItem -Path $root -Recurse -Directory -Filter $toolset -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match 'PlatformToolsets' } |
+                Select-Object -First 1
+            if ($null -ne $hits) {
+                return $toolset
+            }
+        }
+    }
+
+    return "v143"
+}
+
 function Resolve-MSBuildPath {
     $fromPath = Get-Command msbuild -ErrorAction SilentlyContinue
     if ($null -ne $fromPath) {
@@ -153,7 +177,9 @@ if ([string]::IsNullOrWhiteSpace($msbuildPath)) {
     throw "msbuild.exe not found. Install Visual Studio Build Tools with the C++ workload to build the MSIX shell extension."
 }
 
-& $msbuildPath $shellExtensionProject "/t:Build" "/p:Configuration=$Configuration" "/p:Platform=x64" "/m" "/nologo"
+$platformToolset = Resolve-VcPlatformToolset
+Write-Host "  Using PlatformToolset=$platformToolset" -ForegroundColor DarkGray
+& $msbuildPath $shellExtensionProject "/t:Build" "/p:Configuration=$Configuration" "/p:Platform=x64" "/p:PlatformToolset=$platformToolset" "/m" "/nologo"
 if ($LASTEXITCODE -ne 0) {
     throw "Shell extension build failed"
 }
@@ -215,6 +241,9 @@ $publishArgs = @(
     "-p:UapAppxPackageBuildMode=StoreUpload",
     "-p:AppxPackageDir=$msixOutputDir\\",
     "-p:AppxPackageSigningEnabled=false",
+    # Skip symbol packaging — mspdbcmf.exe is often missing on Build Tools-only machines.
+    "-p:AppxSymbolPackageEnabled=false",
+    "-p:AppxPackageIncludePrivateSymbols=false",
     "-p:ShellExtensionDllPath=$shellExtensionDll",
     "-p:HopTracerCliDir=$cliStagingDir"
 )

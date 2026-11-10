@@ -1,12 +1,12 @@
 # HopTracer — Privacy Policy
 
-**Last updated: March 23, 2026**
+**Last updated: November 10, 2026**
 
 ---
 
 ## Overview
 
-HopTracer is a local Windows desktop application for comparing Grasshopper definition files (`.gh` / `.ghx`). All file processing happens entirely on your device. HopTracer does not collect personal information, does not track usage, and does not send your files or project data anywhere.
+HopTracer is a local Windows desktop application for comparing Grasshopper definition files (`.gh` / `.ghx`). All file processing, git history reads (blame / History), and CLI work happen entirely on your device. HopTracer does not collect personal information, does not track usage, and does not send your files or project data anywhere.
 
 ---
 
@@ -69,9 +69,12 @@ HopTracer is a professional tool not directed at children under 13. No data is c
 
 ## Third-Party Components
 
-HopTracer uses only Microsoft-published libraries (.NET, .NET MAUI, ASP.NET Core). No third-party analytics platforms, advertising networks, or tracking SDKs are included.
+HopTracer uses Microsoft-published libraries (.NET, .NET MAUI, ASP.NET Core). No third-party analytics platforms, advertising networks, or tracking SDKs are included.
 
-The optional `.gh` binary parser loads `GH_IO.dll` from your local Rhino installation if present. This is a read-only local operation; no data is sent to Robert McNeel & Associates.
+Optional local tools (read-only on your machine; nothing is sent to their vendors):
+
+- **Rhino 7 or 8** — `GH_IO.dll` for `.gh` conversion when installed
+- **Git** — local history for component blame and History compare when the file is in a repository
 
 ---
 

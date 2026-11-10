@@ -75,10 +75,21 @@ Artifacts:
 
 1. Open [Partner Center](https://partner.microsoft.com/dashboard) → **HopTracer** → **Packages**
 2. **Upload new package** → select the `.msixupload` from the CI artifact
-3. **Store listings** → ensure privacy URL and support URL are set (see table above)
+3. **Store listings** → paste the description below (first two lines are required for policy 10.2.4.1), plus privacy URL and support URL
 4. **What's new** — use the release notes printed by `prepare_store_submission.ps1`
 5. **Capabilities** → when asked about `runFullTrust`, paste the justification from `prepare_store_submission.ps1`
 6. Submit for certification
+
+### Store listing description (copy/paste)
+
+Policy **10.2.4.1**: non-integrated software (**.NET**, **Rhino 7 or 8**) must appear in the **first two lines**.
+
+```
+Requires .NET and Rhino 7 or 8.
+HopTracer diffs Grasshopper .gh/.ghx files; Rhino supplies GH_IO for .gh conversion.
+
+Compare definitions visually, see component git blame and History (past commit vs current file), export forensic reports, and run hoptracer from a terminal or CI. Works offline; no account required.
+```
 
 ### runFullTrust justification (copy/paste)
 

@@ -1,6 +1,6 @@
 # HopTracer CLI Skill
 
-Agent skill for the `hoptracer` CLI — compare Grasshopper definitions (`.gh` / `.ghx`), git history, baselines, forensic reports, and agent-oriented diff JSON.
+Agent skill for the `hoptracer` CLI — compare Grasshopper definitions (`.gh` / `.ghx`), git history, component blame, baselines, forensic reports, and agent-oriented diff JSON.
 
 ## Install skill (agents)
 
@@ -30,6 +30,7 @@ hoptracer compare old.gh new.gh --format agent -o diff-agent.json
 hoptracer compare old.gh new.gh --format html -o report.html
 hoptracer git current.gh --commit HEAD~1 --format markdown -o changes.md
 hoptracer git current.gh --fail-on-risk
+hoptracer blame current.gh --format agent -o blame.json
 hoptracer baseline save current.gh --name release-1.0
 hoptracer baseline compare current.gh --name release-1.0 --fail-on-risk
 hoptracer report old.ghx new.ghx -o ./reports

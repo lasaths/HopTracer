@@ -53,14 +53,22 @@ else {
     Write-Host "Type: .msix (unsigned; Microsoft Store will sign)" -ForegroundColor DarkGray
 }
 
+# Policy 10.2.4.1: name non-integrated deps in the first two description lines.
+$storeDescription = @"
+Requires .NET and Rhino 7 or 8.
+HopTracer diffs Grasshopper .gh/.ghx files; Rhino supplies GH_IO for .gh conversion.
+
+Compare definitions visually, see component git blame and History (past commit vs current file), export forensic reports, and run hoptracer from a terminal or CI. Works offline; no account required.
+"@.Trim()
+
 $releaseNotes = @"
 HopTracer $DisplayVersion
 
-- Review & Export panel: forensic report download, save baseline, check baseline
-- Fix forensic export serialization crash
-- Show changed wires only filter in diff viewer
-- hoptracer CLI: doctor, baseline, and forensic report commands
-- Agent skill: npx skills add lasaths/HopTracer@hoptracer
+- Component git blame (CLI + desktop, loads in the background)
+- History (Time Machine): compare a past commit against the current file
+- Export forensic reports to a chosen folder
+- Clearer risk bands, resizable sidebars, and History dialog polish
+- hoptracer CLI bundled in the package (doctor, blame, compare, report)
 "@.Trim()
 
 $runFullTrustJustification = @"
@@ -81,6 +89,9 @@ Write-Host ""
 Write-Host "Package version:" -ForegroundColor Yellow
 Write-Host $PackageVersion
 Write-Host ""
+Write-Host "Store listing description (policy 10.2.4.1 — deps in first two lines):" -ForegroundColor Yellow
+Write-Host $storeDescription
+Write-Host ""
 Write-Host "What's new / Release notes:" -ForegroundColor Yellow
 Write-Host $releaseNotes
 Write-Host ""
@@ -88,9 +99,10 @@ Write-Host "runFullTrust capability justification:" -ForegroundColor Yellow
 Write-Host $runFullTrustJustification
 Write-Host ""
 Write-Host "=== Submission steps ===" -ForegroundColor Cyan
-Write-Host "1. Partner Center -> HopTracer -> Packages -> Upload new package"
-Write-Host "2. Upload the file listed above"
-Write-Host "3. Paste privacy URL, release notes, and runFullTrust justification when prompted"
-Write-Host "4. Submit for certification"
+Write-Host "1. Partner Center -> HopTracer -> Store listings -> Description"
+Write-Host "2. Paste the Store listing description above (keep the first two lines)"
+Write-Host "3. Packages -> keep existing package (or re-upload if required)"
+Write-Host "4. Paste privacy URL, release notes, and runFullTrust justification when prompted"
+Write-Host "5. Submit for certification"
 Write-Host ""
 Write-Host "Store submission prep complete." -ForegroundColor Green
