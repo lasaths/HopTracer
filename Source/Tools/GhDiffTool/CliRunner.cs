@@ -111,7 +111,8 @@ public static class CliRunner
         }
 
         stdout.WriteLine(JsonSerializer.Serialize(payload));
-        return ready ? 0 : 2;
+        // 0 = ready, 1 = degraded (e.g. no GH_IO on CI agents without Rhino)
+        return ready ? 0 : 1;
     }
 
     private static int RunBaseline(string[] positional, CliFlags flags, TextWriter stdout, TextWriter stderr)
