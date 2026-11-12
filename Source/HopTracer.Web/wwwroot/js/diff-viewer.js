@@ -24,7 +24,9 @@
                 width: 120,
                 height: 50,
                 radius: 6
-            }
+            },
+            // One white pass over surface (#090A0C) matches group (#141517). Nested passes stack.
+            groupFillAlpha: 0.045
         };
 
         const STATUS_FILTER_KEYS = ['all', 'added', 'removed', 'modified', 'same'];
@@ -6200,9 +6202,23 @@
                                     const selectionAlphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
                                     const criteriaAlphaFactor = dimForSearch ? 0.1 : (dimForStatusFilter ? 0.38 : 1.0);
                                     const alphaFactor = selectionAlphaFactor * criteriaAlphaFactor;
-                                    
-                                    // Blend group color with surface based on alpha
-                                    bgColor = CONFIG.colors.group;
+
+                                    let layers = 1;
+                                    for (let gi = 1; gi < nodeGroups.length; gi++) {
+                                        const otherRect = computeGroupRenderRect(nodeGroups[gi], renderNodeLookup);
+                                        if (!otherRect) continue;
+                                        const ox = otherRect.x * state.view.scale + state.view.x;
+                                        const oy = otherRect.y * state.view.scale + state.view.y;
+                                        const ow = otherRect.w * state.view.scale;
+                                        const oh = otherRect.h * state.view.scale;
+                                        if (labelLeft >= ox && labelRight <= ox + ow && labelTop >= oy && labelBottom <= oy + oh) {
+                                            layers++;
+                                        }
+                                    }
+                                    // Same stack as the group fill: white over #090A0C, once per group under this label.
+                                    const keep = Math.pow(1 - CONFIG.groupFillAlpha, layers);
+                                    const lift = (surface) => Math.round(surface + (255 - surface) * (1 - keep));
+                                    bgColor = `rgb(${lift(9)}, ${lift(10)}, ${lift(12)})`;
                                     bgAlpha = alphaFactor;
                                 }
                             }
@@ -6323,12 +6339,10 @@
                 const selectionAlphaFactor = dimUnrelated ? 0.18 : (isConnectedGroup ? 0.45 : 1.0);
                 const criteriaAlphaFactor = dimForSearch ? 0.1 : (dimForStatusFilter ? 0.38 : 1.0);
                 const alphaFactor = selectionAlphaFactor * criteriaAlphaFactor;
-                // Use fixed group color #141517 from CONFIG.colors.group
-                const color = { r: 20, g: 21, b: 23 };
 
                 ctx.save();
                 const baseAlpha = Math.max(0.05, groupAlpha * alphaFactor);
-                ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 1.0)`;
+                ctx.fillStyle = `rgba(255, 255, 255, ${CONFIG.groupFillAlpha})`;
                 roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 12);
                 ctx.globalAlpha = baseAlpha;
                 ctx.fill();
