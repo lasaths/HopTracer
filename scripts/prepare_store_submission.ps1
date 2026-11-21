@@ -2,8 +2,8 @@
 # Validates metadata, locates MSIX artifacts, and prints Partner Center copy-paste fields.
 
 param(
-    [string]$PackageVersion = "1.4.0.0",
-    [string]$DisplayVersion = "1.4.0",
+    [string]$PackageVersion = "1.5.0.0",
+    [string]$DisplayVersion = "1.5.0",
     [string]$MsixDir = "",
     [switch]$Strict = $true
 )
@@ -58,17 +58,15 @@ $storeDescription = @"
 Requires .NET and Rhino 7 or 8.
 HopTracer diffs Grasshopper .gh/.ghx files; Rhino supplies GH_IO for .gh conversion.
 
-Compare definitions visually, see component git blame and History (past commit vs current file), export forensic reports, and run hoptracer from a terminal or CI. Works offline; no account required.
+Compare definitions visually, paste a Grasshopper selection to jump to those components, see component git blame and History, export forensic reports, and run hoptracer from a terminal or CI. Works offline; no account required.
 "@.Trim()
 
 $releaseNotes = @"
 HopTracer $DisplayVersion
 
-- Component git blame (CLI + desktop, loads in the background)
-- History (Time Machine): compare a past commit against the current file
-- Export forensic reports to a chosen folder
-- Clearer risk bands, resizable sidebars, and History dialog polish
-- hoptracer CLI bundled in the package (doctor, blame, compare, report)
+- Paste a Grasshopper canvas selection to highlight and zoom to those components
+- Nested groups stay visible (translucent group fills)
+- Component git blame, History, and forensic export remain in this build
 "@.Trim()
 
 $runFullTrustJustification = @"

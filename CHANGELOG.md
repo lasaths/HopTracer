@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-21
+
+### Added
+
+- **Paste a Grasshopper selection**: copy components on the Grasshopper canvas and paste into the diff view to highlight and zoom to them. A selection inside one cluster opens that cluster.
+
+### Fixed
+
+- Nested group fills stay visible. Group fills are translucent so an outer group no longer hides the groups inside it.
+
+### Changed
+
+- Store listing and privacy text name the .NET and Rhino dependencies.
+
 ## [1.4.0] - 2026-11-10
 
 ### Added

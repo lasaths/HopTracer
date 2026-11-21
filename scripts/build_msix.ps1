@@ -162,7 +162,7 @@ if (-not (Test-Path $readinessScript)) {
     -ExpectedIdentityName $(if ($IdentityName) { $IdentityName } else { "lasaths.HopTracer" }) `
     -ExpectedPublisher $(if ($Publisher) { $Publisher } else { "CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25" }) `
     -ExpectedPublisherDisplayName "lasaths" `
-    -ExpectedPackageVersion $(if ($PackageVersion) { $PackageVersion } else { "1.4.0.0" })
+    -ExpectedPackageVersion $(if ($PackageVersion) { $PackageVersion } else { "1.5.0.0" })
 if (-not $?) {
     throw "Store readiness checks failed."
 }

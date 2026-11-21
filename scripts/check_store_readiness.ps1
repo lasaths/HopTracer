@@ -6,7 +6,7 @@ param(
     [string]$ExpectedIdentityName = "lasaths.HopTracer",
     [string]$ExpectedPublisher = "CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25",
     [string]$ExpectedPublisherDisplayName = "lasaths",
-    [string]$ExpectedPackageVersion = "1.4.0.0"
+    [string]$ExpectedPackageVersion = "1.5.0.0"
 )
 
 $ErrorActionPreference = "Stop"

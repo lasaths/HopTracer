@@ -19,7 +19,7 @@ This validates manifest metadata, locates the upload package, and prints every P
 | Identity Name | `lasaths.HopTracer` |
 | Publisher | `CN=AFE48087-3FFA-435C-A8A2-1776FA3FFA25` |
 | Publisher display name | `lasaths` |
-| Package version | `1.2.0.0` (Store requires revision `0`; use `1.2.1.0` for the next submission) |
+| Package version | `1.5.0.0` |
 | Privacy policy URL | https://github.com/lasaths/HopTracer/blob/main/docs/privacy.md |
 | Support URL | https://github.com/lasaths/HopTracer/issues |
 
@@ -34,7 +34,7 @@ Files:
 
 Workflow: **Build Store MSIX** (manual trigger)
 
-Defaults are pre-filled for `lasaths.HopTracer`. Leave `package_version` at `1.2.0.0` unless you are submitting a revision bump.
+Defaults are pre-filled for `lasaths.HopTracer` at package version `1.5.0.0`.
 
 1. Actions → **Build Store MSIX** → Run workflow
 2. Download artifact **HopTracer-MSIX**
@@ -50,8 +50,8 @@ Requires Visual Studio with **Desktop development with C++** (shell extension).
 ```powershell
 .\scripts\build_msix.ps1 `
   -RequireStoreReadiness `
-  -PackageVersion "1.2.0.0" `
-  -Version "1.2.0"
+  -PackageVersion "1.5.0.0" `
+  -Version "1.5.0"
 ```
 
 Optional: copy `GH_IO.dll` for `.gh` conversion in the CLI:
@@ -88,19 +88,18 @@ Policy **10.2.4.1**: non-integrated software (**.NET**, **Rhino 7 or 8**) must a
 Requires .NET and Rhino 7 or 8.
 HopTracer diffs Grasshopper .gh/.ghx files; Rhino supplies GH_IO for .gh conversion.
 
-Compare definitions visually, see component git blame and History (past commit vs current file), export forensic reports, and run hoptracer from a terminal or CI. Works offline; no account required.
+Compare definitions visually, paste a Grasshopper selection to jump to those components, see component git blame and History, export forensic reports, and run hoptracer from a terminal or CI. Works offline; no account required.
 ```
 
 ### runFullTrust justification (copy/paste)
 
 HopTracer registers a COM shell extension and Explorer context menu for `.gh` files. The extension converts Grasshopper binary definitions to `.ghx` for local diffing. This requires `runFullTrust` because Explorer shell extensions and COM surrogate servers cannot run inside a strict sandboxed UWP container.
 
-### What's new for 1.2.0
+### What's new for 1.5.0
 
-- `hoptracer` CLI for terminal and CI diff workflows
-- Agent-oriented diff JSON with resolved wire labels for AI review
-- `hoptracer.exe` on PATH after Store install (App Execution Alias)
-- Forensic report export and baseline compare in the desktop app
+- Paste a Grasshopper canvas selection to highlight and zoom to those components
+- Nested groups stay visible (translucent group fills)
+- Component git blame, History, and forensic export remain in this build
 
 ## Signed packages (optional)
 
@@ -109,7 +108,7 @@ If you sign locally instead of using Microsoft Store signing:
 ```powershell
 .\scripts\build_msix.ps1 `
   -RequireStoreReadiness `
-  -PackageVersion "1.2.0.0" `
+  -PackageVersion "1.5.0.0" `
   -CertificatePath "C:\path\store-signing-cert.pfx" `
   -CertificatePassword "..."
 ```
