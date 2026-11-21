@@ -42,7 +42,8 @@ public sealed class SessionTokenMiddleware
     private static readonly string[] ProtectedExactPaths =
     [
         "/compare",
-        "/system/pick_file"
+        "/system/pick_file",
+        "/system/clipboard_ids"
     ];
 
     private readonly RequestDelegate _next;

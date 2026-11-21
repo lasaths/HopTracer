@@ -38,4 +38,21 @@ public class SystemController : ControllerBase
     {
         return Ok(new { token = _sessionToken.Token });
     }
+
+    [HttpPost("clipboard_ids")]
+    public IActionResult ClipboardIds([FromBody] ClipboardIdsBody? body)
+    {
+        var read = GrasshopperClipboard.Read(body?.Xml);
+        if (!string.IsNullOrEmpty(read.Error))
+        {
+            return BadRequest(new { error = read.Error });
+        }
+
+        return Ok(new { ids = read.Ids });
+    }
+
+    public sealed class ClipboardIdsBody
+    {
+        public string? Xml { get; set; }
+    }
 }

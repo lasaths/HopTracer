@@ -43,6 +43,7 @@
             minimapDragging: false,
             lastPos: { x: 0, y: 0 },
             selected: null,
+            pastedIds: null,
             hovered: null,
             filterStatus: 'all',
             search: '',
@@ -1034,7 +1035,7 @@
             filtered.forEach(node => {
                 const item = document.createElement('button');
                 item.className = 'qrow';
-                if (state.selected === node.id) item.classList.add('selected', 'sel');
+                if (state.selected === node.id || isPastedId(node.id)) item.classList.add('selected', 'sel');
                 item.dataset.nodeId = String(node.id);
                 item.tabIndex = 0;
                 item.type = 'button';
@@ -1360,7 +1361,184 @@
             else setDetailsTab('script');
         }
 
+        function clearPastedHighlight() {
+            state.pastedIds = null;
+        }
+
+        function hasPastedHighlight() {
+            return !!(state.pastedIds && state.pastedIds.size);
+        }
+
+        function isPastedId(id) {
+            if (!hasPastedHighlight() || id == null) return false;
+            return state.pastedIds.has(id) || state.pastedIds.has(canonicalizeId(id));
+        }
+
+        function matchClipboardNodes(nodes, want) {
+            const found = [];
+            (nodes || []).forEach(node => {
+                if (!node || isGroupLikeNode(node)) return;
+                const key = canonicalizeId(node.id);
+                if (!key || !want.has(key)) return;
+                found.push(node);
+            });
+            return found;
+        }
+
+        function countClipboardIdsInCluster(node, want) {
+            const preview = getClusterPreviewData(node);
+            if (!preview || !preview.isCluster) return 0;
+            const seen = new Set();
+            let count = 0;
+            [preview.oldGraph, preview.newGraph].forEach(graph => {
+                const nodes = graph && graph.nodes;
+                if (!nodes) return;
+                nodes.forEach(inner => {
+                    const key = canonicalizeId(inner && (inner.id || inner.Id));
+                    if (!key || seen.has(key) || !want.has(key)) return;
+                    seen.add(key);
+                    count += 1;
+                });
+            });
+            return count;
+        }
+
+        // shortcut: search stops at one cluster level, upgrade when a paste target sits inside a nested cluster.
+        function openBestClusterForClipboard(nodes, want) {
+            let best = null;
+            (nodes || []).forEach(node => {
+                if (!isClusterLikeNode(node)) return;
+                const count = countClipboardIdsInCluster(node, want);
+                if (count > 0 && (!best || count > best.count)) best = { node, count };
+            });
+            if (!best) return false;
+            return openClusterGraphTab(best.node, getClusterPreviewData(best.node)) !== false;
+        }
+
+        function rememberPastedNodes(nodes) {
+            const set = new Set();
+            nodes.forEach(node => {
+                set.add(node.id);
+                const key = canonicalizeId(node.id);
+                if (key) set.add(key);
+            });
+            state.pastedIds = set;
+        }
+
+        function zoomToNodes(nodes) {
+            const rects = [];
+            nodes.forEach(node => {
+                const rect = getRenderedNodeRect(node);
+                if (rect.w > 0 && rect.h > 0) rects.push(rect);
+            });
+            if (!rects.length) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            const canvasWidth = canvas.width / dpr;
+            const canvasHeight = canvas.height / dpr;
+
+            if (rects.length === 1) {
+                const rect = rects[0];
+                const targetScale = Math.max(state.view.scale, 1.15);
+                state.view.scale = targetScale;
+                state.view.x = (canvasWidth / 2) - (rect.x + rect.w / 2) * targetScale;
+                state.view.y = (canvasHeight / 2) - (rect.y + rect.h / 2) * targetScale;
+                scheduleDraw();
+                return;
+            }
+
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+            rects.forEach(rect => {
+                minX = Math.min(minX, rect.x);
+                minY = Math.min(minY, rect.y);
+                maxX = Math.max(maxX, rect.x + rect.w);
+                maxY = Math.max(maxY, rect.y + rect.h);
+            });
+            const pad = 80;
+            minX -= pad;
+            minY -= pad;
+            maxX += pad;
+            maxY += pad;
+
+            const inset = getFitOverlayInsets(canvasWidth, canvasHeight);
+            const w = Math.max(1, maxX - minX);
+            const h = Math.max(1, maxY - minY);
+            const availW = Math.max(1, canvasWidth - inset.left - inset.right);
+            const availH = Math.max(1, canvasHeight - inset.top - inset.bottom);
+            const scale = Math.min(availW / w, availH / h, 2.5);
+            state.view.scale = scale;
+            state.view.x = inset.left + (availW - w * scale) / 2 - minX * scale;
+            state.view.y = inset.top + (availH - h * scale) / 2 - minY * scale;
+            scheduleDraw();
+        }
+
+        function showClipboardMatches(ids) {
+            const want = new Set();
+            (ids || []).forEach(id => {
+                const key = canonicalizeId(id);
+                if (key) want.add(key);
+            });
+            if (!want.size) {
+                showPerf('Clipboard has no Grasshopper components.');
+                return;
+            }
+
+            let matches = matchClipboardNodes(state.nodes, want);
+            if (!matches.length && openBestClusterForClipboard(state.nodes, want)) {
+                matches = matchClipboardNodes(state.nodes, want);
+            }
+            if (!matches.length && state.activeGraphTabId !== ROOT_GRAPH_TAB_ID) {
+                switchGraphTab(ROOT_GRAPH_TAB_ID, { fit: false });
+                matches = matchClipboardNodes(state.nodes, want);
+                if (!matches.length && openBestClusterForClipboard(state.nodes, want)) {
+                    matches = matchClipboardNodes(state.nodes, want);
+                }
+            }
+            if (!matches.length) {
+                showPerf('No pasted components are in this file.');
+                return;
+            }
+
+            rememberPastedNodes(matches);
+            state.selected = matches[0].id;
+            const tab = getActiveGraphTab();
+            if (tab) tab.selected = state.selected;
+            updateDetailsPanel(matches[0]);
+            renderComponentResultsList();
+            zoomToNodes(matches);
+
+            const found = new Set(matches.map(node => canonicalizeId(node.id)));
+            const missing = Array.from(want).filter(id => !found.has(id)).length;
+            const noun = matches.length === 1 ? 'component' : 'components';
+            const message = missing > 0
+                ? `Highlighted ${matches.length} ${noun}. ${missing} not in this view.`
+                : `Highlighted ${matches.length} ${noun}.`;
+            showPerf(message);
+        }
+
+        async function focusPastedClipboard(text) {
+            try {
+                const response = await authFetch('/system/clipboard_ids', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ xml: text })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    showPerf(payload.error || 'Paste failed.');
+                    return;
+                }
+                showClipboardMatches(payload.ids || []);
+            } catch (err) {
+                showPerf('Paste failed.');
+            }
+        }
+
         function zoomToNode(nodeId) {
+            clearPastedHighlight();
             if (!nodeId) return;
 
             const needle = String(nodeId);
@@ -2362,6 +2540,7 @@
             }
 
             hideCanvasTooltip();
+            state.pastedIds = null;
             state.activeGraphTabId = tab.id;
             state.nodes = tab.nodes;
             state.groups = tab.groups || [];
@@ -4132,8 +4311,9 @@
                             hideViewerToast({ restoreFocus: true });
                             break;
                         }
-                        if (state.selected || state.filterStatus !== 'all') {
+                        if (state.selected || hasPastedHighlight() || state.filterStatus !== 'all') {
                             e.preventDefault();
+                            state.pastedIds = null;
                             state.selected = null;
                             setStatusFilter('all');
                             updateDetailsPanel(null);
@@ -4160,6 +4340,18 @@
                     case '+': zoom(1.2); break;
                     case '-': zoom(0.8); break;
                 }
+            });
+
+            window.addEventListener('paste', (e) => {
+                const targetTag = String(e.target?.tagName || '').toUpperCase();
+                const isTypingTarget = targetTag === 'INPUT' ||
+                    targetTag === 'TEXTAREA' ||
+                    !!e.target?.isContentEditable;
+                if (isTypingTarget) return;
+                const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+                if (!text || text.indexOf('<Archive') < 0 || text.indexOf('InstanceGuid') < 0) return;
+                e.preventDefault();
+                void focusPastedClipboard(text);
             });
 
             // Controls
@@ -5786,7 +5978,9 @@
                 if (!sourceNode || !targetNode) return;
 
                 const wireMode = getEdgeWireDisplayMode(e, targetNode);
-                const isConnected = !!state.selected && (e.source === state.selected || e.target === state.selected);
+                const isConnected = hasPastedHighlight()
+                    ? (isPastedId(e.source) || isPastedId(e.target))
+                    : (!!state.selected && (e.source === state.selected || e.target === state.selected));
                 const wireStyle = getWireStyle(wireMode, isConnected);
                 if (wireStyle.hidden) return;
 
@@ -5907,7 +6101,9 @@
             nodesToDraw.forEach(item => {
                 const n = item.node;
                 let drawAlpha = item.alpha;
-                if (state.selected) {
+                if (hasPastedHighlight()) {
+                    drawAlpha *= isPastedId(n.id) ? 1.0 : 0.12;
+                } else if (state.selected) {
                     drawAlpha *= connectedIds.has(n.id) ? 1.0 : 0.1;
                 } else {
                     drawAlpha *= nodeCriteriaAlphaFactor(n);
@@ -5958,7 +6154,7 @@
                         ctx.fillText(text, n.x + 4, n.y + 2 + (idx * lineHeight));
                     });
 
-                    if (state.selected === n.id) {
+                    if (state.selected === n.id || isPastedId(n.id)) {
                         ctx.save();
                         ctx.strokeStyle = CONFIG.colors.selection;
                         ctx.lineWidth = 1.5 / state.view.scale;
@@ -5983,11 +6179,11 @@
                     ctx.strokeStyle = statusColor;
                 }
 
-                if (state.selected === n.id) {
+                if (state.selected === n.id || isPastedId(n.id)) {
                     ctx.strokeStyle = CONFIG.colors.selection;
                     ctx.lineWidth = 2 / state.view.scale;
                     ctx.shadowBlur = 0;
-                } else if (state.selected && connectedIds.has(n.id)) {
+                } else if (!hasPastedHighlight() && state.selected && connectedIds.has(n.id)) {
                     ctx.strokeStyle = CONFIG.colors.text;
                     ctx.lineWidth = 1.5 / state.view.scale;
                     ctx.shadowBlur = 0;
@@ -6191,7 +6387,9 @@
                                     const connectedCanonical = new Set(Array.from(connectedIds).map(canonicalizeId));
                                     const matchingCanonical = new Set((state.matchingNodes || []).map(n => canonicalizeId(n.id)));
                                     const matchingNodeSet = state.matchingNodes ? new Set(state.matchingNodes.map(n => n.id)) : null;
-                                    const isSelectedGroup = !!state.selected && memberIds.some(id => canonicalizeId(id) === canonicalizeId(state.selected));
+                                    const isSelectedGroup = hasPastedHighlight()
+                    ? memberIds.some(id => isPastedId(id))
+                    : (!!state.selected && memberIds.some(id => canonicalizeId(id) === canonicalizeId(state.selected)));
                                     const isConnectedGroup = !isSelectedGroup && !!state.selected && memberIds.some(id =>
                                         connectedIds.has(id) || connectedCanonical.has(canonicalizeId(id)));
                                     const dimUnrelated = !!state.selected && !isSelectedGroup && !isConnectedGroup;
@@ -6328,7 +6526,9 @@
                 if (groupAlpha <= 0.02) continue;
 
                 const memberIds = getGroupMemberIdsForMix(group, mix);
-                const isSelectedGroup = !!state.selected && memberIds.some(id => canonicalizeId(id) === canonicalizeId(state.selected));
+                const isSelectedGroup = hasPastedHighlight()
+                    ? memberIds.some(id => isPastedId(id))
+                    : (!!state.selected && memberIds.some(id => canonicalizeId(id) === canonicalizeId(state.selected)));
                 const isConnectedGroup = !isSelectedGroup && !!state.selected && memberIds.some(id =>
                     connectedIds.has(id) || connectedCanonical.has(canonicalizeId(id)));
                 const dimUnrelated = !!state.selected && !isSelectedGroup && !isConnectedGroup;
@@ -6583,6 +6783,7 @@
 
             const clicked = getNodeAtCanvasPoint(e.clientX, e.clientY);
 
+            clearPastedHighlight();
             state.selected = clicked ? clicked.id : null;
             updateDetailsPanel(clicked);
             renderComponentResultsList();
@@ -6595,6 +6796,7 @@
 
             if (!clicked) return;
 
+            clearPastedHighlight();
             state.selected = clicked.id;
             updateDetailsPanel(clicked);
             renderComponentResultsList();
@@ -6878,6 +7080,7 @@
         }
 
         function clearCanvasSelection() {
+            state.pastedIds = null;
             state.selected = null;
             updateDetailsPanel(null);
             renderComponentResultsList();
